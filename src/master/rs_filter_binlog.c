@@ -158,6 +158,8 @@ static char *rs_create_test_event(char *buf, void *data)
     /* set var-length value */
     len = rs_strlen(t->msg) + 1;
     p = rs_cpymem(p, &len, 4);
+
+    /* column msg */
     p = rs_cpymem(p, t->msg, len);
 
     return p;
