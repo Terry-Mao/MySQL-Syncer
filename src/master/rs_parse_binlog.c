@@ -3,7 +3,7 @@
 #include <rs_core.h>
 #include <rs_master.h>
 
-int rs_redis_header_handle(rs_request_dump_t *rd) 
+int rs_def_header_handle(rs_request_dump_t *rd) 
 {
     int                 r;
     uint32_t            p;
@@ -71,7 +71,7 @@ int rs_redis_header_handle(rs_request_dump_t *rd)
 
 }
 
-int rs_redis_query_handle(rs_request_dump_t *rd) 
+int rs_def_query_handle(rs_request_dump_t *rd) 
 {
     int r;
     rs_binlog_info_t *bi;
@@ -155,7 +155,7 @@ int rs_redis_query_handle(rs_request_dump_t *rd)
 }
 
 
-int rs_redis_intvar_handle(rs_request_dump_t *rd) 
+int rs_def_intvar_handle(rs_request_dump_t *rd) 
 {
     int                 r;
     rs_binlog_info_t    *bi;
@@ -190,71 +190,21 @@ int rs_redis_intvar_handle(rs_request_dump_t *rd)
     return RS_OK;
 }
 
-int rs_redis_xid_handle(rs_request_dump_t *rd) 
+int rs_def_xid_handle(rs_request_dump_t *rd) 
 {
-
-    int                     r, len, i;
-    char                    *p;
-    rs_ring_buffer_data_t   *d;
     rs_binlog_info_t        *bi;
 
-    i = 0;
     bi = &(rd->binlog_info);
 
     /* flush events */
     if(bi->flush) {
 
         /* add to ring buffer */
-        for( ;; ) {
-
-            r = rs_set_ring_buffer(&(rd->ring_buf), &d);
-
-            if(r == RS_FULL) {
-                if(i % 60 == 0) {
-                    rs_log_info("request dump's ring buffer is full, wait"
-                            "%u secs" ,RS_RING_BUFFER_FULL_SLEEP_SEC);
-                    i = 0;
-                }
-
-                i += RS_RING_BUFFER_FULL_SLEEP_SEC;
-
-                sleep(RS_RING_BUFFER_FULL_SLEEP_SEC);
-
-                continue;
-            }
-
-            if(r == RS_ERR) {
-                return RS_ERR;
-            }
-
-            if(r == RS_OK) {
-                p = d->data;
-
-                len = snprintf(p, RS_SYNC_DATA_CMD_SIZE, "%s,%u,%c", 
-                        rd->dump_file, rd->dump_pos, bi->mev); 
-
-                if(len < 0) {
-                    rs_log_err(rs_errno, "snprintf() failed, dump_file, "
-                            "dump_pos");
-                    return RS_ERR;
-                }
-
-                p += len;
-                p = rs_create_message_event(p, bi->data);
-
-                if(p != NULL) {
-                    d->len = p - d->data;
-                    rs_set_ring_buffer_advance(&(rd->ring_buf));
-                }
-
-                break;
-            }
-
-        } // EXIT RING BUFFER 
+        if(rs_binlog_create_data(rd) != RS_OK) {
+            return RS_ERR;
+        }
 
         bi->flush = 0;
-        bi->mev = 0;
-        bi->sent = 1;
     }
 
     bi->tran = 0;
@@ -262,14 +212,10 @@ int rs_redis_xid_handle(rs_request_dump_t *rd)
     return RS_OK;
 }
 
-int rs_redis_finish_handle(rs_request_dump_t *rd) 
+int rs_def_finish_handle(rs_request_dump_t *rd) 
 {
-    int                     i, r, len;
-    char                    *p;
     rs_binlog_info_t        *bi;
-    rs_ring_buffer_data_t   *d;
 
-    i = 0;
     bi = &(rd->binlog_info);
 
     if(!bi->tran && !bi->sent) {
@@ -278,47 +224,9 @@ int rs_redis_finish_handle(rs_request_dump_t *rd)
                 rd->dump_pos);
 
         /* add to ring buffer */
-        for( ;; ) {
-
-            r = rs_set_ring_buffer(&(rd->ring_buf), &d);
-
-            if(r == RS_FULL) {
-                if(i % 60 == 0) {
-                    rs_log_info("request dump's ring buffer is full, wait %u "
-                            "secs" ,RS_RING_BUFFER_FULL_SLEEP_SEC);
-                    i = 0;
-                }
-
-                i += RS_RING_BUFFER_FULL_SLEEP_SEC;
-
-                sleep(RS_RING_BUFFER_FULL_SLEEP_SEC);
-
-                continue;
-            }
-
-            if(r == RS_ERR) {
-                return RS_ERR;
-            }
-
-            if(r == RS_OK) {
-                p = d->data;
-
-                len = snprintf(p, RS_SYNC_DATA_CMD_SIZE, "%s,%u,%c", 
-                        rd->dump_file, rd->dump_pos, RS_MYSQL_SKIP_DATA); 
-
-                if(len < 0) {
-                    rs_log_err(rs_errno, "snprintf() failed");
-                    return RS_ERR;
-                }
-
-                d->len = len;
-
-                rs_set_ring_buffer_advance(&(rd->ring_buf));
-
-                break;
-            }
-
-        } // EXIT RING BUFFER 
+        if(rs_binlog_create_data(rd) != RS_OK) {
+            return RS_ERR;
+        }
     }
 
     bi->sent = 0;

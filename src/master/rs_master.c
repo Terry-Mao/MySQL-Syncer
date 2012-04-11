@@ -6,13 +6,14 @@
 rs_master_info_t    *rs_master_info = NULL;
 rs_binlog_action_t  rs_binlog_actions;
 
-static rs_binlog_action_t rs_redis_binlog_actions = {
-    rs_redis_header_handle,
-    rs_redis_query_handle,
-    rs_redis_filter_data_handle,
-    rs_redis_intvar_handle,
-    rs_redis_xid_handle,
-    rs_redis_finish_handle
+static rs_binlog_action_t rs_def_binlog_actions = {
+    rs_def_header_handle,
+    rs_def_query_handle,
+    rs_def_filter_data_handle,
+    rs_def_create_data_handle,
+    rs_def_intvar_handle,
+    rs_def_xid_handle,
+    rs_def_finish_handle
 };
 
 
@@ -20,7 +21,7 @@ int rs_init_master()
 {
     rs_master_info_t    *mi, *om;
 
-    rs_binlog_actions = rs_redis_binlog_actions;
+    rs_binlog_actions = rs_def_binlog_actions;
     mi = rs_init_master_info(rs_master_info);
     
     if(mi == NULL) {

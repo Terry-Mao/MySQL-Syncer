@@ -6,7 +6,7 @@ CFLAGS =  -pipe  -O -W -Wall -Wpointer-arith -Wno-unused-parameter -Wunused-func
 LINK =	$(CC)
 
 
-CORE_DEPS = src/core/redisync.h \
+CORE_DEPS = src/core/rs.h \
 			src/core/rs_config.h \
 			src/core/rs_core.h \
 			src/core/rs_errno.h \
@@ -45,7 +45,7 @@ SLAVE_LIBS = -lhiredis -lprotobuf-c
 
 SLAVE_DEFINE = -DSLAVE -D$(CPUBIT)
 
-objs/redisync_master:	objs/src/core/redisync_master.o \
+objs/rs_master:	objs/src/core/rs_master.o \
 	objs/src/core/rs_errno.o \
 	objs/src/core/rs_string.o \
 	objs/src/core/rs_io.o \
@@ -61,7 +61,7 @@ objs/redisync_master:	objs/src/core/redisync_master.o \
 	objs/src/master/rs_parse_binlog.o \
 	objs/src/master/rs_filter_binlog.o
 
-objs/redisync_slave:	objs/src/core/redisync_slave.o \
+objs/rs_slave:	objs/src/core/rs_slave.o \
 	objs/src/core/rs_errno.o \
 	objs/src/core/rs_string.o \
 	objs/src/core/rs_io.o \
@@ -76,9 +76,9 @@ objs/redisync_slave:	objs/src/core/redisync_slave.o \
 	objs/src/slave/rs_io_thread.o \
 	objs/src/slave/rs_redis_thread.o
 
-master: objs/redisync_master
-	$(LINK) -o objs/redisync_master \
-		objs/src/core/redisync_master.o \
+master: objs/rs_master
+	$(LINK) -o objs/rs_master \
+		objs/src/core/rs_master.o \
 		objs/src/core/rs_errno.o \
 		objs/src/core/rs_string.o \
 		objs/src/core/rs_io.o \
@@ -95,9 +95,9 @@ master: objs/redisync_master
 		objs/src/master/rs_filter_binlog.o \
 		-lpthread -lm $(MASTER_DEFINE)
 
-slave: objs/redisync_slave
-	$(LINK) -o objs/redisync_slave \
-		objs/src/core/redisync_slave.o \
+slave: objs/rs_slave
+	$(LINK) -o objs/rs_slave \
+		objs/src/core/rs_slave.o \
 		objs/src/core/rs_errno.o \
 		objs/src/core/rs_string.o \
 		objs/src/core/rs_io.o \
@@ -116,17 +116,17 @@ slave: objs/redisync_slave
 
 
 # core
-objs/src/core/redisync_master.o: $(CORE_DEPS) \
-	src/core/redisync.c
+objs/src/core/rs_master.o: $(CORE_DEPS) \
+	src/core/rs.c
 	$(CC) -c $(CFLAGS) $(CORE_INCS) \
-		-o objs/src/core/redisync_master.o \
-		src/core/redisync.c $(MASTER_DEFINE)
+		-o objs/src/core/rs_master.o \
+		src/core/rs.c $(MASTER_DEFINE)
 
-objs/src/core/redisync_slave.o: $(CORE_DEPS) \
-	src/core/redisync.c
+objs/src/core/rs_slave.o: $(CORE_DEPS) \
+	src/core/rs.c
 	$(CC) -c $(CFLAGS) $(CORE_INCS) \
-		-o objs/src/core/redisync_slave.o \
-		src/core/redisync.c $(SLAVE_DEFINE)
+		-o objs/src/core/rs_slave.o \
+		src/core/rs.c $(SLAVE_DEFINE)
 
 objs/src/core/rs_errno.o: $(CORE_DEPS) \
 	src/core/rs_errno.c
