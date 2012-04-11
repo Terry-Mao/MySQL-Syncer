@@ -113,6 +113,8 @@ slave: objs/rs_slave
 		objs/src/slave/rs_redis_thread.o \
 		-lpthread -lm $(SLAVE_LIBS) $(SLAVE_DEFINE)
 
+clean: 
+	/bin/rm -rvf objs/src/* objs/rs_master
 
 
 # core

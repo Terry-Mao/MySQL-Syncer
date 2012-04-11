@@ -196,6 +196,7 @@ int rs_def_xid_handle(rs_request_dump_t *rd)
 
     bi = &(rd->binlog_info);
 
+#if 0
     /* flush events */
     if(bi->flush) {
 
@@ -203,10 +204,10 @@ int rs_def_xid_handle(rs_request_dump_t *rd)
         if(rs_binlog_create_data(rd) != RS_OK) {
             return RS_ERR;
         }
-
-        bi->flush = 0;
     }
+#endif
 
+    rs_log_info("END TRANSACTION");
     bi->tran = 0;
 
     return RS_OK;
@@ -218,7 +219,7 @@ int rs_def_finish_handle(rs_request_dump_t *rd)
 
     bi = &(rd->binlog_info);
 
-    if(!bi->tran && !bi->sent) {
+    if((!bi->tran && !bi->sent) || bi->flush) {
 
         rs_log_info("send dump file = %s, send dump pos = %u", rd->dump_file, 
                 rd->dump_pos);
