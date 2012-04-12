@@ -26,7 +26,6 @@ int rs_init_master()
     
     if(mi == NULL) {
         goto free;
-        return RS_ERR;
     }
 
     om = rs_master_info;
