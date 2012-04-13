@@ -33,6 +33,7 @@ extern volatile sig_atomic_t     rs_reload;
 #define RS_EMPTY                    -7
 #define RS_NO_BINLOG                -8
 #define RS_CMD_ERR                  -9
+#define RS_SLAB_OVERFLOW            -10
 
 #define INT32_SIZE            sizeof(int32_t);
 #define INT32_LEN             sizeof("-2147483648") - 1
@@ -54,7 +55,9 @@ extern volatile sig_atomic_t     rs_reload;
 #include <rs_string.h>
 #include <rs_io.h>
 #include <rs_log.h>
+#include <rs_slab.h>
 #include <rs_ring_buffer.h>
+#include <rs_ring_buffer2.h>
 #include <rs_process.h>
 #include <rs_conf.h>
 #include <rs_core_info.h>

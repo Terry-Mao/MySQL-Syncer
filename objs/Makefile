@@ -13,7 +13,9 @@ CORE_DEPS = src/core/rs.h \
 			src/core/rs_string.h \
 			src/core/rs_io.h \
 			src/core/rs_log.h \
+			src/core/rs_slab.h \
 			src/core/rs_ring_buffer.h \
+			src/core/rs_ring_buffer2.h \
 			src/core/rs_process.h \
 			src/core/rs_conf.h \
 			src/core/rs_core_info.h
@@ -50,7 +52,9 @@ objs/rs_master:	objs/src/core/rs_master.o \
 	objs/src/core/rs_string.o \
 	objs/src/core/rs_io.o \
 	objs/src/core/rs_log.o \
+	objs/src/core/rs_slab.o \
 	objs/src/core/rs_ring_buffer.o \
+	objs/src/core/rs_ring_buffer2.o \
 	objs/src/core/rs_process.o \
 	objs/src/core/rs_conf.o \
 	objs/src/master/rs_master.o \
@@ -66,7 +70,9 @@ objs/rs_slave:	objs/src/core/rs_slave.o \
 	objs/src/core/rs_string.o \
 	objs/src/core/rs_io.o \
 	objs/src/core/rs_log.o \
+	objs/src/core/rs_slab.o \
 	objs/src/core/rs_ring_buffer.o \
+	objs/src/core/rs_ring_buffer2.o \
 	objs/src/core/rs_process.o \
 	objs/src/core/rs_conf.o \
 	objs/src/slave/rs_slave.o \
@@ -83,7 +89,9 @@ master: objs/rs_master
 		objs/src/core/rs_string.o \
 		objs/src/core/rs_io.o \
 		objs/src/core/rs_log.o \
+		objs/src/core/rs_slab.o \
 		objs/src/core/rs_ring_buffer.o \
+		objs/src/core/rs_ring_buffer2.o \
 		objs/src/core/rs_process.o \
 		objs/src/core/rs_conf.o \
 		objs/src/master/rs_master.o \
@@ -102,7 +110,9 @@ slave: objs/rs_slave
 		objs/src/core/rs_string.o \
 		objs/src/core/rs_io.o \
 		objs/src/core/rs_log.o \
+		objs/src/core/rs_slab.o \
 		objs/src/core/rs_ring_buffer.o \
+		objs/src/core/rs_ring_buffer2.o \
 		objs/src/core/rs_process.o \
 		objs/src/core/rs_conf.o \
 		objs/src/slave/rs_slave.o \
@@ -154,11 +164,23 @@ objs/src/core/rs_log.o: $(CORE_DEPS) \
 		-o objs/src/core/rs_log.o \
 		src/core/rs_log.c
 
+objs/src/core/rs_slab.o: $(CORE_DEPS) \
+	src/core/rs_slab.c
+	$(CC) -c $(CFLAGS) $(CORE_INCS) \
+		-o objs/src/core/rs_slab.o \
+		src/core/rs_slab.c
+
 objs/src/core/rs_ring_buffer.o: $(CORE_DEPS) \
 	src/core/rs_ring_buffer.c
 	$(CC) -c $(CFLAGS) $(CORE_INCS) \
 		-o objs/src/core/rs_ring_buffer.o \
 		src/core/rs_ring_buffer.c
+
+objs/src/core/rs_ring_buffer2.o: $(CORE_DEPS) \
+	src/core/rs_ring_buffer2.c
+	$(CC) -c $(CFLAGS) $(CORE_INCS) \
+		-o objs/src/core/rs_ring_buffer2.o \
+		src/core/rs_ring_buffer2.c
 
 objs/src/core/rs_process.o: $(CORE_DEPS) \
 	src/core/rs_process.c

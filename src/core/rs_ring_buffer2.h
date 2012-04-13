@@ -27,7 +27,7 @@ typedef struct {
     void                    *rp;
     void                    *wp;
 
-    void                    *start
+    void                    *start;;;;
     void                    *end;
 } rs_ring_buffer2_t;
 

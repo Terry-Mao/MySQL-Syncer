@@ -7,6 +7,7 @@ int rs_init_ring_buffer2(rs_ring_buffer2_t *rb, uint32_t num)
 {
     void                    *p;
     uint32_t                len, i;
+    rs_ring_buffer2_data_t  *d;
 
     if(rb == NULL) {
         rs_log_err(0, "rs_init_ring_buffer2() failed, rb is NULL");
@@ -31,12 +32,12 @@ int rs_init_ring_buffer2(rs_ring_buffer2_t *rb, uint32_t num)
     for(i = 0; i < num; i++) {
        d = (rs_ring_buffer2_data_t *) p; 
        rs_ring_buffer2_data_t_init(d);
-       p = d->data + sizeof(rs_ring_buffer2_data_t);
+       p = (void *) ((char *) d->data + sizeof(rs_ring_buffer2_data_t));
     }
 
-    rb->rp = rb->rb;
-    rb->wp = rb->rb;
-    rb->end = rb->rb + len;
+    rb->rp = rb->start;
+    rb->wp = rb->start;
+    rb->end = (void *) ((char *) rb->start + len);
 
     return RS_OK;
 }
@@ -45,7 +46,7 @@ int rs_get_ring_buffer2(rs_ring_buffer2_t *rb, rs_ring_buffer2_data_t **data)
 {
     rs_ring_buffer2_data_t *d;
 
-    if(r == NULL) {
+    if(rb == NULL) {
         rs_log_err(0, "rs_get_ring_buffer2() failed, pointer r is NULL");
         return RS_ERR;
     } 
@@ -70,8 +71,9 @@ int rs_get_ring_buffer2(rs_ring_buffer2_t *rb, rs_ring_buffer2_data_t **data)
 
 void rs_get_ring_buffer2_advance(rs_ring_buffer2_t *rb) 
 {
-    rb->rp = (rb->rp + sizeof(rs_ring_buffer2_data_t)) == rb->end ? 
-        rb->start : rb->rp + sizeof(rs_ring_buffer2_data_t);
+    rb->rp = (void *) (((char *) rb->rp + sizeof(rs_ring_buffer2_data_t)) 
+            == rb->end ? rb->start : (char *) rb->rp + 
+            sizeof(rs_ring_buffer2_data_t));
     rb->rn++;
 }
 
@@ -103,8 +105,9 @@ int rs_set_ring_buffer2(rs_ring_buffer2_t *rb, rs_ring_buffer2_data_t **data)
 
 void rs_set_ring_buffer2_advance(rs_ring_buffer2_t *rb) 
 {
-    rb->wp = (rb->wp + sizeof(rs_ring_buffer2_data_t)) == r->end ? 
-        r->rb : r->wp + sizeof(rs_ring_buffer2_data_t);
+    rb->wp = (void *) (((char *) rb->wp + sizeof(rs_ring_buffer2_data_t)) 
+            == rb->end ? rb->start : (char *) rb->wp + 
+            sizeof(rs_ring_buffer2_data_t));
 
-    r->wn++;
+    rb->wn++;
 }
