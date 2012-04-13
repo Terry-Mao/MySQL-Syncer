@@ -30,9 +30,9 @@ int rs_init_ring_buffer2(rs_ring_buffer2_t *rb, uint32_t num)
     p = rb->start;
 
     for(i = 0; i < num; i++) {
-       d = (rs_ring_buffer2_data_t *) p; 
-       rs_ring_buffer2_data_t_init(d);
-       p = (void *) ((char *) d->data + sizeof(rs_ring_buffer2_data_t));
+        d = (rs_ring_buffer2_data_t *) p; 
+        rs_ring_buffer2_data_t_init(d);
+        p = (void *) ((char *) d->data + sizeof(rs_ring_buffer2_data_t));
     }
 
     rb->rp = rb->start;
