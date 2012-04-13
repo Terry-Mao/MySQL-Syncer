@@ -46,6 +46,9 @@ int main(int argc, char * const *argv)
 
     rs_core_info = ci;
 
+    /* TEST SLAB */
+    return 0;
+
     rs_log_info("main thread opened");
 
 #if MASTER

@@ -172,16 +172,6 @@ void *rs_slab_alloc(rs_slab_t *sl, uint32_t size, int id)
         return NULL;
     }
 
-    if(id == -1) {
-        p = malloc(size);
-
-        if(p == NULL) {
-            rs_log_err(rs_errno, "malloc() failed, rs_slab_alloc");
-        }
-
-        return p;
-    }
-
     if(id < RS_SLAB_CLASS_IDX_MIN || id > RS_SLAB_CLASS_IDX_MAX) {
         rs_log_err(0, "rs_slab_alloc() failed, id = %d", id);
         return NULL;
@@ -190,17 +180,20 @@ void *rs_slab_alloc(rs_slab_t *sl, uint32_t size, int id)
     c = &(sl->slab_class[id]);
 
     if(c->slab == NULL || c->used_free_slab_n == 0) {
-        rs_log_err(0, "no more free slab, get a new slab");
+        /* new slab */
+        rs_log_info("no more free slab, get a new slab");
 
         if(rs_slab_newslab(sl, id) == RS_ERR) {
             return NULL;
         }
-    } else if(c->used_free_slab_n != 0) {
+    } else if(c->used_free_slab_n > 0) {
+        /* use free slab */
         p = c->free_slabs[--c->used_free_slab_n];
     } else {
+        /* use slab */
         p = c->slab;
 
-        if(--c->last_slab_n != 0) {
+        if(--c->last_slab_n > 0) {
             c->slab = (void *) ((char *) c->slab + c->size);
         } else {
             c->slab = NULL;
