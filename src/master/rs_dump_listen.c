@@ -144,8 +144,16 @@ void *rs_start_accept_thread(void *data)
 
         rd->cli_fd = cli_fd;
 
-        if(rs_init_ring_buffer(&(rd->ring_buf), RS_SYNC_DATA_SIZE, 
+        /* init ring buffer */
+        if(rs_init_ring_buffer2(&(rd->ring_buf), 
                     RS_IO_THREAD_RING_BUFFER_NUM)) 
+        {
+            goto free;
+        }
+
+        /* init slab */
+        if(rs_init_slab(&(rd->slab), NULL, 100, 1.5, 1024 * 1024 * 100, 
+                    RS_SLABS_PREALLOC) != RS_OK) 
         {
             goto free;
         }
@@ -174,8 +182,10 @@ static void rs_free_accept_thread(void *data)
     mi = (rs_master_info_t *) data;
 
     /* NOTICE : if reload signal, must skip send SIGQUIT */
-    if(mi != NULL && rs_reload != 1) {
+    if(mi != NULL) {
         rs_log_info("free accept thread");
-        kill(rs_pid, SIGQUIT);
+        // kill(rs_pid, SIGQUIT);
+        rs_close(mi->svr_fd);
+        mi->svr_fd = -1;
     }
 }

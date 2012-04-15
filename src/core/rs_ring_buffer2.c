@@ -32,7 +32,7 @@ int rs_init_ring_buffer2(rs_ring_buffer2_t *rb, uint32_t num)
     for(i = 0; i < num; i++) {
         d = (rs_ring_buffer2_data_t *) p; 
         rs_ring_buffer2_data_t_init(d);
-        p = (void *) ((char *) d->data + sizeof(rs_ring_buffer2_data_t));
+        p = (void *) ((char *) d + sizeof(rs_ring_buffer2_data_t));
     }
 
     rb->rp = rb->start;
@@ -55,7 +55,6 @@ int rs_get_ring_buffer2(rs_ring_buffer2_t *rb, rs_ring_buffer2_data_t **data)
         return RS_EMPTY;
     }
 
-    rs_log_debug(0, "ring buffer write : %u, read : %u", rb->wn, rb->rn);
 
     d = (rs_ring_buffer2_data_t *) rb->rp;
 
@@ -75,6 +74,12 @@ void rs_get_ring_buffer2_advance(rs_ring_buffer2_t *rb)
             == rb->end ? rb->start : (char *) rb->rp + 
             sizeof(rs_ring_buffer2_data_t));
     rb->rn++;
+
+#if x86_64
+    rs_log_debug(0, "ring buffer write : %lu, read : %lu", rb->wn, rb->rn);
+#elif x86_32
+    rs_log_debug(0, "ring buffer write : %llu, read : %llu", rb->wn, rb->rn);
+#endif
 }
 
 int rs_set_ring_buffer2(rs_ring_buffer2_t *rb, rs_ring_buffer2_data_t **data) 
@@ -90,9 +95,8 @@ int rs_set_ring_buffer2(rs_ring_buffer2_t *rb, rs_ring_buffer2_data_t **data)
         return RS_FULL;
     }
 
-    rs_log_debug(0, "ring buffer write : %u, read : %u", rb->wn, rb->rn);
-
     d = (rs_ring_buffer2_data_t *) rb->wp;
+
     if(d == NULL) {
         rs_log_err(0, "rs_set_ring_buffer2() failed, data is NULL");
         return RS_ERR;
@@ -110,4 +114,9 @@ void rs_set_ring_buffer2_advance(rs_ring_buffer2_t *rb)
             sizeof(rs_ring_buffer2_data_t));
 
     rb->wn++;
+#if x86_64
+    rs_log_debug(0, "ring buffer write : %lu, read : %lu", rb->wn, rb->rn);
+#elif x86_32
+    rs_log_debug(0, "ring buffer write : %llu, read : %llu", rb->wn, rb->rn);
+#endif
 }

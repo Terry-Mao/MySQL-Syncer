@@ -21,13 +21,17 @@ int rs_init_master()
 {
     rs_master_info_t    *mi, *om;
 
+    /* set binlog actions */
     rs_binlog_actions = rs_def_binlog_actions;
+
+    /* init master info */
     mi = rs_init_master_info(rs_master_info);
     
     if(mi == NULL) {
         goto free;
     }
 
+    /* free old master info */
     om = rs_master_info;
     rs_master_info = mi;
 

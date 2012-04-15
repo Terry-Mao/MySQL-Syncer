@@ -16,11 +16,11 @@ typedef struct rs_binlog_info_s         rs_binlog_info_t;
 extern rs_master_info_t             *rs_master_info;
 
 #include <rs_master_info.h>
+#include <rs_dump_listen.h>
 #include <rs_read_binlog.h>
 #include <rs_parse_binlog.h>
 #include <rs_request_dump.h>
 #include <rs_filter_binlog.h>
-#include <rs_dump_listen.h>
-
+#include <test.pb-c.h>
 
 #endif

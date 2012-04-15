@@ -3,13 +3,12 @@
 #include <rs_core.h>
 #include <rs_master.h>
 
-static char *rs_create_test_event(char *buf, void *data);
 static int rs_filter_test(rs_binlog_info_t *bi);
+void rs_create_test_event(Test *pb_t, void *data);
 
 int rs_def_filter_data_handle(rs_request_dump_t *rd)
 {
     rs_binlog_info_t    *bi;
-    rs_mysql_test_t     *t;
 
     bi = &(rd->binlog_info);
 
@@ -31,7 +30,7 @@ int rs_def_filter_data_handle(rs_request_dump_t *rd)
     if(bi->tran == 0 && rs_memcmp(bi->sql, TEST_FILTER_KEY, 
                 TEST_FILTER_KEY_LEN) == 0) {
 
-        t = (rs_mysql_test_t *) bi->data; 
+        rs_mysql_test_t *t = (rs_mysql_test_t *) bi->data; 
         rs_mysql_test_t_init(t);
 
         /* INSERT TEST */
@@ -48,17 +47,20 @@ int rs_def_filter_data_handle(rs_request_dump_t *rd)
 
 int rs_def_create_data_handle(rs_request_dump_t *rd) 
 {
-    int                     i, r, len;
-    char                    *p;
+    int                     i, r, len, id, pb_len;
+    char                    *p, istr[UINT32_LEN];
+    void                    *pb_buf;
     rs_binlog_info_t        *bi;
-    rs_ring_buffer_data_t   *d;
+    rs_ring_buffer2_data_t  *d;
+    rs_slab_t               *sl;
 
     i = 0;
     bi = &(rd->binlog_info);
+    sl = &(rd->slab);
 
     for( ;; ) {
 
-        r = rs_set_ring_buffer(&(rd->ring_buf), &d);
+        r = rs_set_ring_buffer2(&(rd->ring_buf), &d);
 
         if(r == RS_FULL) {
             if(i % 60 == 0) {
@@ -79,29 +81,46 @@ int rs_def_create_data_handle(rs_request_dump_t *rd)
         }
 
         if(r == RS_OK) {
-            p = d->data;
-
-            len = snprintf(p, RS_SYNC_DATA_CMD_SIZE, "%s,%u,%c", 
-                    rd->dump_file, rd->dump_pos, bi->mev); 
-
-            if(len < 0) {
-                rs_log_err(rs_errno, "snprintf() failed");
-                return RS_ERR;
-            }
+            
+            rs_uint32_to_str(bi->dump_pos, istr);
+            len = rs_strlen(rd->dump_file) + rd_strlen(istr) + 1; 
 
             if(bi->mev == 0) {
                 d->len = len;
-            } else {
-                p += len;
-                p = rs_create_test_event(p, bi->data);
+                d->id = rs_slab_clsid(sl, len);
+                d->data = rs_alloc_slab(sl, d->id);
 
-                if(p != NULL) {
-                    d->len = p - d->data;
-                    rs_set_ring_buffer_advance(&(rd->ring_buf));
+                if(d->data == NULL) {
+                    return RS_ERR;
                 }
+
+            } else {
+                Test t;
+                rs_create_test_event(&t, bi->data);
+                pb_len = test__get_packed_size(&t);
+
+                id = rs_slab_clsid(sl, pb_len);
+                pb_buf = rs_alloc_slab(sl, pb_len, id);
+
+                if(pb_buf == NULL) {
+                    return RS_ERR;
+                }
+                
+                len += pb_len;
+
+                d->len = len;
+                d->id = rs_slab_clsid(sl, len);
+                d->data = rs_alloc_slab(sl, len, d->id);
+
+                if(d->data == NULL) {
+                    return RS_ERR;
+                }
+
+                /* free pb buffer */
+                rs_free_slab(sl, id);
             }
 
-            rs_set_ring_buffer_advance(&(rd->ring_buf));
+            rs_set_ring_buffer2_advance(sl);
 
             break;
         }
@@ -129,38 +148,24 @@ static int rs_filter_test(rs_binlog_info_t *bi)
 
     /* COLUMN : ID */
     t->id = (uint32_t) bi->ai;
-    t->nullbit[0] |= (1 << 0);
 
     if((p = rs_strstr_end(p, TEST_COLUMN_MSG, TEST_COLUMN_MSG_LEN)) == NULL) {
         rs_log_err(0, "filter test failed, \"%s\"", TEST_COLUMN_MSG);
         return RS_ERR;
     }
-    
+
     /* COLUMN : MSG */
     p = rs_cp_utf8_str(t->msg, p);
-    t->nullbit[0] |= (1 << 1);
 
     return RS_OK;
 }
 
-static char *rs_create_test_event(char *buf, void *data)
+void rs_create_test_event(Test *pb_t, void *data)
 {
-    char            *p;
-    size_t          len;
     rs_mysql_test_t *t;
 
-    p = buf;
     t = (rs_mysql_test_t *) data;
 
-    /* set nullbit */
-    p = rs_cpymem(p, t->nullbit, RS_MYSQL_TEST_NULL_BIT_NUM);
-
-    /* set var-length value */
-    len = rs_strlen(t->msg) + 1;
-    p = rs_cpymem(p, &len, 4);
-
-    /* column msg */
-    p = rs_cpymem(p, t->msg, len);
-
-    return p;
+    pb_t->id = t->id;
+    pb_t->msg = t->msg;
 }

@@ -47,6 +47,7 @@ struct rs_request_dump_s {
 
     rs_ring_buffer_t    ring_buf;
     rs_binlog_info_t    binlog_info;
+    rs_slab_t           slab;
 
     pthread_t           io_thread;
     pthread_t           dump_thread;

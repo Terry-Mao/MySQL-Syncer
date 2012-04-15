@@ -60,4 +60,6 @@ char *rs_strstr_end(char *src, char *sea, uint32_t len);
 void rs_convert_to_hex(char *buf, char *src, uint32_t len);
 char *rs_ncp_str_till(char *dst, char *src, char es, size_t len);
 
+void rs_uint32_to_str(uint32_t n, char *buf);
+
 #endif

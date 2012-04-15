@@ -286,11 +286,3 @@ int rs_has_next_binlog(rs_request_dump_t *rd)
 
     return RS_OK;
 }
-
-void rs_free_binlog_info(rs_binlog_info_t *bi)
-{
-    if(bi != NULL && bi->data != NULL) {
-        free(bi->data);
-        bi->data = NULL;
-    }
-}

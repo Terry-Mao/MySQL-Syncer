@@ -9,7 +9,7 @@ user terry terry
 pid /tmp/redisync_master.pid
 
 # daemon
-daemon 1
+daemon 0
 
 # log path
 log /tmp/rs_master.log

@@ -10,11 +10,13 @@ typedef struct {
 
     uint32_t                len;
     void                    *data;
+    int                     id;
 } rs_ring_buffer2_data_t;
 
 #define rs_ring_buffer2_data_t_init(d)                                       \
     (d)->len = 0;                                                            \
-    (d)->data = NULL
+    (d)->data = NULL;                                                        \
+    (d)->id = 0
 
 typedef struct {
 
@@ -27,7 +29,7 @@ typedef struct {
     void                    *rp;
     void                    *wp;
 
-    void                    *start;;;;
+    void                    *start;
     void                    *end;
 } rs_ring_buffer2_t;
 

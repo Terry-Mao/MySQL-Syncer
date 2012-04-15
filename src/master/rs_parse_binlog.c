@@ -19,7 +19,6 @@ int rs_def_header_handle(rs_request_dump_t *rd)
         rs_log_err(rs_errno, "fseek() failed, seek_set pos = %u", p);
         return RS_ERR;
     }
-
     /* get event type */
     if((r = rs_eof_read_binlog(rd, &(bi->t), BINLOG_TYPE_CODE_LEN)) 
             != RS_OK) 

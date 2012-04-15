@@ -23,6 +23,7 @@ rs_master_info_t *rs_init_master_info(rs_master_info_t *om)
 
     rs_master_info_t_init(mi);
 
+    /* init master conf */
     if(rs_init_master_conf(mi) != RS_OK) {
         goto free;
     }
@@ -39,6 +40,7 @@ rs_master_info_t *rs_init_master_info(rs_master_info_t *om)
         } else {
             rs_log_info("reuse svr_fd");
 
+#if 0
             rs_log_info("stop accept_thread");
 
             if(om->accept_thread != 0) {
@@ -51,9 +53,11 @@ rs_master_info_t *rs_init_master_info(rs_master_info_t *om)
                     }
                 }
             }
+#endif 
+            mi->svr_fd = om->svr_fd;
+            mi->accept_thread = om->accept_thread;
 
             om->accept_thread = 0; /* NOTICE : don't restop accept thread */
-            mi->svr_fd = om->svr_fd;
             om->svr_fd = -1; /* NOTICE : reuse fd, don't reclose svr_fd */
         }
 
@@ -69,9 +73,9 @@ rs_master_info_t *rs_init_master_info(rs_master_info_t *om)
             rs_log_info("reuse dump threads");
 
             mi->req_dump_info = om->req_dump_info;
-            om->req_dump_info = NULL;
+            om->req_dump_info = NULL; /* NOTICE: don't refree req_dump_info */
         }
-    }
+    } /* end om */
 
     if(nl) {
         rs_log_info("start init dump listen");

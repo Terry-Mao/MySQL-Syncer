@@ -24,6 +24,7 @@ CORE_INCS = -I src/core
 
 MASTER_DEPS =  src/master/rs_master.h \
 			   src/master/rs_master_info.h \
+			   src/master/test.pb-c.h \
 			   src/master/rs_dump_listen.h \
 			   src/master/rs_request_dump.h \
 			   src/master/rs_read_binlog.h \
@@ -35,8 +36,6 @@ MASTER_INCS = -I src/master
 MASTER_DEFINE = -DMASTER -D$(CPUBIT)
 
 SLAVE_DEPS =   src/slave/rs_slave.h \
-			   src/slave/common.pb-c.h \
-			   src/slave/redis.pb-c.h \
 			   src/slave/rs_slave_info.h \
 			   src/slave/rs_io_thread.h \
 			   src/slave/rs_redis_thread.h
@@ -46,6 +45,12 @@ SLAVE_INCS = -I src/slave -I /usr/local/include -I /usr/local/include/hiredis
 SLAVE_LIBS = -lhiredis -lprotobuf-c
 
 SLAVE_DEFINE = -DSLAVE -D$(CPUBIT)
+
+TEST_INCS = -I test/unit -I /usr/local/include -I /usr/local/include/CUnit
+
+TEST_LIBS = -lcunit
+
+TEST_DEFINE = -D$(CPUBIT)
 
 objs/rs_master:	objs/src/core/rs_master.o \
 	objs/src/core/rs_errno.o \
@@ -57,6 +62,7 @@ objs/rs_master:	objs/src/core/rs_master.o \
 	objs/src/core/rs_ring_buffer2.o \
 	objs/src/core/rs_process.o \
 	objs/src/core/rs_conf.o \
+	objs/src/core/rs_core_info.o \
 	objs/src/master/rs_master.o \
 	objs/src/master/rs_master_info.o \
 	objs/src/master/rs_dump_listen.o \
@@ -75,12 +81,25 @@ objs/rs_slave:	objs/src/core/rs_slave.o \
 	objs/src/core/rs_ring_buffer2.o \
 	objs/src/core/rs_process.o \
 	objs/src/core/rs_conf.o \
+	objs/src/core/rs_core_info.o \
 	objs/src/slave/rs_slave.o \
 	objs/src/slave/common.pb-c.o \
 	objs/src/slave/redis.pb-c.o \
 	objs/src/slave/rs_slave_info.o \
 	objs/src/slave/rs_io_thread.o \
 	objs/src/slave/rs_redis_thread.o
+
+objs/rs_unit_test:	objs/src/test/rs_unit_test.o \
+	objs/src/core/rs_errno.o \
+	objs/src/core/rs_string.o \
+	objs/src/core/rs_io.o \
+	objs/src/core/rs_log.o \
+	objs/src/core/rs_slab.o \
+	objs/src/core/rs_ring_buffer.o \
+	objs/src/core/rs_ring_buffer2.o \
+	objs/src/core/rs_process.o \
+	objs/src/core/rs_conf.o \
+	objs/src/core/rs_core_info.o
 
 master: objs/rs_master
 	$(LINK) -o objs/rs_master \
@@ -94,8 +113,10 @@ master: objs/rs_master
 		objs/src/core/rs_ring_buffer2.o \
 		objs/src/core/rs_process.o \
 		objs/src/core/rs_conf.o \
+		objs/src/core/rs_core_info.o \
 		objs/src/master/rs_master.o \
 		objs/src/master/rs_master_info.o \
+		objs/src/master/test.pb-c.o \
 		objs/src/master/rs_dump_listen.o \
 		objs/src/master/rs_request_dump.o \
 		objs/src/master/rs_read_binlog.o \
@@ -115,6 +136,7 @@ slave: objs/rs_slave
 		objs/src/core/rs_ring_buffer2.o \
 		objs/src/core/rs_process.o \
 		objs/src/core/rs_conf.o \
+		objs/src/core/rs_core_info.o \
 		objs/src/slave/rs_slave.o \
 		objs/src/slave/common.pb-c.o \
 		objs/src/slave/redis.pb-c.o \
@@ -123,9 +145,30 @@ slave: objs/rs_slave
 		objs/src/slave/rs_redis_thread.o \
 		-lpthread -lm $(SLAVE_LIBS) $(SLAVE_DEFINE)
 
-clean: 
-	/bin/rm -rvf objs/src/* objs/rs_master
+test: objs/rs_unit_test
+	$(LINK) -o objs/rs_unit_test \
+		objs/src/test/rs_unit_test.o \
+		objs/src/core/rs_errno.o \
+		objs/src/core/rs_string.o \
+		objs/src/core/rs_io.o \
+		objs/src/core/rs_log.o \
+		objs/src/core/rs_slab.o \
+		objs/src/core/rs_ring_buffer.o \
+		objs/src/core/rs_ring_buffer2.o \
+		objs/src/core/rs_process.o \
+		objs/src/core/rs_conf.o \
+		objs/src/core/rs_core_info.o \
+		-lpthread -lm $(TEST_LIBS) $(TEST_DEFINE)
 
+clean: 
+	/bin/rm -rvf objs/src/* objs/rs_master objs/rs_slave objs/rs_unit_test
+
+# test
+objs/src/test/rs_unit_test.o: $(CORE_DEPS) \
+	test/unit/rs_unit_test.c
+	$(CC) -c $(CFLAGS) $(CORE_INCS) $(TEST_INCS) \
+		-o objs/src/test/rs_unit_test.o \
+		test/unit/rs_unit_test.c
 
 # core
 objs/src/core/rs_master.o: $(CORE_DEPS) \
@@ -194,6 +237,12 @@ objs/src/core/rs_conf.o: $(CORE_DEPS) \
 		-o objs/src/core/rs_conf.o \
 		src/core/rs_conf.c
 
+objs/src/core/rs_core_info.o: $(CORE_DEPS) \
+	src/core/rs_core_info.c
+	$(CC) -c $(CFLAGS) $(CORE_INCS) \
+		-o objs/src/core/rs_core_info.o \
+		src/core/rs_core_info.c
+
 # master
 objs/src/master/rs_master.o: $(CORE_DEPS) $(MASTER_DEPS) \
 	src/master/rs_master.c
@@ -206,6 +255,12 @@ objs/src/master/rs_master_info.o: $(CORE_DEPS) $(MASTER_DEPS) \
 	$(CC) -c $(CFLAGS) $(CORE_INCS) $(MASTER_INCS) \
 		-o objs/src/master/rs_master_info.o \
 		src/master/rs_master_info.c $(MASTER_DEFINE)
+
+objs/src/master/test.pb-c.o: $(CORE_DEPS) $(MASTER_DEPS) \
+	src/master/test.pb-c.c
+	$(CC) -c $(CFLAGS) $(CORE_INCS) $(MASTER_INCS) \
+		-o objs/src/master/test.pb-c.o \
+		src/master/test.pb-c.c $(MASTER_DEFINE)
 
 objs/src/master/rs_read_binlog.o: $(CORE_DEPS) $(MASTER_DEPS) \
 	src/master/rs_read_binlog.c
@@ -274,4 +329,3 @@ objs/src/slave/rs_redis_thread.o: $(CORE_DEPS) $(SLAVE_DEPS) \
 	$(CC) -c $(CFLAGS) $(CORE_INCS) $(SLAVE_INCS) \
 		-o objs/src/slave/rs_redis_thread.o \
 		src/slave/rs_redis_thread.c $(SLAVE_DEFINE)
-

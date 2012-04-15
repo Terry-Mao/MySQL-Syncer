@@ -11,12 +11,13 @@ static void *rs_start_io_thread(void *data);
 
 void *rs_start_dump_thread(void *data) 
 {
-    int                     err, i, ready, mfd, s;
+    int                     err, i, ready, mfd, s, id;
     ssize_t                 n;
     char                    *cbuf, *p;
     rs_request_dump_t       *rd;
     rs_request_dump_info_t  *rdi;
     rs_ring_buffer_data_t   *d;
+    rs_slab_t               *sl;
     fd_set                  rset, tset;
     struct timeval          tv;
 
@@ -24,6 +25,7 @@ void *rs_start_dump_thread(void *data)
     cbuf = NULL;
     rd = (rs_request_dump_t *) data;
     rdi = rs_master_info->req_dump_info;
+    sl = &(rd->slab);
     FD_ZERO(&rset);
     FD_ZERO(&tset);
     mfd = 0;
@@ -36,10 +38,11 @@ void *rs_start_dump_thread(void *data)
         goto free;
     }
 
-    cbuf = (char *) malloc(RS_REGISTER_SLAVE_CMD_LEN + 1);
+    id = rs_slab_clsid(sl, RS_REGISTER_SLAVE_CMD_LEN);
+    cbuf = (char *) rs_alloc_slab(sl, RS_REGISTER_SLAVE_CMD_LEN, id);
 
     if(cbuf == NULL) {
-        rs_log_err(rs_errno, "malloc failed(), register_slave_cmd");
+        rs_log_err(rs_errno, "rs_alloc_slab failed(), register_slave_cmd");
         goto free;
     } 
 
@@ -178,10 +181,6 @@ void *rs_start_dump_thread(void *data)
     } // END FOR
 
 free:
-
-    if(cbuf != NULL) {
-        free(cbuf);
-    }
 
     pthread_cleanup_pop(1);
 
@@ -413,6 +412,9 @@ void rs_free_request_dump(rs_request_dump_info_t *rdi, rs_request_dump_t *rd)
     /* free ring buffer */
     rs_free_ring_buffer(&(rd->ring_buf));
 
+    /* free slab */
+    rs_free_slab(&(rd->slab));
+
     /* close binlog fp */
     if(rd->binlog_fp != NULL) {
         if(fclose(rd->binlog_fp) != 0) {
@@ -427,9 +429,6 @@ void rs_free_request_dump(rs_request_dump_info_t *rdi, rs_request_dump_t *rd)
         }
     }
 
-
-    /* free binlog info */
-    rs_free_binlog_info(&(rd->binlog_info));
 
     /* update free thread p */
     rd->data = rdi->free_req_dump;

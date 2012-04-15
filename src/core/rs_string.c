@@ -182,11 +182,12 @@ char *rs_ncp_str_till(char *dst, char *src, char es, size_t len)
     return src;
 }
 
-u_char rs_uint64_to_str(uint64_t n, char *buf) 
+void rs_uint32_to_str(uint32_t n, char *buf) 
 {
-    u_char p;
-    char b[UINT64_LEN], *t;
+    uint32_t    p;
+    char        b[UINT32_LEN], *t, *s;
 
+    s = buf;
     t = b + UINT64_LEN;
     p = 0;
 
@@ -195,9 +196,8 @@ u_char rs_uint64_to_str(uint64_t n, char *buf)
         p += 1;
     } while (n /= 10);
 
-    rs_memcpy(buf, t, p);
-
-    return p;
+    s = rs_cpymem(s, t, p);
+    *s = '\0';
 }
 
 int64_t rs_timestr_to_msec(char *time) 

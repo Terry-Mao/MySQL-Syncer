@@ -14,34 +14,19 @@
 #define RS_MYSQL_INSERT_TEST        1
 #define RS_MYSQL_DELETE_TEST        2
 
-#define RS_MYSQL_TEST_COLUMN_NUM     2
-#define RS_MYSQL_TEST_VAR_COLUMN_NUM 1
-#define RS_MYSQL_TEST_NULL_BIT_NUM                                           \
-    ((RS_MYSQL_TEST_COLUMN_NUM - 1) / 8 + 1)
-
 #define RS_SYNC_DATA_CMD_SIZE           (PATH_MAX + UINT32_LEN + 3)
 
-/* nullbit + id(8) + msg_len(4) + msg_data */
-#define RS_MYSQL_TEST_DATA_SIZE                                              \
-    RS_MYSQL_TEST_NULL_BIT_NUM + 8 + 4 + 210
-
-#define RS_SYNC_DATA_SIZE                                                    \
-    (RS_SYNC_DATA_CMD_SIZE + rs_max(RS_MYSQL_TEST_DATA_SIZE, 0))
-
-
 typedef struct {
-
-    char        nullbit[RS_MYSQL_TEST_NULL_BIT_NUM]; 
-    uint64_t    id;         /* NULL BIT = index : 0, pos = 0 */
-    char        msg[210];   /* NULL BIT = index : 0, pos = 1 */
-
+    uint32_t    id;
+    char        msg[210];
 } rs_mysql_test_t;
 
 #define rs_mysql_test_t_init(t)                                              \
-    rs_memzero((t)->nullbit, RS_MYSQL_TEST_NULL_BIT_NUM);                    \
     (t)->id = 0;                                                             \
-    rs_memzero((t)->msg, 210)
+    rs_memzero(msg, 210)
 
+/* choose a bigest struct size */
+#define RS_SYNC_DATA_SIZE       rs_max(0, sizeof(rs_mysql_test_t))
 
 #define TEST_FILTER_KEY         "INSERT INTO test(msg) VALUES("
 #define TEST_FILTER_KEY_LEN     (sizeof(TEST_FILTER_KEY) - 1)
