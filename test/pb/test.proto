@@ -1,0 +1,5 @@
+
+message test {
+    required uint32 id = 1;
+    required string msg = 2;
+}
