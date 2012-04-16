@@ -18,6 +18,7 @@ extern rs_slave_info_t                  *rs_slave_info;
 #include <rs_slave_info.h>
 #include <rs_io_thread.h>
 #include <rs_redis_thread.h>
+#include <test.pb-c.h>
 
 #endif
 

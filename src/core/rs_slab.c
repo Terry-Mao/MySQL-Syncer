@@ -226,11 +226,6 @@ void rs_free_slab_chunk(rs_slab_t *sl, void *data, int id)
     uint32_t            size;
     void                **free_chunks;
     
-    if(id == RS_SLAB_OVERFLOW) {
-        free(data); 
-        return;
-    }
-
     c = &(sl->slab_class[id]);
 
     if (c->used_free_slab_n == c->free_slab_n) {
