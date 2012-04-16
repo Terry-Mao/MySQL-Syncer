@@ -176,6 +176,9 @@ void *rs_start_dump_thread(void *data)
             goto free;
         }
 
+        /* free slab chunk */
+        rs_free_slab_chunk(&(rd->sl), d->data, d->id);
+
         rs_get_ring_buffer2_advance(&(rd->ring_buf));
 
     } // END FOR
