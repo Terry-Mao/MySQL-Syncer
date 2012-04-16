@@ -33,6 +33,16 @@ typedef struct {
     void                    *end;
 } rs_ring_buffer2_t;
 
+#define rs_ring_buffer2_t_init(rb)                                           \
+    rb->rn = 0;                                                              \
+    rb->wn = 0;                                                              \
+    rb->size = 0;                                                            \
+    rb->num = 0;                                                             \
+    rb->rp = NULL;                                                           \
+    rb->wp = NULL;                                                           \
+    rb->start = NULL;                                                        \
+    rb->end = NULL
+
 
 int rs_init_ring_buffer2(rs_ring_buffer2_t *rb, uint32_t num);
 
@@ -41,5 +51,7 @@ void rs_get_ring_buffer2_advance(rs_ring_buffer2_t *rb);
 
 int rs_set_ring_buffer2(rs_ring_buffer2_t *rb, rs_ring_buffer2_data_t **data); 
 void rs_set_ring_buffer2_advance(rs_ring_buffer2_t *rb);
+
+void rs_free_ring_buffer2(rs_ring_buffer2_t *rb);
 
 #endif

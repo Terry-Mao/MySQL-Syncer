@@ -4,6 +4,8 @@
 
 static int rs_init_core_conf(rs_core_info_t *ci);
 
+rs_core_info_t  *rs_core_info = NULL;
+
 rs_core_info_t *rs_init_core_info(rs_core_info_t *oc) 
 {
     int             nl, nd;
@@ -108,39 +110,31 @@ free :
 
 static int rs_init_core_conf(rs_core_info_t *ci)
 {
-    rs_conf_kv_t *core_conf;
+    rs_conf_t *c;
 
-    core_conf = (rs_conf_kv_t *) malloc(sizeof(rs_conf_kv_t) * 
-            RS_CORE_CONF_NUM);
+    c = &(ci->conf);
 
-    if(core_conf == NULL) {
-        rs_log_err(rs_errno, "malloc() failed, rs_conf_kv_t * core_num");
+    if(
+            (rs_add_conf_kv(c, "user", &(ci->user), RS_CONF_STR) != RS_OK) 
+            ||
+            (rs_add_conf_kv(c, "pid", &(ci->pid_path), RS_CONF_STR) != RS_OK) 
+            ||
+            (rs_add_conf_kv(c, "log", &(ci->log_path), RS_CONF_STR) != RS_OK) 
+            ||
+            (rs_add_conf_kv(c, "log.level", &rs_log_level, 
+                            RS_CONF_UINT32) != RS_OK) 
+            ||
+            (rs_add_conf_kv(c, "daemon", &(ci->daemon), 
+                            RS_CONF_UINT32) != RS_OK)
+      )
+    {
+        rs_log_err(0, "rs_add_conf_kv() failed");
         return RS_ERR;
     }
 
-    ci->conf = core_conf;
-
-    rs_str_set(&(core_conf[0].k), "user");
-    rs_conf_v_set(&(core_conf[0].v), ci->user, RS_CONF_STR);
-
-    rs_str_set(&(core_conf[1].k), "pid");
-    rs_conf_v_set(&(core_conf[1].v), ci->pid_path, RS_CONF_STR);
-
-    rs_str_set(&(core_conf[2].k), "log");
-    rs_conf_v_set(&(core_conf[2].v), ci->log_path, RS_CONF_STR);
-
-    rs_str_set(&(core_conf[3].k), "log.level");
-    rs_conf_v_set(&(core_conf[3].v), rs_log_level, RS_CONF_UINT32);
-
-    rs_str_set(&(core_conf[4].k), "daemon");
-    rs_conf_v_set(&(core_conf[4].v), ci->daemon, RS_CONF_UINT32);
-
-    rs_str_set(&(core_conf[5].k), NULL);
-    rs_conf_v_set(&(core_conf[5].v), "", RS_CONF_NULL);
-
     /* init core conf */
-    if(rs_init_conf(rs_conf_path, RS_CORE_MODULE_NAME, core_conf) != RS_OK) {
-        rs_log_err(0, "core conf init failed");
+    if(rs_init_conf(c, rs_conf_path, RS_CORE_MODULE_NAME) != RS_OK) {
+        rs_log_err(0, "core conf init failed, %s", rs_conf_path);
         return RS_ERR;
     }
 
@@ -157,10 +151,10 @@ void rs_free_core(rs_core_info_t *ci)
             rs_close(ci->log_fd);
         }
 
-        if(ci->conf != NULL) {
-            rs_free_conf(ci->conf);
-            free(ci->conf);
-        }
+        /* free conf */
+        rs_free_conf(&(ci->conf));
+
+        free(ci->conf.kv);
 
         free(ci);
     }

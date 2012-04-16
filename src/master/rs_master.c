@@ -79,10 +79,9 @@ void rs_free_master(void *data)
             rs_close(mi->svr_fd);
         }
 
-        if(mi->conf != NULL) {
-            rs_free_conf(mi->conf);
-            free(mi->conf);
-        }
+        /* free conf */
+        rs_free_conf(&(mi->conf));
+        free(mi->conf.kv);
 
         free(mi);
     }

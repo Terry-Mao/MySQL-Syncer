@@ -23,7 +23,7 @@ typedef struct {
 
 #define rs_mysql_test_t_init(t)                                              \
     (t)->id = 0;                                                             \
-    rs_memzero(msg, 210)
+    rs_memzero((t)->msg, 210)
 
 /* choose a bigest struct size */
 #define RS_SYNC_DATA_SIZE       rs_max(0, sizeof(rs_mysql_test_t))

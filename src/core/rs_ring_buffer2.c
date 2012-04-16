@@ -14,6 +14,8 @@ int rs_init_ring_buffer2(rs_ring_buffer2_t *rb, uint32_t num)
         return RS_ERR;
     }
 
+    rs_ring_buffer2_t_init(rb);
+
     len =  sizeof(rs_ring_buffer2_data_t) * num;
 
     rb->num = num;
@@ -119,4 +121,11 @@ void rs_set_ring_buffer2_advance(rs_ring_buffer2_t *rb)
 #elif x86_32
     rs_log_debug(0, "ring buffer write : %llu, read : %llu", rb->wn, rb->rn);
 #endif
+}
+
+void rs_free_ring_buffer2(rs_ring_buffer2_t *rb)
+{
+    if(rb != NULL && rb->start != NULL) {
+        free(rb->start);
+    }
 }

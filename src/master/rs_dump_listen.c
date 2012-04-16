@@ -146,14 +146,14 @@ void *rs_start_accept_thread(void *data)
 
         /* init ring buffer */
         if(rs_init_ring_buffer2(&(rd->ring_buf), 
-                    RS_IO_THREAD_RING_BUFFER_NUM)) 
+                    RS_IO_THREAD_RING_BUFFER_NUM) != RS_OK) 
         {
             goto free;
         }
 
         /* init slab */
-        if(rs_init_slab(&(rd->slab), NULL, 100, 1.5, 1024 * 1024 * 100, 
-                    RS_SLABS_PREALLOC) != RS_OK) 
+        if(rs_init_slab(&(rd->slab), NULL, mi->slab_init_size, mi->slab_factor
+                    , mi->slab_mem_size, RS_SLAB_PREALLOC) != RS_OK) 
         {
             goto free;
         }

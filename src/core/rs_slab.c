@@ -220,7 +220,7 @@ void *rs_alloc_slab(rs_slab_t *sl, uint32_t size, int id)
     return p;
 }
 
-void rs_free_slab(rs_slab_t *sl, void *data, int id)
+void rs_free_slab_chunk(rs_slab_t *sl, void *data, int id)
 {
     rs_slab_class_t     *c;
     uint32_t            size;
@@ -281,7 +281,7 @@ static void *rs_slab_allocmem(rs_slab_t *sl, uint32_t size)
     return p;
 }
 
-void rs_free_chunks(rs_slab_t *sl)
+void rs_free_slabs(rs_slab_t *sl)
 {
     int i;
 

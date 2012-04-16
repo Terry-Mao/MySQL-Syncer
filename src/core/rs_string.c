@@ -49,7 +49,27 @@ uint64_t rs_str_to_uint64(char *p)
     i = 0;
 
     while(*p >= '0' && *p <= '9') {
+        i = i * 10.0 + *p++ - '0';
+    }
+
+    return i;
+}
+
+double rs_str_to_double(char *p)
+{
+    double i, j;
+    i = 0;
+    j = 0.1;
+
+    while(*p >= '0' && *p <= '9') {
         i = i * 10 + *p++ - '0';
+    }
+
+    if(*p++ == '.') {
+        while(*p >= '0' && *p <= '9') {
+            i += (*p++ - '0') * j;
+            j *= 0.1;
+        }
     }
 
     return i;
@@ -226,44 +246,44 @@ static char rs_ansi_escape_char(char src)
     char t;
 
     switch(src) {
-    case '0':
-        t = 0;
-        break;
+        case '0':
+            t = 0;
+            break;
 
-    case 'a':
-        t = 7;
-        break;
+        case 'a':
+            t = 7;
+            break;
 
-    case 'b':
-        t = 8;
-        break;
+        case 'b':
+            t = 8;
+            break;
 
-    case 't':
-        t = 9;
-        break;
+        case 't':
+            t = 9;
+            break;
 
-    case 'n':
-        t = 10;
-        break;
+        case 'n':
+            t = 10;
+            break;
 
-    case 'v':
-        t = 11;
-        break;
+        case 'v':
+            t = 11;
+            break;
 
-    case 'f':
-        t = 12;
-        break;
+        case 'f':
+            t = 12;
+            break;
 
-    case 'r':
-        t = 13;
-        break;
+        case 'r':
+            t = 13;
+            break;
 
-    case 'Z':
-        t = 26;
-        break;
+        case 'Z':
+            t = 26;
+            break;
 
-    default:
-        t = src;
+        default:
+            t = src;
     }
 
     return t;

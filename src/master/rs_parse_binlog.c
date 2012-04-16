@@ -128,23 +128,25 @@ int rs_def_query_handle(rs_request_dump_t *rd)
 
     bi->sql[bi->sl] = '\0';
 
+    if(rs_strncmp(bi->sql, TRAN_KEYWORD, TRAN_KEYWORD_LEN) == 0) {
+        bi->tran = 1;
+    } else if(rs_strncmp(bi->sql, TRAN_END_KEYWORD, 
+                TRAN_END_KEYWORD_LEN) == 0) {
+        bi->tran = 0;
+    }
+
     rs_log_debug(0, 
             "\n========== query event ==============\n"
             "database name          : %s\n"
             "query sql              : %s\n"
+            "next position          : %u\n"
+            "tran                   : %d\n"
             "\n=====================================\n",
             bi->db,
             bi->sql,
-            bi->np);
+            bi->np,
+            bi->tran);
 
-    if(rs_strncmp(bi->sql, TRAN_KEYWORD, TRAN_KEYWORD_LEN) == 0) {
-        rs_log_info("START TRANSACTION");
-        bi->tran = 1;
-    } else if(rs_strncmp(bi->sql, TRAN_END_KEYWORD, 
-                TRAN_END_KEYWORD_LEN) == 0) {
-        rs_log_info("END TRANSACTION");
-        bi->tran = 0;
-    }
 
     if(rs_binlog_filter_data(rd) != RS_OK) {
         return RS_ERR;
@@ -182,7 +184,20 @@ int rs_def_intvar_handle(rs_request_dump_t *rd)
         return r;
     }
 
-    rs_log_debug(0, "get increment id = %lu", bi->ai);
+#if x86_64
+    rs_log_debug(0, 
+            "\n========== intvar event ==============\n"
+            "increment id           : %lu"
+            "\n=====================================\n",
+            bi->ai);
+#elif x86_32
+    rs_log_debug(0, 
+            "\n========== intvar event ==============\n"
+            "increment id           : %llu"
+            "\n=====================================\n",
+            bi->ai);
+
+#endif
 
     bi->auto_incr = 1;
 
@@ -206,8 +221,13 @@ int rs_def_xid_handle(rs_request_dump_t *rd)
     }
 #endif
 
-    rs_log_info("END TRANSACTION");
     bi->tran = 0;
+
+    rs_log_debug(0, 
+            "\n========== intvar event ==============\n"
+            "tran                   : %d"
+            "\n=====================================\n",
+            bi->tran);
 
     return RS_OK;
 }

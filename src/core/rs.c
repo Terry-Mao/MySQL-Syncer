@@ -5,11 +5,6 @@
 
 static int rs_get_options(int argc, char *const *argv);
 
-rs_core_info_t  *rs_core_info = NULL;
-pid_t           rs_pid;
-char            *rs_conf_path = NULL;
-uint32_t        rs_log_level = RS_LOG_LEVEL_DEBUG;
-
 static int      rs_show_help = 0;
 
 

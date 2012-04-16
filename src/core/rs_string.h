@@ -18,7 +18,7 @@ typedef struct {
 #define rs_string(str)     { sizeof(str) - 1, (char *) str }
 #define rs_null_string     { 0, NULL }
 #define rs_str_set(str, text)                                               \
-    (str)->len = sizeof(text) - 1; (str)->data = (char *) text
+    (str)->len = rs_strlen(text); (str)->data = (char *) text
 
 #define rs_strncmp(s1, s2, n)  strncmp((const char *) s1, (const char *) s2, n)
 #define rs_strncasecmp(s1, s2, n)  strncmp((const char *) s1, (const char *) \
@@ -61,5 +61,6 @@ void rs_convert_to_hex(char *buf, char *src, uint32_t len);
 char *rs_ncp_str_till(char *dst, char *src, char es, size_t len);
 
 void rs_uint32_to_str(uint32_t n, char *buf);
+double rs_str_to_double(char *p);
 
 #endif

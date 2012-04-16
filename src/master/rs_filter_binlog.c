@@ -48,7 +48,7 @@ int rs_def_filter_data_handle(rs_request_dump_t *rd)
 int rs_def_create_data_handle(rs_request_dump_t *rd) 
 {
     int                     i, r, len, id, pb_len;
-    char                    *p, istr[UINT32_LEN];
+    char                    istr[UINT32_LEN];
     void                    *pb_buf;
     rs_binlog_info_t        *bi;
     rs_ring_buffer2_data_t  *d;
@@ -82,13 +82,13 @@ int rs_def_create_data_handle(rs_request_dump_t *rd)
 
         if(r == RS_OK) {
             
-            rs_uint32_to_str(bi->dump_pos, istr);
-            len = rs_strlen(rd->dump_file) + rd_strlen(istr) + 1; 
+            rs_uint32_to_str(rd->dump_pos, istr);
+            len = rs_strlen(rd->dump_file) + rs_strlen(istr) + 1; 
 
             if(bi->mev == 0) {
                 d->len = len;
                 d->id = rs_slab_clsid(sl, len);
-                d->data = rs_alloc_slab(sl, d->id);
+                d->data = rs_alloc_slab(sl, len, d->id);
 
                 if(d->data == NULL) {
                     return RS_ERR;
@@ -117,10 +117,10 @@ int rs_def_create_data_handle(rs_request_dump_t *rd)
                 }
 
                 /* free pb buffer */
-                rs_free_slab(sl, id);
+                rs_free_slab_chunk(sl, pb_buf, id);
             }
 
-            rs_set_ring_buffer2_advance(sl);
+            rs_set_ring_buffer2_advance(&(rd->ring_buf));
 
             break;
         }

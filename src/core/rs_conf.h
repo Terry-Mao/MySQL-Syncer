@@ -5,17 +5,19 @@
 #include <rs_config.h>
 #include <rs_core.h>
 
-#define RS_CONF_BUFFER_LEN  10
+#define RS_CONF_BUFFER_LEN      1024
+#define RS_CONF_DEFAULT_NUM     16
 
-#define RS_CONF_NULL      0
-#define RS_CONF_INT32     1 
-#define RS_CONF_UINT32    2
-#define RS_CONF_STR       3
+#define RS_CONF_NULL            0
+#define RS_CONF_INT32           1 
+#define RS_CONF_UINT32          2
+#define RS_CONF_STR             3
+#define RS_CONF_DOUBLE          4
 
 
-#define RS_CONF_MODULE_MAX_LEN  6
-#define RS_CONF_KEY_MAX_LEN     12
-#define RS_CONF_VALUE_MAX_LEN   PATH_MAX
+#define RS_CONF_MODULE_MAX_LEN  20
+#define RS_CONF_KEY_MAX_LEN     20
+#define RS_CONF_VALUE_MAX_LEN   200
 
 
 #define RS_CONF_COMMENT         '#'
@@ -42,8 +44,22 @@ typedef struct {
     rs_conf_v_t     v;
 } rs_conf_kv_t;
 
+typedef struct {
 
-int rs_init_conf(char *path, char *module, rs_conf_kv_t *kv);
-void rs_free_conf(rs_conf_kv_t *kv);
+    rs_conf_kv_t    *kv;
+
+    uint32_t        conf_n;
+    uint32_t        conf_idx;
+} rs_conf_t;
+
+#define rs_conf_t_init(c)                                                    \
+    (c)->kv = NULL;                                                          \
+    (c)->conf_n = 0;                                                         \
+    (c)->conf_idx = 0
+
+
+int rs_init_conf(rs_conf_t *conf, char *path, char *name); 
+int rs_add_conf_kv(rs_conf_t *c, char *key, void *value, char type);
+void rs_free_conf(rs_conf_t *c);
 
 #endif

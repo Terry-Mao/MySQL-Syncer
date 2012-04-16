@@ -95,6 +95,5 @@ struct rs_binlog_info_s {
 int rs_read_binlog(rs_request_dump_t *rd);
 int rs_has_next_binlog(rs_request_dump_t *rd);
 int rs_eof_read_binlog(rs_request_dump_t *rd, void *buf, size_t size);
-void rs_free_binlog_info(rs_binlog_info_t *bi);
 
 #endif

@@ -14,7 +14,7 @@
 
 
 #define rs_request_dump_t_init(rd)                                           \
-    rs_ring_buffer_t *rb;                                                    \
+    rs_ring_buffer2_t *rb;                                                   \
     rs_binlog_info_t *bi;                                                    \
     (rd)->dump_pos = 0;                                                      \
     (rd)->cli_fd = -1;                                                       \
@@ -28,7 +28,7 @@
     rs_memzero((rd)->dump_file, PATH_MAX + 1);                               \
     rb = &(rd->ring_buf);                                                    \
     bi = &(rd->binlog_info);                                                 \
-    rs_ring_buffer_t_init(rb);                                               \
+    rs_ring_buffer2_t_init(rb);                                              \
     rs_binlog_info_t_init(bi)                                               
 
 
@@ -45,7 +45,7 @@ struct rs_request_dump_s {
     FILE                *binlog_fp;  /* binlog fp */
     FILE                *binlog_idx_fp; /* binlog idx fp */
 
-    rs_ring_buffer_t    ring_buf;
+    rs_ring_buffer2_t   ring_buf;
     rs_binlog_info_t    binlog_info;
     rs_slab_t           slab;
 

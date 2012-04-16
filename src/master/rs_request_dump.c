@@ -16,7 +16,7 @@ void *rs_start_dump_thread(void *data)
     char                    *cbuf, *p;
     rs_request_dump_t       *rd;
     rs_request_dump_info_t  *rdi;
-    rs_ring_buffer_data_t   *d;
+    rs_ring_buffer2_data_t  *d;
     rs_slab_t               *sl;
     fd_set                  rset, tset;
     struct timeval          tv;
@@ -85,7 +85,7 @@ void *rs_start_dump_thread(void *data)
 
     for( ;; ) {
 
-        err = rs_get_ring_buffer(&(rd->ring_buf), &d);
+        err = rs_get_ring_buffer2(&(rd->ring_buf), &d);
 
         if(err == RS_ERR) {
             rs_log_err(0, "rs_get_ring_buffer() failed, dump data");
@@ -100,7 +100,7 @@ void *rs_start_dump_thread(void *data)
                     rs_cpu_pause();
                 }
 
-                err = rs_get_ring_buffer(&(rd->ring_buf), &d);
+                err = rs_get_ring_buffer2(&(rd->ring_buf), &d);
 
                 if(err == RS_OK) {
                     break;
@@ -176,7 +176,7 @@ void *rs_start_dump_thread(void *data)
             goto free;
         }
 
-        rs_get_ring_buffer_advance(&(rd->ring_buf));
+        rs_get_ring_buffer2_advance(&(rd->ring_buf));
 
     } // END FOR
 
@@ -410,10 +410,10 @@ void rs_free_request_dump(rs_request_dump_info_t *rdi, rs_request_dump_t *rd)
     }
 
     /* free ring buffer */
-    rs_free_ring_buffer(&(rd->ring_buf));
+    rs_free_ring_buffer2(&(rd->ring_buf));
 
     /* free slab */
-    rs_free_slab(&(rd->slab));
+    rs_free_slabs(&(rd->slab));
 
     /* close binlog fp */
     if(rd->binlog_fp != NULL) {

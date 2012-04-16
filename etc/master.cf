@@ -27,3 +27,12 @@ listen.port 1919
 
 # binlog index path
 binlog.index /var/log/mysql/mysql-bin.index
+
+# slab init size
+slab.initsize 100
+
+# slab max memory size (300MB)
+slab.memsize 314572800
+
+# slab slab class grow factor
+slab.factor 1.5

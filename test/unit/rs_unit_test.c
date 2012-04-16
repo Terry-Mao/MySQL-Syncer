@@ -4,32 +4,20 @@
 #include <CUnit/Basic.h>
 
 
-static int rs_get_options(int argc, char *const *argv);
+/* static int rs_get_options(int argc, char *const *argv); */
 static int rs_init_suite(void);
 static int rs_clean_suite(void);
 
 
 static void rs_ring_buffer2_test(void);
 static void rs_slab_test(void);
+static void rs_conf_test(void);
 
 
-static rs_slab_t slab;
-static rs_core_info_t  *ci;
-
-rs_core_info_t  *rs_core_info = NULL;
-pid_t           rs_pid;
-char            *rs_conf_path = NULL;
-uint32_t        rs_log_level = RS_LOG_LEVEL_DEBUG;
-
-
+/* static rs_core_info_t  *ci; */
 int main(int argc, char *const *argv)
 {
     CU_pSuite pSuite = NULL;
-
-    /* init argv */
-    if(rs_get_options(argc, argv) != RS_OK) {
-        return 1;
-    }
 
     /* initialize the CUnit test registry */
     if (CUE_SUCCESS != CU_initialize_registry())
@@ -47,7 +35,9 @@ int main(int argc, char *const *argv)
     if ((NULL == CU_add_test(pSuite, "test of rs_slab_test", 
                     rs_slab_test)) || 
             (NULL == CU_add_test(pSuite, "test of rs_ring_buffer2_test", 
-                rs_ring_buffer2_test))
+                                 rs_ring_buffer2_test)) ||
+            (NULL == CU_add_test(pSuite, "test of rs_conf_test",
+                                 rs_conf_test))
        )
     {
         CU_cleanup_registry();
@@ -69,12 +59,14 @@ static int rs_init_suite(void)
         return 1;
     }
 
+#if 0
     /* init core info */
     if((ci = rs_init_core_info(NULL)) == NULL) {
         return 1;
     }
 
     rs_core_info = ci;
+#endif
 
     return 0;
 }
@@ -84,17 +76,75 @@ static int rs_clean_suite(void)
     return 0;
 }
 
+static void rs_conf_test(void)
+{
+    rs_conf_t   conf;
+    char        *conf_path;
+    uint32_t    test, test2;
+    char        *test1;
+
+    conf_path = "etc/test.cf";
+    test1= NULL;
+    test = 0;
+    test2= 0;
+
+    rs_conf_t_init(&conf);
+
+    CU_ASSERT(rs_add_conf_kv(&conf, "test", &test, RS_CONF_UINT32) 
+            == RS_OK);
+    CU_ASSERT(rs_add_conf_kv(&conf, "test1", &test1, RS_CONF_STR) == RS_OK);
+    CU_ASSERT(rs_add_conf_kv(&conf, "test2", &test2, RS_CONF_UINT32) 
+            == RS_OK);
+    CU_ASSERT(rs_add_conf_kv(&conf, "test3", &test2, RS_CONF_UINT32) 
+            == RS_OK);
+    CU_ASSERT(rs_add_conf_kv(&conf, "test4", &test2, RS_CONF_UINT32) 
+            == RS_OK);
+    CU_ASSERT(rs_add_conf_kv(&conf, "test5", &test2, RS_CONF_UINT32) 
+            == RS_OK);
+    CU_ASSERT(rs_add_conf_kv(&conf, "test6", &test2, RS_CONF_UINT32) 
+            == RS_OK);
+    CU_ASSERT(rs_add_conf_kv(&conf, "test7", &test2, RS_CONF_UINT32) 
+            == RS_OK);
+    CU_ASSERT(rs_add_conf_kv(&conf, "test8", &test2, RS_CONF_UINT32) 
+            == RS_OK);
+    CU_ASSERT(rs_add_conf_kv(&conf, "test9", &test2, RS_CONF_UINT32) 
+            == RS_OK);
+    CU_ASSERT(rs_add_conf_kv(&conf, "test10", &test2, RS_CONF_UINT32) 
+            == RS_OK);
+    CU_ASSERT(rs_add_conf_kv(&conf, "test11", &test2, RS_CONF_UINT32) 
+            == RS_OK);
+    CU_ASSERT(rs_add_conf_kv(&conf, "test12", &test2, RS_CONF_UINT32) 
+            == RS_OK);
+    CU_ASSERT(rs_add_conf_kv(&conf, "test13", &test2, RS_CONF_UINT32) 
+            == RS_OK);
+    CU_ASSERT(rs_add_conf_kv(&conf, "test14", &test2, RS_CONF_UINT32) 
+            == RS_OK);
+    CU_ASSERT(rs_add_conf_kv(&conf, "test15", &test2, RS_CONF_UINT32) 
+            == RS_OK);
+    CU_ASSERT(rs_add_conf_kv(&conf, "test16", &test2, RS_CONF_UINT32) 
+            == RS_OK);
+    CU_ASSERT(rs_add_conf_kv(&conf, "test16", &test2, RS_CONF_UINT32) 
+            == RS_ERR);
+
+    CU_ASSERT(rs_init_conf(&conf, conf_path, RS_CORE_MODULE_NAME) == RS_OK);
+    CU_ASSERT(test == 1);
+    CU_ASSERT(rs_strcmp("abc", test1) == 0);
+    CU_ASSERT(test2 == 1234);
+}
+
 static void rs_slab_test(void)
 {
-    int     id, i;
-    char    *p;
+    return;
+    rs_slab_t   slab;
+    int         id, i;
+    char        *p;
 
     /* init slab  */
     CU_ASSERT(rs_init_slab(&slab, NULL, 100, 1.5, 1024 * 1024 * 2, 
                 RS_SLAB_PREALLOC) == RS_OK) 
 
-    /* alloc slab */
-    CU_ASSERT((id = rs_slab_clsid(&slab, 1747)) >= 0);
+        /* alloc slab */
+        CU_ASSERT((id = rs_slab_clsid(&slab, 1747)) >= 0);
 
     for(i = 0; i < 599; i++) {
         CU_ASSERT(rs_alloc_slab(&slab, 1747, id) != NULL); 
@@ -143,6 +193,7 @@ static void rs_slab_test(void)
 
 static void rs_ring_buffer2_test(void)
 {
+    return;
     int                     i;
     rs_ring_buffer2_t       rb; 
     rs_ring_buffer2_data_t  *d;
@@ -169,9 +220,10 @@ static void rs_ring_buffer2_test(void)
     }
 
     CU_ASSERT(rs_get_ring_buffer2(&rb, &d) == RS_EMPTY);
-    
+
 }
 
+#if 0
 static int rs_get_options(int argc, char *const *argv) 
 {
     char   *p;
@@ -216,3 +268,4 @@ next:
 
     return RS_OK;
 }
+#endif

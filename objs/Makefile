@@ -24,16 +24,18 @@ CORE_INCS = -I src/core
 
 MASTER_DEPS =  src/master/rs_master.h \
 			   src/master/rs_master_info.h \
-			   src/master/test.pb-c.h \
 			   src/master/rs_dump_listen.h \
 			   src/master/rs_request_dump.h \
 			   src/master/rs_read_binlog.h \
 			   src/master/rs_parse_binlog.h \
-			   src/master/rs_filter_binlog.h 
+			   src/master/rs_filter_binlog.h \
+			   src/master/test.pb-c.h
 
-MASTER_INCS = -I src/master
+MASTER_INCS = -I src/master -I /usr/local/include
 
 MASTER_DEFINE = -DMASTER -D$(CPUBIT)
+
+MASTER_LIBS = -lprotobuf-c
 
 SLAVE_DEPS =   src/slave/rs_slave.h \
 			   src/slave/rs_slave_info.h \
@@ -69,7 +71,8 @@ objs/rs_master:	objs/src/core/rs_master.o \
 	objs/src/master/rs_request_dump.o \
 	objs/src/master/rs_read_binlog.o \
 	objs/src/master/rs_parse_binlog.o \
-	objs/src/master/rs_filter_binlog.o
+	objs/src/master/rs_filter_binlog.o \
+	objs/src/master/test.pb-c.o
 
 objs/rs_slave:	objs/src/core/rs_slave.o \
 	objs/src/core/rs_errno.o \
@@ -116,13 +119,13 @@ master: objs/rs_master
 		objs/src/core/rs_core_info.o \
 		objs/src/master/rs_master.o \
 		objs/src/master/rs_master_info.o \
-		objs/src/master/test.pb-c.o \
 		objs/src/master/rs_dump_listen.o \
 		objs/src/master/rs_request_dump.o \
 		objs/src/master/rs_read_binlog.o \
 		objs/src/master/rs_parse_binlog.o \
 		objs/src/master/rs_filter_binlog.o \
-		-lpthread -lm $(MASTER_DEFINE)
+		objs/src/master/test.pb-c.o \
+		-lpthread -lm $(MASTER_LIBS) $(MASTER_DEFINE) 
 
 slave: objs/rs_slave
 	$(LINK) -o objs/rs_slave \
@@ -256,12 +259,6 @@ objs/src/master/rs_master_info.o: $(CORE_DEPS) $(MASTER_DEPS) \
 		-o objs/src/master/rs_master_info.o \
 		src/master/rs_master_info.c $(MASTER_DEFINE)
 
-objs/src/master/test.pb-c.o: $(CORE_DEPS) $(MASTER_DEPS) \
-	src/master/test.pb-c.c
-	$(CC) -c $(CFLAGS) $(CORE_INCS) $(MASTER_INCS) \
-		-o objs/src/master/test.pb-c.o \
-		src/master/test.pb-c.c $(MASTER_DEFINE)
-
 objs/src/master/rs_read_binlog.o: $(CORE_DEPS) $(MASTER_DEPS) \
 	src/master/rs_read_binlog.c
 	$(CC) -c $(CFLAGS) $(CORE_INCS) $(MASTER_INCS) \
@@ -291,6 +288,12 @@ objs/src/master/rs_request_dump.o: $(CORE_DEPS) $(MASTER_DEPS) \
 	$(CC) -c $(CFLAGS) $(CORE_INCS) $(MASTER_INCS) \
 		-o objs/src/master/rs_request_dump.o \
 		src/master/rs_request_dump.c $(MASTER_DEFINE)
+
+objs/src/master/test.pb-c.o: $(CORE_DEPS) $(MASTER_DEPS) \
+	src/master/test.pb-c.c
+	$(CC) -c $(CFLAGS) $(CORE_INCS) $(MASTER_INCS) \
+		-o objs/src/master/test.pb-c.o \
+		src/master/test.pb-c.c $(MASTER_DEFINE)
 
 # slave
 objs/src/slave/rs_slave.o: $(CORE_DEPS) $(SLAVE_DEPS) \

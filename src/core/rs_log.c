@@ -11,6 +11,8 @@ static rs_str_t rs_log_level_list[] = {
     rs_string(RS_LOG_LEVEL_DEBUG_STR)
 };
 
+uint32_t rs_log_level = RS_LOG_LEVEL_DEBUG;
+
 int rs_log_init(char *name, char *cwd, int flags) 
 {
     char    path[PATH_MAX + 1], *p;

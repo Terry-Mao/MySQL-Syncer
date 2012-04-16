@@ -3,12 +3,14 @@
 #include <rs_config.h>
 #include <rs_core.h>
 
-static int rs_get_conf_info(char *k, rs_conf_kv_t *kv, uint32_t *idx, char *t); 
+static int rs_get_conf_info(rs_conf_t *c, char *k, char *t, uint32_t *idx);
 static int rs_get_conf_str(char **dst, char *value);
 static int rs_get_conf_uint(uint32_t *dst, char *value);
 static int rs_get_conf_int(int32_t *dst, char *value);
-static int rs_set_conf_value(char *src, rs_conf_v_t v, char type);
+static int rs_get_conf_double(double *dst, char *value);
+static int rs_set_conf_value(rs_conf_v_t *v, char *src, char type); 
 
+char *rs_conf_path = NULL;
 
 /*
  * DESCRIPTION
@@ -20,7 +22,7 @@ static int rs_set_conf_value(char *src, rs_conf_v_t v, char type);
  *    On Success RS_OK is returned, On error RS_ERR is returned.
  *
  */
-int rs_init_conf(char *path, char *name, rs_conf_kv_t *kv) 
+int rs_init_conf(rs_conf_t *conf, char *path, char *name) 
 {
     int         fd, comment, key, value, module, eof, r;
     uint32_t    i, idx, m_len;
@@ -51,12 +53,12 @@ int rs_init_conf(char *path, char *name, rs_conf_kv_t *kv)
         return RS_ERR;
     }
 
-    rs_log_debug(0, "conf file = %s", path);
+    rs_log_debug(0, "conf file = %s, module = %s", path, name);
 
     fd = open(path, O_CREAT | O_RDONLY, 00666);
 
     if(fd == -1) {
-        rs_log_err(rs_errno, "rs_init_conf(\"%s\") failed", path);
+        rs_log_err(rs_errno, "rs_init_conf() failed, %s", path);
         goto free;
     }
 
@@ -193,13 +195,13 @@ int rs_init_conf(char *path, char *name, rs_conf_kv_t *kv)
                 *p = '\0';
 
                 /* get conf index */
-                if(rs_get_conf_info(k, kv, &idx, &t) != RS_OK) {
+                if(rs_get_conf_info(conf, k, &t, &idx) != RS_OK) {
                     rs_log_err(0, "unknow conf key \"%s\"", k);
                     goto free;
                 }
 
                 /* set value */
-                if(rs_set_conf_value(v, kv[idx].v, t) != RS_OK) {
+                if(rs_set_conf_value(&(conf->kv[idx].v), v, t) != RS_OK) {
                     goto free;
                 }
 
@@ -208,7 +210,8 @@ int rs_init_conf(char *path, char *name, rs_conf_kv_t *kv)
                 p = k;
                 i = 0;
 
-                rs_log_debug(0, "get conf key = %s, value = %s", k, v);
+                rs_log_debug(0, "get conf key = %s, type = %d, value = %s", 
+                        conf->kv[idx].k.data, conf->kv[idx].v.type, v);
 
                 continue;
             }
@@ -230,19 +233,69 @@ free :
     return r;
 }
 
-
-static int rs_get_conf_info(char *k, rs_conf_kv_t *kv, uint32_t *idx, char *t) 
+int rs_add_conf_kv(rs_conf_t *c, char *key, void *value, char type)
 {
-    int     i, found;
-    size_t  len;
+    uint32_t        size, i;
+    size_t          len;
+    rs_conf_kv_t    *kv;
+
+    len = rs_strlen(key);
+
+    for(i = 0; i < c->conf_idx; i++) {
+        if(c->kv[i].k.len == len && rs_strncmp(key, c->kv[i].k.data, len) 
+                == 0) 
+        {
+            rs_log_err(rs_errno, "config file has a dupication key, %s", key);
+            return RS_ERR;
+        }
+    }
+
+    if(c->kv == NULL || c->conf_n == c->conf_idx) {
+        /* resize kv*/    
+        size = (c->kv == NULL) ? RS_CONF_DEFAULT_NUM : c->conf_n * 2;
+        c->kv = realloc(c->kv, size * sizeof(rs_conf_kv_t));
+
+        if(c->kv == NULL) {
+            rs_log_err(rs_errno, "realloc() failed, rs_conf_kv_t");
+            return RS_ERR;
+        }
+
+        c->conf_n = size;
+    }
+
+
+
+    kv = &(c->kv[c->conf_idx++]);
+
+    kv->k.data = key;
+    kv->k.len = rs_strlen(key);
+    kv->v.data = value;
+    kv->v.type = type;
+
+    rs_log_debug(0, "key = %s, conf_idx = %u, conf_n = %u", kv->k.data, 
+            c->conf_idx, c->conf_n);
+
+    return RS_OK;
+}
+
+static int rs_get_conf_info(rs_conf_t *c, char *k, char *t, uint32_t *idx) 
+{
+    uint32_t    i, found;
+    size_t      len;
 
     found = 0;
     len = rs_strlen(k);
 
-    for(i = 0; kv[i].k.data; i++) {
-        if(kv[i].k.len == len && rs_strncmp(k, kv[i].k.data, len) == 0) {
+    for(i = 0; i < c->conf_idx; i++) {
+        /*
+           rs_log_debug(0, "key = %s, ken_len = %u, conf_idx = %u, i = %u", 
+           c->kv[i].k.data, c->kv[i].k.len, c->conf_idx, i);
+           */
+
+        if(c->kv[i].k.len == len && rs_strncmp(k, c->kv[i].k.data, len) == 0) 
+        {
             *idx = i;
-            *t = kv[i].v.type;
+            *t = c->kv[i].v.type;
             found = 1;
             break;
         }
@@ -255,7 +308,7 @@ static int rs_get_conf_info(char *k, rs_conf_kv_t *kv, uint32_t *idx, char *t)
     return RS_ERR;
 }
 
-static int rs_set_conf_value(char *src, rs_conf_v_t v, char type) 
+static int rs_set_conf_value(rs_conf_v_t *v, char *src, char type) 
 {
     int     r;
 
@@ -263,20 +316,24 @@ static int rs_set_conf_value(char *src, rs_conf_v_t v, char type)
 
     switch(type) {
 
-    case RS_CONF_INT32:
-        r = rs_get_conf_int(v.data, src);
-        break;
+        case RS_CONF_INT32:
+            r = rs_get_conf_int(v->data, src);
+            break;
 
-    case RS_CONF_UINT32:
-        r = rs_get_conf_uint(v.data, src);
-        break;
+        case RS_CONF_UINT32:
+            r = rs_get_conf_uint(v->data, src);
+            break;
 
-    case RS_CONF_STR:
-        r = rs_get_conf_str(v.data, src);
-        break;
+        case RS_CONF_STR:
+            r = rs_get_conf_str(v->data, src);
+            break;
 
-    default:
-        r = RS_ERR;
+        case RS_CONF_DOUBLE:
+            r = rs_get_conf_double(v->data, src);
+            break;
+
+        default:
+            r = RS_ERR;
     }
 
     return r;
@@ -307,6 +364,12 @@ static int rs_get_conf_uint(uint32_t *dst, char *value)
     return RS_OK;
 }
 
+static int rs_get_conf_double(double *dst, char *value) 
+{
+    *dst = rs_str_to_double(value);
+    return RS_OK;
+}
+
 
 static int rs_get_conf_int(int32_t *dst, char *value) 
 {
@@ -314,17 +377,17 @@ static int rs_get_conf_int(int32_t *dst, char *value)
     return RS_OK;
 }
 
-void rs_free_conf(rs_conf_kv_t *kv)
+void rs_free_conf(rs_conf_t *c)
 {
     int     i;
     void    *p;
 
     p = NULL;
 
-    if(kv != NULL) {
-        for(i = 0; kv[i].k.data; i++) {
-            if(kv[i].v.type == RS_CONF_STR) {
-                p = (void *) *((void **) kv[i].v.data);
+    if(c != NULL || c->kv != NULL) {
+        for(i = 0; c->kv[i].k.data; i++) {
+            if(c->kv[i].v.type == RS_CONF_STR) {
+                p = (void *) *((void **) c->kv[i].v.data);
                 if(p != NULL) {
                     free(p);
                 }

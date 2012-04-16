@@ -28,7 +28,7 @@ typedef struct {
     sigset_t        sig_set;
     siginfo_t       sig_info;
 
-    rs_conf_kv_t    *conf;
+    rs_conf_t       conf;
 
 } rs_core_info_t;
 
@@ -38,7 +38,7 @@ typedef struct {
     ci->daemon = 0;                                                          \
     ci->log_path = NULL;                                                     \
     ci->log_fd = -1;                                                         \
-    ci->conf = NULL
+    rs_conf_t_init(&(ci->conf))
 
 
 extern rs_core_info_t   *rs_core_info;

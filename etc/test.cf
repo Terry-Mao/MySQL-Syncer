@@ -1,18 +1,13 @@
 [core]
-
 # this is a master config file
-
 # execute user group
-user terry terry
 
-# pid file
-pid /tmp/redisync_master_test.pid
+# test
+test 1
 
-# daemon
-daemon 0
+# test1
+test1 abc
 
-# log path
-log /tmp/rs_master_test.log
+# test2
 
-# log debug level(DEBUG : 2, INFO : 1, ERR : 0)
-log.level 2
+test16 1234

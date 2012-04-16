@@ -5,6 +5,8 @@
 volatile sig_atomic_t rs_quit;
 volatile sig_atomic_t rs_reload;
 
+pid_t rs_pid;
+
 int rs_init_daemon()
 {
     int  fd;

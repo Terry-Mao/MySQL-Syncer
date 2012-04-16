@@ -28,6 +28,23 @@ rs_master_info_t *rs_init_master_info(rs_master_info_t *om)
         goto free;
     }
 
+    /* slab info */
+    if(mi->slab_factor <= 1) {
+        mi->slab_factor = RS_SLAB_GROW_FACTOR; 
+        rs_log_info("slab_facto use default value, %u", mi->slab_factor);
+    }
+
+    if(mi->slab_init_size <= 0) {
+        mi->slab_init_size = RS_SLAB_INIT_SIZE;
+        rs_log_info("slab_init_size use default value, %u", 
+                mi->slab_init_size);
+    }
+
+    if(mi->slab_mem_size <= 1 * 1024 * 1024) {
+        mi->slab_mem_size = RS_SLAB_MEM_SIZE; 
+        rs_log_info("slab_mem_size use default value, %u", mi->slab_mem_size);
+    }
+
     if(om != NULL) {
 
         /* init dump listen */
@@ -127,34 +144,36 @@ free:
 static int rs_init_master_conf(rs_master_info_t *mi)
 {
 
-    rs_conf_kv_t *master_conf;
+    rs_conf_t *c;
 
-    master_conf = (rs_conf_kv_t *) malloc(sizeof(rs_conf_kv_t) * 
-            RS_MASTER_CONF_NUM);
+    c = &(mi->conf);
 
-    if(master_conf == NULL) {
-        rs_log_err(rs_errno, "malloc() failed, rs_conf_kv_t * master_num");
+    if(
+            (rs_add_conf_kv(c, "listen.addr", &(mi->listen_addr), 
+                            RS_CONF_STR) != RS_OK) 
+            ||
+            (rs_add_conf_kv(c, "listen.port", &(mi->listen_port), 
+                            RS_CONF_INT32) != RS_OK) 
+            ||
+            (rs_add_conf_kv(c, "binlog.index", &(mi->binlog_idx_file), 
+                            RS_CONF_STR) != RS_OK) 
+            ||
+            (rs_add_conf_kv(c, "slab.factor", &(mi->slab_factor), 
+                            RS_CONF_DOUBLE) != RS_OK)
+            ||
+            (rs_add_conf_kv(c, "slab.memsize", &(mi->slab_mem_size), 
+                            RS_CONF_UINT32) != RS_OK)
+            ||
+            (rs_add_conf_kv(c, "slab.initsize", &(mi->slab_init_size), 
+                            RS_CONF_UINT32) != RS_OK)
+      )
+    {
+        rs_log_err(0, "rs_add_conf_kv() failed");
         return RS_ERR;
     }
 
-    mi->conf = master_conf;
-
-    rs_str_set(&(master_conf[0].k), "listen.addr");
-    rs_conf_v_set(&(master_conf[0].v), mi->listen_addr, RS_CONF_STR);
-
-    rs_str_set(&(master_conf[1].k), "listen.port");
-    rs_conf_v_set(&(master_conf[1].v), mi->listen_port, RS_CONF_INT32);
-
-    rs_str_set(&(master_conf[2].k), "binlog.index");
-    rs_conf_v_set(&(master_conf[2].v), mi->binlog_idx_file, RS_CONF_STR);
-
-    rs_str_set(&(master_conf[3].k), NULL);
-    rs_conf_v_set(&(master_conf[3].v), "", RS_CONF_NULL);
-
     /* init master conf */
-    if(rs_init_conf(rs_conf_path, RS_MASTER_MODULE_NAME, master_conf) 
-            != RS_OK) 
-    {
+    if(rs_init_conf(c, rs_conf_path, RS_MASTER_MODULE_NAME) != RS_OK) {
         rs_log_err(0, "master conf init failed");
         return RS_ERR;
     }
