@@ -177,7 +177,7 @@ void *rs_start_dump_thread(void *data)
         }
 
         /* free slab chunk */
-        rs_free_slab_chunk(&(rd->sl), d->data, d->id);
+        rs_free_slab_chunk(&(rd->slab), d->data, d->id);
 
         rs_ring_buffer2_data_t_init(d);
 
