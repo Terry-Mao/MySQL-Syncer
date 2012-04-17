@@ -8,9 +8,12 @@ static void rs_free_redis_thread(void *data);
 static redisReply *rs_redis_command(rs_slave_info_t *si, int free, 
         const char *fmt, ...);
 static int rs_redis_dml_message(rs_slave_info_t *si, char *buf, uint32_t len);
-static int rs_redis_insert_test(rs_slave_info_t *si, Test test);
-static int rs_redis_delete_test(rs_slave_info_t *si, Test test);
 
+static int rs_redis_insert_test(rs_slave_info_t *si, void *data, 
+        uint32_t len);
+
+static int rs_redis_delete_test(rs_slave_info_t *si, void *data, 
+        uint32_t len);
 
 void *rs_start_redis_thread(void *data) 
 {
@@ -75,7 +78,7 @@ void *rs_start_redis_thread(void *data)
             goto free;
         }
 
-        rs_memcpy(si->dump_file, d->data, p - d->data);
+        rs_memcpy(si->dump_file, d->data, p - (char *) d->data);
 
         p++;
 
@@ -87,14 +90,14 @@ void *rs_start_redis_thread(void *data)
         si->dump_pos = rs_estr_to_uint32(p - 1);
 
         /* COMMIT TO REDIS */
-        if(rs_redis_dml_message(si, p, d->len - (p - (cha *) d->data)) 
+        if(rs_redis_dml_message(si, p, d->len - (p - (char *) d->data)) 
                 != RS_OK) 
         {
             goto free;
         }
 
         /* flush slave.info, NOTICE : must skip "," */
-        if(rs_flush_slave_info(si, d->data, p - d->data) != RS_OK) {
+        if(rs_flush_slave_info(si, d->data, p - (char *) d->data) != RS_OK) {
             goto free;
         }
 
@@ -141,14 +144,14 @@ static int rs_redis_insert_test(rs_slave_info_t *si, void *data, uint32_t len)
 
     /* insert into redis */
     rs_redis_command(si, 1, "SET test_%u %s", test->id, test->msg);
-    
+
     /* free pb test */
-    test__free_unpacked(msg, NULL);
+    test__free_unpacked(test, NULL);
 
     return RS_OK;
 }
 
-static int rs_redis_delete_test(rs_slave_info_t *si, Test test)
+static int rs_redis_delete_test(rs_slave_info_t *si, void *data, uint32_t len)
 {
     Test *test;
 
@@ -157,9 +160,9 @@ static int rs_redis_delete_test(rs_slave_info_t *si, Test test)
 
     /* insert into redis */
     rs_redis_command(si, 1, "SET test_%u %s", test->id, "");
-    
+
     /* free pb test */
-    test__free_unpacked(msg, NULL);
+    test__free_unpacked(test, NULL);
 
     return RS_OK;
 }

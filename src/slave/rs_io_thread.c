@@ -43,7 +43,7 @@ void *rs_start_io_thread(void *data)
         goto free;
     }
 
-    sl = &(rd->slab);
+    sl = &(si->slab);
 
     id = rs_slab_clsid(sl, RS_REGISTER_SLAVE_CMD_LEN);
     cbuf = (char *) rs_alloc_slab(sl, RS_REGISTER_SLAVE_CMD_LEN, id);
@@ -171,13 +171,13 @@ void *rs_start_io_thread(void *data)
                 d->data = rs_alloc_slab(sl, pack_len, d->id);
 
                 if(d->data == NULL) {
-                    return RS_ERR;
+                    goto free;
                 }
 
                 /* while get a full packet */
                 while(cur_len != pack_len) {
 
-                    n = rs_read(si->svr_fd, d->data + cur_len, 
+                    n = rs_read(si->svr_fd, (char *) d->data + cur_len, 
                             pack_len - cur_len);
 
                     if(n < 0) {

@@ -31,6 +31,23 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
         goto free;
     }
 
+    /* slab info */
+    if(si->slab_factor <= 1) {
+        si->slab_factor = RS_SLAB_GROW_FACTOR; 
+        rs_log_info("slab_facto use default value, %u", si->slab_factor);
+    }
+
+    if(si->slab_init_size <= 0) {
+        si->slab_init_size = RS_SLAB_INIT_SIZE;
+        rs_log_info("slab_init_size use default value, %u", 
+                si->slab_init_size);
+    }
+
+    if(si->slab_mem_size <= 1 * 1024 * 1024) {
+        si->slab_mem_size = RS_SLAB_MEM_SIZE; 
+        rs_log_info("slab_mem_size use default value, %u", si->slab_mem_size);
+    }
+
     /* init thread attr */
     if((err = pthread_attr_init(&(si->thread_attr))) != 0) {
         rs_log_err(err, "pthread_attr_init() failed, thread_attr");
@@ -107,15 +124,16 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
     }/*}}}*/
 
     if(nrb) {
-        si->ring_buf = (rs_ring_buffer_t *) malloc(sizeof(rs_ring_buffer_t));
+        si->ring_buf = (rs_ring_buffer2_t *) 
+            malloc(sizeof(rs_ring_buffer2_t));
 
         if(si->ring_buf == NULL) {
             rs_log_err(rs_errno, "malloc() failed, rs_ring_buffer_t");
         }
 
         /* init ring buffer for io and redis thread */
-        if(rs_init_ring_buffer(si->ring_buf,  RS_SYNC_DATA_SIZE, 
-                    2046) != RS_OK) {
+        if(rs_init_ring_buffer2(si->ring_buf, RS_RING_BUFFER_NUM) != RS_OK) {
+            goto free;
         }
     }
 
@@ -144,15 +162,17 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
     }
 
     /* free old slave info */
+    #if 0
     if(os != NULL) {
         if(nrb) {
-            rs_free_ring_buffer(os->ring_buf);
+            rs_free_ring_buffer2(os->ring_buf);
         }
 
         free(os->ring_buf);
         free(os->conf);
         free(os);
     }
+    #endif
 
     return si;
 
@@ -204,22 +224,31 @@ static int rs_init_slave_conf(rs_slave_info_t *si)
             (rs_add_conf_kv(c, "listen.addr", &(si->listen_addr), 
                             RS_CONF_STR) != RS_OK)
             ||
-            (rs_add_conf_kv(c, "listen.port", &(mi->listen_port),
+            (rs_add_conf_kv(c, "listen.port", &(si->listen_port),
                             RS_CONF_INT32) != RS_OK)
             ||
-            (rs_add_conf_kv(c, "slave.info", (si->slave_info), 
+            (rs_add_conf_kv(c, "slave.info", &(si->slave_info), 
                             RS_CONF_STR) != RS_OK)
             || 
-            (rs_add_conf_kv(c, "redis.addr", (si->redis_addr), 
+            (rs_add_conf_kv(c, "redis.addr", &(si->redis_addr), 
                             RS_CONF_STR) != RS_OK)
             ||
-            (rs_add_conf_kv(c, "redis.port", (si->redis_port), 
+            (rs_add_conf_kv(c, "redis.port", &(si->redis_port), 
                             RS_CONF_INT32) != RS_OK)
-      ) 
-    {
-        rs_log_err(0, "rs_add_conf_kv() failed"); 
-        return RS_ERR;
-    }
+            ||
+            (rs_add_conf_kv(c, "slab.factor", &(si->slab_factor), 
+                            RS_CONF_DOUBLE) != RS_OK)
+            ||
+            (rs_add_conf_kv(c, "slab.memsize", &(si->slab_mem_size), 
+                            RS_CONF_UINT32) != RS_OK)
+            ||
+            (rs_add_conf_kv(c, "slab.initsize", &(si->slab_init_size), 
+                            RS_CONF_UINT32) != RS_OK)
+            ) 
+            {
+                rs_log_err(0, "rs_add_conf_kv() failed"); 
+                return RS_ERR;
+            }
 
     /* init master conf */
     if(rs_init_conf(c, rs_conf_path, RS_SLAVE_MODULE_NAME) != RS_OK) {

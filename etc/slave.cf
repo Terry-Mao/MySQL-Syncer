@@ -1,0 +1,34 @@
+ [core] 
+# this is a master config file
+
+# user group
+user terry terry
+
+# pid
+pid /tmp/rs_slave.pid
+
+# daemon
+daemon 1
+
+# log path
+log /tmp/rs_slave.log
+
+# log debug level(DEBUG : 2, INFO : 1, ERR : 0)
+log.level 2
+
+[slave]
+# listen addr
+listen.addr 127.0.0.1
+
+# listen port
+listen.port 1919
+
+# slave.info path
+slave.info /home/terry/Documents/MySQL-Syncer/etc/slave.info
+
+# redis addr
+redis.addr 127.0.0.1
+
+# redis port
+redis.port 6375
+

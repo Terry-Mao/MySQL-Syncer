@@ -145,8 +145,7 @@ void *rs_start_accept_thread(void *data)
         rd->cli_fd = cli_fd;
 
         /* init ring buffer */
-        if(rs_init_ring_buffer2(&(rd->ring_buf), 
-                    RS_IO_THREAD_RING_BUFFER_NUM) != RS_OK) 
+        if(rs_init_ring_buffer2(&(rd->ring_buf), RS_RING_BUFFER_NUM) != RS_OK) 
         {
             goto free;
         }

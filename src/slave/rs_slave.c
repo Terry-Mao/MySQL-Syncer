@@ -57,7 +57,7 @@ void rs_free_slave(void *data)
         }
 
         if(si->ring_buf != NULL) {
-            rs_free_ring_buffer(si->ring_buf);
+            rs_free_ring_buffer2(si->ring_buf);
             free(si->ring_buf);
         }
 
@@ -70,10 +70,8 @@ void rs_free_slave(void *data)
             rs_log_err(err, "pthread_attr_destroy() failed, thread_attr");
         }
 
-        if(si->conf != NULL) {
-            rs_free_conf(si->conf);
-            free(si->conf);
-        }
+        rs_free_conf(&(si->conf));
+        free(si->conf.kv);
 
         free(si);
     }

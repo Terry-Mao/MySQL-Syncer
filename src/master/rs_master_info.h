@@ -6,8 +6,10 @@
 #include <rs_core.h>
 #include <rs_master.h>
 
-
-#define RS_MASTER_CONF_NUM  5
+#define RS_RING_BUFFER_NUM              50000
+#define RS_SLAB_GROW_FACTOR             1.5
+#define RS_SLAB_INIT_SIZE               100
+#define RS_SLAB_MEM_SIZE                (100 * 1024 * 1024)
 
 struct rs_master_info_s {
     char                    *listen_addr;   /* dump listen addr */
