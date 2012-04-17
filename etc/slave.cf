@@ -8,7 +8,7 @@ user terry terry
 pid /tmp/rs_slave.pid
 
 # daemon
-daemon 1
+daemon 0
 
 # log path
 log /tmp/rs_slave.log
@@ -32,3 +32,11 @@ redis.addr 127.0.0.1
 # redis port
 redis.port 6375
 
+# slab init size
+slab.initsize 100
+
+# slab max memory size (10MB)
+slab.memsize 10485760
+
+# slab slab class grow factor
+slab.factor 1.5

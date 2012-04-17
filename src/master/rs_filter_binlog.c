@@ -27,7 +27,7 @@ int rs_def_filter_data_handle(rs_request_dump_t *rd)
         }
     }
 
-    if(bi->tran == 0 && rs_memcmp(bi->sql, TEST_FILTER_KEY, 
+    if(bi->tran == 1 && rs_memcmp(bi->sql, TEST_FILTER_KEY, 
                 TEST_FILTER_KEY_LEN) == 0) {
 
         rs_mysql_test_t *t = (rs_mysql_test_t *) bi->data; 
@@ -48,7 +48,7 @@ int rs_def_filter_data_handle(rs_request_dump_t *rd)
 int rs_def_create_data_handle(rs_request_dump_t *rd) 
 {
     int                     i, r, len, id, pb_len;
-    char                    istr[UINT32_LEN];
+    char                    *p, istr[UINT32_LEN];
     void                    *pb_buf;
     rs_binlog_info_t        *bi;
     rs_ring_buffer2_data_t  *d;
@@ -88,7 +88,7 @@ int rs_def_create_data_handle(rs_request_dump_t *rd)
             }
 
             rs_uint32_to_str(rd->dump_pos, istr);
-            len = rs_strlen(rd->dump_file) + rs_strlen(istr) + 1; 
+            len = rs_strlen(rd->dump_file) + rs_strlen(istr) + 1 + 1 + 1; 
 
             if(bi->mev == 0) {
 
@@ -100,11 +100,20 @@ int rs_def_create_data_handle(rs_request_dump_t *rd)
                     return RS_ERR;
                 }
 
+                len = snprintf(d->data, d->len, "%s,%u,%c", rd->dump_file, 
+                        rd->dump_pos, bi->mev);
+
+                if(len < 0) {
+                    rs_log_err(rs_errno, "snprint() failed, dump cmd"); 
+                    return RS_ERR;
+                }
+
             } else {
-                Test t;
+                Test t = TEST__INIT;
                 rs_create_test_event(&t, bi->data);
                 pb_len = test__get_packed_size(&t);
 
+                /* alloc mem for pb */
                 id = rs_slab_clsid(sl, pb_len);
                 pb_buf = rs_alloc_slab(sl, pb_len, id);
 
@@ -114,6 +123,7 @@ int rs_def_create_data_handle(rs_request_dump_t *rd)
 
                 len += pb_len;
 
+                /* alloc mem for cmd */
                 d->len = len;
                 d->id = rs_slab_clsid(sl, len);
                 d->data = rs_alloc_slab(sl, len, d->id);
@@ -121,6 +131,18 @@ int rs_def_create_data_handle(rs_request_dump_t *rd)
                 if(d->data == NULL) {
                     return RS_ERR;
                 }
+
+                len = snprintf(d->data, d->len, "%s,%u,%c", rd->dump_file, 
+                        rd->dump_pos, bi->mev);
+
+                if(len < 0) {
+                    rs_log_err(rs_errno, "snprint() failed, dump cmd"); 
+                    return RS_ERR;
+                }
+
+                p = (char *) d->data + len;
+                test__pack(&t, pb_buf);
+                rs_memcpy(p, pb_buf, pb_len);
 
                 /* free pb buffer */
                 rs_free_slab_chunk(sl, pb_buf, id);
@@ -171,6 +193,15 @@ void rs_create_test_event(Test *pb_t, void *data)
     rs_mysql_test_t *t;
 
     t = (rs_mysql_test_t *) data;
+
+    rs_log_debug(0, 
+            "\n------------------------\n"
+            "id             : %u\n" 
+            "msg            : %s"
+            "\n------------------------\n",
+            t->id,
+            t->msg
+            );
 
     pb_t->id = t->id;
     pb_t->msg = t->msg;

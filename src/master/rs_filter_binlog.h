@@ -28,10 +28,10 @@ typedef struct {
 /* choose a bigest struct size */
 #define RS_SYNC_DATA_SIZE       rs_max(0, sizeof(rs_mysql_test_t))
 
-#define TEST_FILTER_KEY         "INSERT INTO test(msg) VALUES("
+#define TEST_FILTER_KEY         "INSERT INTO t1(Msg) VALUES("
 #define TEST_FILTER_KEY_LEN     (sizeof(TEST_FILTER_KEY) - 1)
 
-#define TEST_COLUMN_MSG         "INSERT INTO test(msg) VALUES('"
+#define TEST_COLUMN_MSG         "INSERT INTO t1(Msg) VALUES('"
 #define TEST_COLUMN_MSG_LEN     (sizeof(TEST_COLUMN_MSG) - 1)
 
 

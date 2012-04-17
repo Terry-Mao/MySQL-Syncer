@@ -123,6 +123,13 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
 #endif
     }/*}}}*/
 
+    /* init slab */
+    if(rs_init_slab(&(si->slab), NULL, si->slab_init_size, si->slab_factor
+                , si->slab_mem_size, RS_SLAB_PREALLOC) != RS_OK) 
+    {
+        goto free;
+    }
+
     if(nrb) {
         si->ring_buf = (rs_ring_buffer2_t *) 
             malloc(sizeof(rs_ring_buffer2_t));
@@ -162,7 +169,7 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
     }
 
     /* free old slave info */
-    #if 0
+#if 0
     if(os != NULL) {
         if(nrb) {
             rs_free_ring_buffer2(os->ring_buf);
@@ -172,7 +179,7 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
         free(os->conf);
         free(os);
     }
-    #endif
+#endif
 
     return si;
 

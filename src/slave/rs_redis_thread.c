@@ -70,6 +70,8 @@ void *rs_start_redis_thread(void *data)
             }
         }
 
+        rs_log_debug(0, "d->data = %s", d->data);
+
         p = d->data;
 
         /* get flush info */
@@ -88,6 +90,9 @@ void *rs_start_redis_thread(void *data)
         }
 
         si->dump_pos = rs_estr_to_uint32(p - 1);
+
+        rs_log_debug(0, "total len = %u", d->len);
+        rs_log_debug(0, "file,pos = %u", (p - (char *) d->data));
 
         /* COMMIT TO REDIS */
         if(rs_redis_dml_message(si, p, d->len - (p - (char *) d->data)) 
@@ -122,12 +127,14 @@ static int rs_redis_dml_message(rs_slave_info_t *si, char *buf, uint32_t len)
     p++; /* skip , */
     t = *p++;
 
+    rs_log_debug(0, "pb len = %u", len - 2);
+
     if(t == RS_MYSQL_SKIP_DATA) {
         return RS_OK;
     } else if(t == RS_MYSQL_INSERT_TEST) {
-        return rs_redis_insert_test(si, p, len - 1);
+        return rs_redis_insert_test(si, p, len - 2);
     } else if(t == RS_MYSQL_DELETE_TEST) {
-        return rs_redis_delete_test(si, p, len - 1); 
+        return rs_redis_delete_test(si, p, len - 2); 
     }
 
     rs_log_info("unkonw cmd type = %d", t);
@@ -141,6 +148,11 @@ static int rs_redis_insert_test(rs_slave_info_t *si, void *data, uint32_t len)
 
     /* unpack the buffer */
     test = test__unpack(NULL, len, data);
+
+    if(test == NULL) {
+        rs_log_err(rs_errno, "test__unpack() failed");
+        return RS_ERR;
+    }
 
     /* insert into redis */
     rs_redis_command(si, 1, "SET test_%u %s", test->id, test->msg);

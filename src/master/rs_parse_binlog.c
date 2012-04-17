@@ -224,7 +224,7 @@ int rs_def_xid_handle(rs_request_dump_t *rd)
     bi->tran = 0;
 
     rs_log_debug(0, 
-            "\n========== intvar event ==============\n"
+            "\n========== xid event ==============\n"
             "tran                   : %d"
             "\n=====================================\n",
             bi->tran);
