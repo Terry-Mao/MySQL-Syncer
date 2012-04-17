@@ -6,6 +6,8 @@
 static int rs_init_slave_conf(rs_slave_info_t *mi);
 static int rs_parse_slave_info(rs_slave_info_t *s);
 
+rs_slave_info_t     *rs_slave_info = NULL;
+
 rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os) 
 {
     int                 nr, ni, nrb, err;
@@ -56,11 +58,12 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
         goto free;
     }
 
-    if(os != NULL) {
-
+    if(os != NULL) {/*{{{*/
+#if 0
+/* TODO RELOAD */
         /* dump file or pos */
         nrb = (os->dump_pos != si->dump_pos || 
-                        rs_strcmp(os->dump_file, si->dump_file) != 0);
+                rs_strcmp(os->dump_file, si->dump_file) != 0);
 
         /* redis addr or port */
         nr = (os->redis_port != si->redis_port || 
@@ -100,12 +103,12 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
         if(!nrb) {
             si->ring_buf = os->ring_buf;
         }
-
-    }
+#endif
+    }/*}}}*/
 
     if(nrb) {
         si->ring_buf = (rs_ring_buffer_t *) malloc(sizeof(rs_ring_buffer_t));
-        
+
         if(si->ring_buf == NULL) {
             rs_log_err(rs_errno, "malloc() failed, rs_ring_buffer_t");
         }
@@ -158,6 +161,7 @@ free:
     /* free new slave info */
     rs_free_slave(si);
 
+#if 0
     /* rollback */
     if(os != NULL) {
         if(ni) {
@@ -186,45 +190,39 @@ free:
             }
         }
     }
-
+#endif
     return NULL;
 }
 
 static int rs_init_slave_conf(rs_slave_info_t *si)
 {
+    rs_conf_t *c;
 
-    rs_conf_kv_t *slave_conf;
+    c = &(si->conf);
 
-    slave_conf = (rs_conf_kv_t *) malloc(sizeof(rs_conf_kv_t) * 
-            RS_SLAVE_CONF_NUM);
-
-    if(slave_conf == NULL) {
-        rs_log_err(rs_errno, "malloc() failed, rs_conf_kv_t * slave_num");
+    if(
+            (rs_add_conf_kv(c, "listen.addr", &(si->listen_addr), 
+                            RS_CONF_STR) != RS_OK)
+            ||
+            (rs_add_conf_kv(c, "listen.port", &(mi->listen_port),
+                            RS_CONF_INT32) != RS_OK)
+            ||
+            (rs_add_conf_kv(c, "slave.info", (si->slave_info), 
+                            RS_CONF_STR) != RS_OK)
+            || 
+            (rs_add_conf_kv(c, "redis.addr", (si->redis_addr), 
+                            RS_CONF_STR) != RS_OK)
+            ||
+            (rs_add_conf_kv(c, "redis.port", (si->redis_port), 
+                            RS_CONF_INT32) != RS_OK)
+      ) 
+    {
+        rs_log_err(0, "rs_add_conf_kv() failed"); 
         return RS_ERR;
     }
 
-    si->conf = slave_conf;
-
-    rs_str_set(&(slave_conf[0].k), "listen.addr");
-    rs_conf_v_set(&(slave_conf[0].v), si->listen_addr, RS_CONF_STR);
-
-    rs_str_set(&(slave_conf[1].k), "listen.port");
-    rs_conf_v_set(&(slave_conf[1].v), si->listen_port, RS_CONF_INT32);
-
-    rs_str_set(&(slave_conf[2].k), "slave.info");
-    rs_conf_v_set(&(slave_conf[2].v), si->slave_info, RS_CONF_STR);
-
-    rs_str_set(&(slave_conf[3].k), "redis.addr");
-    rs_conf_v_set(&(slave_conf[3].v), si->redis_addr, RS_CONF_STR);
-
-    rs_str_set(&(slave_conf[4].k), "redis.port");
-    rs_conf_v_set(&(slave_conf[4].v), si->redis_port, RS_CONF_INT32);
-
-    rs_str_set(&(slave_conf[5].k), NULL);
-    rs_conf_v_set(&(slave_conf[5].v), "", RS_CONF_NULL);
-
     /* init master conf */
-    if(rs_init_conf(rs_conf_path, RS_SLAVE_MODULE_NAME, slave_conf) != RS_OK) {
+    if(rs_init_conf(c, rs_conf_path, RS_SLAVE_MODULE_NAME) != RS_OK) {
         rs_log_err(0, "slave conf init failed");
         return RS_ERR;
     }
@@ -243,7 +241,7 @@ static int rs_parse_slave_info(rs_slave_info_t *si)
     n = rs_read(si->info_fd, buf, RS_SLAVE_INFO_STR_LEN);
 
     if(n < 0) {
-        rs_log_debug(0, "rs_read() in rs_parse_slave_info failed");
+        rs_log_debug(0, "rs_read() failed, rs_parse_slave_info");
         return RS_ERR;
     } else if (n > 0) { 
         buf[n] = '\0';
@@ -277,7 +275,7 @@ int rs_flush_slave_info(rs_slave_info_t *si, char *buf, size_t len)
     rs_log_info("flush slave.info buf = %*.*s", len, len, buf);
 
     if(lseek(si->info_fd, 0, SEEK_SET) == -1) {
-        rs_log_err(rs_errno, "lseek(\"%s\") failed", si->slave_info);
+        rs_log_err(rs_errno, "lseek() failed, %s", si->slave_info);
         return RS_ERR;
     }
 
@@ -288,14 +286,13 @@ int rs_flush_slave_info(rs_slave_info_t *si, char *buf, size_t len)
     } 
 
     if(fdatasync(si->info_fd) != 0) {
-        rs_log_err(rs_errno, "fdatasync(\"%s\") failed", si->slave_info);
+        rs_log_err(rs_errno, "fdatasync() failed, %s", si->slave_info);
         return RS_ERR;
     }
 
     /* truncate other remained file bytes */
     if(truncate(si->slave_info, len) != 0) {
-        rs_log_err(rs_errno, "truncate(\"%s\", %d) failed", 
-                si->slave_info, len);
+        rs_log_err(rs_errno, "truncate() failed, %s:%u", si->slave_info, len);
         return RS_ERR;
     }
 

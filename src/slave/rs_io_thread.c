@@ -19,14 +19,15 @@ static void rs_free_io_thread(void *data);
  */
 void *rs_start_io_thread(void *data) 
 {
-    int                     r, sock_err, i;
+    int                     r, sock_err, i, id;
     socklen_t               len;
     uint32_t                l, pack_len, cur_len;
     ssize_t                 n;
-    char                    cbuf[PATH_MAX + 1 + UINT32_LEN];
+    char                    *cbuf;
     struct                  sockaddr_in svr_addr;
     rs_slave_info_t         *si;
-    rs_ring_buffer_data_t   *d;
+    rs_ring_buffer2_data_t  *d;
+    rs_slab_t               *sl;
 
     /* init var */
     i = 0;
@@ -41,6 +42,16 @@ void *rs_start_io_thread(void *data)
         rs_log_err(0, "io thread can not get slave info struct"); 
         goto free;
     }
+
+    sl = &(rd->slab);
+
+    id = rs_slab_clsid(sl, RS_REGISTER_SLAVE_CMD_LEN);
+    cbuf = (char *) rs_alloc_slab(sl, RS_REGISTER_SLAVE_CMD_LEN, id);
+
+    if(cbuf == NULL) {
+        rs_log_err(rs_errno, "rs_alloc_slab failed(), register_slave_cmd");
+        goto free;
+    } 
 
     /* connect to master */
     svr_addr.sin_family = AF_INET;
@@ -72,7 +83,8 @@ void *rs_start_io_thread(void *data)
         }
 
         if(connect(si->svr_fd, (const struct sockaddr *) &svr_addr, 
-                    sizeof(svr_addr)) == -1) {
+                    sizeof(svr_addr)) == -1) 
+        {
             if(i % 60 == 0) {
                 i = 0;
                 rs_log_err(rs_errno, "connect() failed, addr = %s:%d", 
@@ -101,7 +113,7 @@ void *rs_start_io_thread(void *data)
         /* add to ring buffer */
         for( ;; ) {
 
-            r = rs_set_ring_buffer(si->ring_buf, &d);
+            r = rs_set_ring_buffer2(si->ring_buf, &d);
 
             if(r == RS_FULL) {
                 if(i % 60 == 0) {
@@ -131,6 +143,11 @@ void *rs_start_io_thread(void *data)
 
             if(r == RS_OK) {
 
+                /* free slab chunk */
+                if(d->data != NULL && d->id > 0 && d->len > 0) {
+                    rs_free_slab_chunk(sl, d->data, d->id); 
+                }
+
                 cur_len = 0;
 
                 /* get packet length */ 
@@ -147,6 +164,15 @@ void *rs_start_io_thread(void *data)
                 }
 
                 rs_log_info("get cmd packet length = %u", pack_len);
+
+                /* alloc memory */
+                d->len = pack_len;
+                d->id = rs_slab_clsid(sl, pack_len);
+                d->data = rs_alloc_slab(sl, pack_len, d->id);
+
+                if(d->data == NULL) {
+                    return RS_ERR;
+                }
 
                 /* while get a full packet */
                 while(cur_len != pack_len) {
@@ -167,9 +193,7 @@ void *rs_start_io_thread(void *data)
                     cur_len += (uint32_t) n;
                 }
 
-                d->len = pack_len;
-
-                rs_set_ring_buffer_advance(si->ring_buf);
+                rs_set_ring_buffer2_advance(si->ring_buf);
 
                 continue;
             }

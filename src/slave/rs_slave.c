@@ -3,7 +3,6 @@
 #include <rs_core.h>
 #include <rs_slave.h>
 
-rs_slave_info_t     *rs_slave_info = NULL;
 
 int rs_init_slave() 
 {

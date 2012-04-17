@@ -7,8 +7,9 @@
 #include <rs_slave.h>
 
 #define SLAVE_MODULE_NAME       "slave"
-#define RS_SLAVE_CONF_NUM       6
-#define RS_SLAVE_INFO_STR_LEN   PATH_MAX + 1 + UINT32_LEN
+#define RS_SLAVE_INFO_STR_LEN   (PATH_MAX + 1 + UINT32_LEN)
+
+typedef rs_slave_info_s rs_slave_info_t;
 
 struct rs_slave_info_s {
     int                 info_fd;
@@ -32,7 +33,7 @@ struct rs_slave_info_s {
     pthread_t           redis_thread;
     pthread_attr_t      thread_attr;
 
-    rs_conf_kv_t        *conf;
+    rs_conf_t           conf;
 };
 
 #define rs_slave_info_t_init(si)                                             \
@@ -53,6 +54,8 @@ struct rs_slave_info_s {
 
 rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os); 
 int rs_flush_slave_info(rs_slave_info_t *si, char *buf, size_t len);
+
+extern rs_slave_info_t                  *rs_slave_info; 
 
 #endif
 

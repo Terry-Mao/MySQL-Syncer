@@ -81,11 +81,17 @@ int rs_def_create_data_handle(rs_request_dump_t *rd)
         }
 
         if(r == RS_OK) {
-            
+
+            /* free slab chunk */
+            if(d->data != NULL && d->id > 0 && d->len > 0) {
+                rs_free_slab_chunk(sl, d->data, d->id); 
+            }
+
             rs_uint32_to_str(rd->dump_pos, istr);
             len = rs_strlen(rd->dump_file) + rs_strlen(istr) + 1; 
 
             if(bi->mev == 0) {
+
                 d->len = len;
                 d->id = rs_slab_clsid(sl, len);
                 d->data = rs_alloc_slab(sl, len, d->id);
@@ -105,7 +111,7 @@ int rs_def_create_data_handle(rs_request_dump_t *rd)
                 if(pb_buf == NULL) {
                     return RS_ERR;
                 }
-                
+
                 len += pb_len;
 
                 d->len = len;

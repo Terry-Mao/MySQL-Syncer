@@ -4,20 +4,19 @@
 #include <rs_slave.h>
 
 
-static int  rs_redis_dml_message(rs_slave_info_t *si, char *buf);
 static void rs_free_redis_thread(void *data);
-static void rs_redis_parse_message(char *buf, rs_mysql_message_t *msg);
-
 static redisReply *rs_redis_command(rs_slave_info_t *si, int free, 
         const char *fmt, ...);
-
+static int rs_redis_dml_message(rs_slave_info_t *si, char *buf, uint32_t len);
+static int rs_redis_insert_test(rs_slave_info_t *si, Test test);
+static int rs_redis_delete_test(rs_slave_info_t *si, Test test);
 
 
 void *rs_start_redis_thread(void *data) 
 {
     int                         r, n, i, s;
     char                        *p;
-    rs_ring_buffer_data_t       *d;
+    rs_ring_buffer2_data_t      *d;
     rs_slave_info_t             *si;
 
     s = 0;
@@ -33,7 +32,7 @@ void *rs_start_redis_thread(void *data)
 
     for( ;; ) {
 
-        r = rs_get_ring_buffer(si->ring_buf, &d);
+        r = rs_get_ring_buffer2(si->ring_buf, &d);
 
         if(r == RS_ERR) {
             rs_log_err(0, "rs_get_ring_buffer() failed, get dump data");
@@ -48,7 +47,7 @@ void *rs_start_redis_thread(void *data)
                     rs_cpu_pause();
                 }
 
-                r = rs_get_ring_buffer(si->ring_buf, &d);
+                r = rs_get_ring_buffer2(si->ring_buf, &d);
 
                 if(r == RS_OK) {
                     break;
@@ -88,7 +87,9 @@ void *rs_start_redis_thread(void *data)
         si->dump_pos = rs_estr_to_uint32(p - 1);
 
         /* COMMIT TO REDIS */
-        if(rs_redis_dml_message(si, p) != RS_OK) {
+        if(rs_redis_dml_message(si, p, d->len - (p - (cha *) d->data)) 
+                != RS_OK) 
+        {
             goto free;
         }
 
@@ -97,7 +98,7 @@ void *rs_start_redis_thread(void *data)
             goto free;
         }
 
-        rs_get_ring_buffer_advance(si->ring_buf);
+        rs_get_ring_buffer2_advance(si->ring_buf);
     } 
 
 free:
@@ -108,10 +109,9 @@ free:
     return NULL;
 }
 
-static int rs_redis_dml_message(rs_slave_info_t *si, char *buf) {
-
+static int rs_redis_dml_message(rs_slave_info_t *si, char *buf, uint32_t len) 
+{
     char                *p, t;
-    rs_mysql_message_t  msg;
 
     p = buf;
     t = 0;
@@ -119,14 +119,49 @@ static int rs_redis_dml_message(rs_slave_info_t *si, char *buf) {
     p++; /* skip , */
     t = *p++;
 
+    if(t == RS_MYSQL_SKIP_DATA) {
+        return RS_OK;
+    } else if(t == RS_MYSQL_INSERT_TEST) {
+        return rs_redis_insert_test(si, p, len - 1);
+    } else if(t == RS_MYSQL_DELETE_TEST) {
+        return rs_redis_delete_test(si, p, len - 1); 
+    }
 
     rs_log_info("unkonw cmd type = %d", t);
 
     return RS_OK;
 }
 
-static void rs_redis_parse_message(char *buf, rs_mysql_message_t *msg)
+static int rs_redis_insert_test(rs_slave_info_t *si, void *data, uint32_t len)
 {
+    Test *test;
+
+    /* unpack the buffer */
+    test = test__unpack(NULL, len, data);
+
+    /* insert into redis */
+    rs_redis_command(si, 1, "SET test_%u %s", test->id, test->msg);
+    
+    /* free pb test */
+    test__free_unpacked(msg, NULL);
+
+    return RS_OK;
+}
+
+static int rs_redis_delete_test(rs_slave_info_t *si, Test test)
+{
+    Test *test;
+
+    /* unpack the buffer */
+    test = test__unpack(NULL, len, data);
+
+    /* insert into redis */
+    rs_redis_command(si, 1, "SET test_%u %s", test->id, "");
+    
+    /* free pb test */
+    test__free_unpacked(msg, NULL);
+
+    return RS_OK;
 }
 
 static redisReply *rs_redis_command(rs_slave_info_t *si, int free, 

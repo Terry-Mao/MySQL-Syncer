@@ -11,6 +11,9 @@
 #define RS_REDIS_CONNECT_RETRY_SLEEP_SEC    10
 #define RS_RING_BUFFER_EMPTY_SLEEP_SEC      1      
 
+#define RS_MYSQL_SKIP_DATA                  0
+#define RS_MYSQL_INSERT_TEST                1
+#define RS_MYSQL_DELETE_TEST                2
 
 void *rs_start_redis_thread(void *data);
 

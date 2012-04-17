@@ -25,7 +25,6 @@ void *rs_start_dump_thread(void *data)
     cbuf = NULL;
     rd = (rs_request_dump_t *) data;
     rdi = rs_master_info->req_dump_info;
-    sl = &(rd->slab);
     FD_ZERO(&rset);
     FD_ZERO(&tset);
     mfd = 0;
@@ -37,6 +36,8 @@ void *rs_start_dump_thread(void *data)
         rs_log_err(rs_errno, "rd or rdi is null");
         goto free;
     }
+
+    sl = &(rd->slab);
 
     id = rs_slab_clsid(sl, RS_REGISTER_SLAVE_CMD_LEN);
     cbuf = (char *) rs_alloc_slab(sl, RS_REGISTER_SLAVE_CMD_LEN, id);
@@ -71,6 +72,9 @@ void *rs_start_dump_thread(void *data)
     rs_memcpy(rd->dump_file, cbuf, p - cbuf);
     rd->dump_num = rs_estr_to_uint32(p - 1);
     rd->dump_pos = rs_str_to_uint32(p + 1);
+
+    /* free cmd buffer */
+    rs_free_slab_chunk(sl, cbuf, id);
 
     rs_log_info("dump_file = %s, dump_num = %u, dump_pos = %u", 
             rd->dump_file, rd->dump_num, rd->dump_pos);
