@@ -8,17 +8,21 @@ void rs_create_test_event(Test *pb_t, void *data);
 
 int rs_def_filter_data_handle(rs_request_dump_t *rd)
 {
+    int                 id;
     rs_binlog_info_t    *bi;
+    rs_slab_t           *sl;
 
     bi = &(rd->binlog_info);
+    sl = &(rd->slab);
 
     if(rs_strncmp(bi->db, RS_FILTER_DB_NAME, bi->dbl) != 0) {
         return RS_OK;
     }
 
     if(bi->data == NULL) {
+        id = rs_slab_clsid(sl, RS_SYNC_DATA_SIZE);
         
-        bi->data = malloc(RS_SYNC_DATA_SIZE);
+        bi->data = rs_alloc_slab_chunk(sl, RS_SYNC_DATA_SIZE, id);
 
         if(bi->data == NULL) {
             rs_log_err(rs_errno, "malloc() failed, rs_sync_data_size", 
@@ -94,7 +98,7 @@ int rs_def_create_data_handle(rs_request_dump_t *rd)
 
                 d->len = len;
                 d->id = rs_slab_clsid(sl, len);
-                d->data = rs_alloc_slab(sl, len, d->id);
+                d->data = rs_alloc_slab_chunk(sl, len, d->id);
 
                 if(d->data == NULL) {
                     return RS_ERR;
@@ -115,7 +119,7 @@ int rs_def_create_data_handle(rs_request_dump_t *rd)
 
                 /* alloc mem for pb */
                 id = rs_slab_clsid(sl, pb_len);
-                pb_buf = rs_alloc_slab(sl, pb_len, id);
+                pb_buf = rs_alloc_slab_chunk(sl, pb_len, id);
 
                 if(pb_buf == NULL) {
                     return RS_ERR;
@@ -126,7 +130,7 @@ int rs_def_create_data_handle(rs_request_dump_t *rd)
                 /* alloc mem for cmd */
                 d->len = len;
                 d->id = rs_slab_clsid(sl, len);
-                d->data = rs_alloc_slab(sl, len, d->id);
+                d->data = rs_alloc_slab_chunk(sl, len, d->id);
 
                 if(d->data == NULL) {
                     return RS_ERR;

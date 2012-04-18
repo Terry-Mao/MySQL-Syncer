@@ -177,7 +177,7 @@ static int rs_new_slab(rs_slab_t *sl, int id)
     return RS_OK;
 }
 
-void *rs_alloc_slab(rs_slab_t *sl, uint32_t size, int id)
+void *rs_alloc_slab_chunk(rs_slab_t *sl, uint32_t size, int id)
 {
     rs_slab_class_t    *c;
     void               *p;

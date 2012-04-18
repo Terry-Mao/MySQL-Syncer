@@ -40,7 +40,7 @@ void *rs_start_dump_thread(void *data)
     sl = &(rd->slab);
 
     id = rs_slab_clsid(sl, RS_REGISTER_SLAVE_CMD_LEN);
-    cbuf = (char *) rs_alloc_slab(sl, RS_REGISTER_SLAVE_CMD_LEN, id);
+    cbuf = (char *) rs_alloc_slab_chunk(sl, RS_REGISTER_SLAVE_CMD_LEN, id);
 
     if(cbuf == NULL) {
         rs_log_err(rs_errno, "rs_alloc_slab failed(), register_slave_cmd");

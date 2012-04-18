@@ -47,7 +47,7 @@ typedef struct {
 
 
 int rs_slab_clsid(rs_slab_t *sl, uint32_t size);
-void *rs_alloc_slab(rs_slab_t *sl, uint32_t size, int id);
+void *rs_alloc_slab_chunk(rs_slab_t *sl, uint32_t size, int id);
 int rs_init_slab(rs_slab_t *sl, uint32_t *size_list, uint32_t size, 
         double factor, uint32_t mem_size, int32_t flags);
 void rs_free_slabs(rs_slab_t *sl);

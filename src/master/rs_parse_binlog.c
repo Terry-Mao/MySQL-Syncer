@@ -232,6 +232,11 @@ int rs_def_xid_handle(rs_request_dump_t *rd)
     return RS_OK;
 }
 
+int rs_def_table_map_handle(rs_request_dump_t *rd)
+{
+    
+}
+
 int rs_def_finish_handle(rs_request_dump_t *rd) 
 {
     rs_binlog_info_t        *bi;
