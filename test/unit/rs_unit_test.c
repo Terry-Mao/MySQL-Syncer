@@ -164,7 +164,7 @@ static void rs_slab_test(void)
 
     /* free slab */
     for(i = 0; i < 599; i++) {
-        rs_free_slab(&slab, p, id);
+        rs_free_slab_chunk(&slab, p, id);
         p = (char *) p + 1747;
     }
 
@@ -173,7 +173,7 @@ static void rs_slab_test(void)
 
     /* free slab */
     for(i = 0; i < 10485; i++) {
-        rs_free_slab(&slab, p, id);
+        rs_free_slab_chunk(&slab, p, id);
         p = (char *) p + 100;
     }
 
