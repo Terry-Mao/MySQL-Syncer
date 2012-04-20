@@ -18,8 +18,8 @@ int rs_read_binlog(rs_request_dump_t *rd)
 
         switch(rd->binlog_info.t) {
         /* ROTATE_EVENT | STOP_EVENT */
-        case ROTATE_EVENT:
-        case STOP_EVENT:
+        case RS_ROTATE_EVENT:
+        case RS_STOP_EVENT:
             for( ;; ) {
                 if((err = rs_has_next_binlog(rd)) == RS_OK) {
                     r = RS_HAS_BINLOG;
@@ -42,19 +42,19 @@ int rs_read_binlog(rs_request_dump_t *rd)
             }
 
             break;
-        case QUERY_EVENT:
+        case RS_QUERY_EVENT:
             /* QUERY_EVENT */
             if((r = rs_binlog_query_event(rd)) != RS_OK) {
                 goto free;
             }
             break;
             /* INTVAR EVNET */
-        case INTVAR_EVENT:
+        case RS_INTVAR_EVENT:
             if((r = rs_binlog_intvar_event(rd)) != RS_OK) {
                 goto free;
             }
             break;
-        case XID_EVENT:
+        case RS_XID_EVENT:
             /* COMMIT EVENT */
             if((r = rs_binlog_xid_event(rd)) != RS_OK) {
                 goto free;
