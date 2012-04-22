@@ -470,6 +470,7 @@ void rs_destroy_request_dumps(rs_request_dump_info_t *rdi)
     int err;
 
     if(rdi != NULL) {
+
         rs_free_request_dumps(rdi);
 
         if((err = pthread_mutex_destroy(&(rdi->req_dump_mutex))) != 0) {
@@ -479,6 +480,8 @@ void rs_destroy_request_dumps(rs_request_dump_info_t *rdi)
         if((err = pthread_attr_destroy(&(rdi->thread_attr))) != 0) {
             rs_log_err(err, "pthread_attr_destroy() failed, thread_attr");
         }
+        
+        free(rdi->req_dumps);
 
         free(rdi);
     }

@@ -13,7 +13,7 @@ int main(int argc, char * const *argv)
     rs_core_info_t  *ci, *oc;
 
     /* init rs_errno */
-    if(rs_strerror_init() != RS_OK) {
+    if(rs_init_strerror() != RS_OK) {
         return 1;
     }
 
@@ -84,9 +84,7 @@ int main(int argc, char * const *argv)
             rs_init_slave();
 #endif
 
-            if(oc != NULL) {
-                rs_free_core(oc);
-            }
+            rs_free_core(oc);
 
             rs_reload = 0;
 
@@ -101,7 +99,7 @@ int main(int argc, char * const *argv)
 
     rs_free_core(ci);
 
-    rs_log_info("exit success!");
+    rs_free_strerr();
 
     return 0;
 }

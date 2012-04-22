@@ -143,8 +143,6 @@ static int rs_init_core_conf(rs_core_info_t *ci)
 
 void rs_free_core(rs_core_info_t *ci)
 {
-    ci = (ci == NULL ? rs_core_info : ci);
-
     if(ci != NULL) {
 
         if(ci->log_fd != -1) {
@@ -154,7 +152,9 @@ void rs_free_core(rs_core_info_t *ci)
         /* free conf */
         rs_free_conf(&(ci->conf));
 
-        free(ci->conf.kv);
+        if(ci->conf.kv != NULL) {
+            free(ci->conf.kv);
+        }
 
         free(ci);
     }

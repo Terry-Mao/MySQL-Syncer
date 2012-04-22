@@ -33,12 +33,12 @@ typedef struct {
 } rs_core_info_t;
 
 #define rs_core_info_t_init(ci)                                              \
-    rs_memzero(ci->cwd, PATH_MAX + 1);                                       \
-    ci->pid_path = NULL;                                                     \
-    ci->daemon = 0;                                                          \
-    ci->log_path = NULL;                                                     \
-    ci->log_fd = -1;                                                         \
-    rs_conf_t_init(&(ci->conf))
+    rs_memzero((ci)->cwd, PATH_MAX + 1);                                     \
+    (ci)->pid_path = NULL;                                                   \
+    (ci)->daemon = 0;                                                        \
+    (ci)->log_path = NULL;                                                   \
+    (ci)->log_fd = -1;                                                       \
+    rs_conf_t_init(&((ci)->conf))
 
 
 extern rs_core_info_t   *rs_core_info;

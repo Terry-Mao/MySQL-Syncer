@@ -116,9 +116,10 @@ void *rs_start_accept_thread(void *data)
         goto free;
     }
 
-    rs_memzero(&cli_addr, sizeof(cli_addr));
-
     for( ;; ) {
+
+        socklen = 0;
+        rs_memzero(&cli_addr, sizeof(cli_addr));
 
         cli_fd = accept(mi->svr_fd, (struct sockaddr *) &cli_addr, &socklen);
 

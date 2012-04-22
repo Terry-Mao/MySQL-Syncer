@@ -259,6 +259,9 @@ int rs_add_conf_kv(rs_conf_t *c, char *key, void *value, char type)
             rs_log_err(rs_errno, "realloc() failed, rs_conf_kv_t");
             return RS_ERR;
         }
+        
+        rs_memzero(c->kv + c->conf_n, sizeof(rs_conf_kv_t) * 
+                (size - c->conf_n));
 
         c->conf_n = size;
     }
@@ -379,13 +382,13 @@ static int rs_get_conf_int(int32_t *dst, char *value)
 
 void rs_free_conf(rs_conf_t *c)
 {
-    int     i;
-    void    *p;
+    uint32_t    i;
+    void        *p;
 
     p = NULL;
 
     if(c != NULL || c->kv != NULL) {
-        for(i = 0; c->kv[i].k.data; i++) {
+        for(i = 0; i < c->conf_idx; i++) {
             if(c->kv[i].v.type == RS_CONF_STR) {
                 p = (void *) *((void **) c->kv[i].v.data);
                 if(p != NULL) {

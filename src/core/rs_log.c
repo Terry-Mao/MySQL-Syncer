@@ -95,9 +95,9 @@ void rs_log_info(const char *fmt, ...)
     va_list args;
     int     log_fd;
 
-    if(rs_core_info == NULL || rs_core_info->log_fd == -1) {
-        log_fd = STDERR_FILENO;
-    } else {
+    log_fd = STDERR_FILENO;
+
+    if(rs_core_info != NULL && rs_core_info->log_fd != -1) {
         log_fd = rs_core_info->log_fd;
     }
 

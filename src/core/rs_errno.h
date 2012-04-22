@@ -10,8 +10,9 @@ typedef int rs_err_t;
 #define rs_errno       errno
 #define RS_SYS_NERR    135
 
-int rs_strerror_init(void);
+int rs_init_strerror(void);
 char *rs_strerror(rs_err_t err, char *errstr, size_t size);
+void rs_free_strerr();
 
 
 #endif

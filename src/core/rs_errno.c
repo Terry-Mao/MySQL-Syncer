@@ -2,7 +2,7 @@
 #include <rs_config.h>
 #include <rs_core.h>
 
-static char **rs_sys_errlist;
+static char **rs_sys_errlist = NULL;
 static char *rs_unknown_error = "Unknown error";
 
 char *rs_strerror(rs_err_t err, char *errstr, size_t size) 
@@ -17,7 +17,7 @@ char *rs_strerror(rs_err_t err, char *errstr, size_t size)
     return rs_cpymem(errstr, msg, size);
 }
 
-int rs_strerror_init() 
+int rs_init_strerror() 
 {
     char        *msg, *p;
     size_t      len;
@@ -54,4 +54,19 @@ failed:
     rs_log_stderr(0, "malloc(%uz) failed (%d: %s)", len, err, strerror(err));
 
     return RS_ERR;
+}
+
+void rs_free_strerr()
+{
+    rs_err_t    err;
+
+    if(rs_sys_errlist != NULL) {
+        for (err = 0; err < RS_SYS_NERR; err++) {
+            if(rs_sys_errlist[err] != NULL) {
+                free(rs_sys_errlist[err]);
+            }
+        }
+
+        free(rs_sys_errlist);
+    }    
 }
