@@ -55,7 +55,7 @@ int main(int argc, char *const *argv)
 static int rs_init_suite(void)
 {
     /* init rs_errno */
-    if(rs_strerror_init() != RS_OK) {
+    if(rs_init_strerror() != RS_OK) {
         return 1;
     }
 
@@ -147,17 +147,17 @@ static void rs_slab_test(void)
         CU_ASSERT((id = rs_slab_clsid(&slab, 1747)) >= 0);
 
     for(i = 0; i < 599; i++) {
-        CU_ASSERT(rs_alloc_slab(&slab, 1747, id) != NULL); 
+        CU_ASSERT(rs_alloc_slab_chunk(&slab, 1747, id) != NULL); 
     }
 
     CU_ASSERT((id = rs_slab_clsid(&slab, 100)) >= 0);
 
     for(i = 0; i < 10485; i++) {
-        CU_ASSERT(rs_alloc_slab(&slab, 100, id) != NULL); 
+        CU_ASSERT(rs_alloc_slab_chunk(&slab, 100, id) != NULL); 
     }
 
     /* no more mem */
-    CU_ASSERT(rs_alloc_slab(&slab, 1747, id) == NULL); 
+    CU_ASSERT(rs_alloc_slab_chunk(&slab, 1747, id) == NULL); 
 
     CU_ASSERT((id = rs_slab_clsid(&slab, 1747)) >= 0);
     p = slab.slab_class[id].slabs[0];
@@ -181,13 +181,13 @@ static void rs_slab_test(void)
     CU_ASSERT((id = rs_slab_clsid(&slab, 1747)) >= 0);
 
     for(i = 0; i < 599; i++) {
-        CU_ASSERT(rs_alloc_slab(&slab, 1747, id) != NULL); 
+        CU_ASSERT(rs_alloc_slab_chunk(&slab, 1747, id) != NULL); 
     }
 
     CU_ASSERT((id = rs_slab_clsid(&slab, 100)) >= 0);
 
     for(i = 0; i < 10485; i++) {
-        CU_ASSERT(rs_alloc_slab(&slab, 100, id) != NULL); 
+        CU_ASSERT(rs_alloc_slab_chunk(&slab, 100, id) != NULL); 
     }
 }
 
