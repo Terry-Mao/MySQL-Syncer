@@ -124,6 +124,7 @@ void *rs_start_accept_thread(void *data)
         cli_fd = accept(mi->svr_fd, (struct sockaddr *) &cli_addr, &socklen);
 
         if(cli_fd == -1) {
+        
             if(rs_errno == EINTR) {
                 continue;
             }
@@ -171,8 +172,7 @@ void *rs_start_accept_thread(void *data)
 free:
 
     pthread_cleanup_pop(1);
-
-    return NULL;
+    pthread_exit(NULL);
 }
 
 static void rs_free_accept_thread(void *data)
@@ -184,8 +184,5 @@ static void rs_free_accept_thread(void *data)
     /* NOTICE : if reload signal, must skip send SIGQUIT */
     if(mi != NULL) {
         rs_log_info("free accept thread");
-        // kill(rs_pid, SIGQUIT);
-        rs_close(mi->svr_fd);
-        mi->svr_fd = -1;
     }
 }

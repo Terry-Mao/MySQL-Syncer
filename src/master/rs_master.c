@@ -28,6 +28,7 @@ int rs_init_master()
     mi = rs_init_master_info(rs_master_info);
     
     if(mi == NULL) {
+        mi = rs_master_info;
         goto free;
     }
 
@@ -54,14 +55,11 @@ void rs_free_master(void *data)
     int                 err;
     rs_master_info_t    *mi;
 
-    mi = data == NULL ? rs_master_info : (rs_master_info_t *) data;
+    mi = (data == NULL ? rs_master_info : (rs_master_info_t *) data);
 
     if(mi != NULL) {
 
         rs_log_info("free master");
-
-        /* close all request_dump*/
-        rs_destroy_request_dumps(mi->req_dump_info); 
 
         if(mi->accept_thread != 0) {
             if((err = pthread_cancel(mi->accept_thread)) != 0) {
@@ -72,16 +70,23 @@ void rs_free_master(void *data)
                             "accept_thread");
                 }
             }
-
         }
 
         if(mi->svr_fd != -1) {
             rs_close(mi->svr_fd);
         }
 
+        if(mi->req_dump_info != NULL) {
+            /* close all request_dump*/
+            rs_destroy_request_dumps(mi->req_dump_info); 
+        }
+
         /* free conf */
         rs_free_conf(&(mi->conf));
-        free(mi->conf.kv);
+
+        if(mi->conf.kv != NULL) {
+            free(mi->conf.kv);
+        }
 
         free(mi);
     }

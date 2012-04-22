@@ -192,8 +192,7 @@ void *rs_start_dump_thread(void *data)
 free:
 
     pthread_cleanup_pop(1);
-
-    return NULL;
+    pthread_exit(NULL);
 }
 
 
@@ -245,8 +244,7 @@ static void *rs_start_io_thread(void *data)
 free:
 
     pthread_cleanup_pop(1);
-
-    return NULL;
+    pthread_exit(NULL);
 }
 
 void rs_free_io_thread(void *data)
