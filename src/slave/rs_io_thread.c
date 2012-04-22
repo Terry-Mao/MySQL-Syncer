@@ -46,7 +46,7 @@ void *rs_start_io_thread(void *data)
     sl = &(si->slab);
 
     id = rs_slab_clsid(sl, RS_REGISTER_SLAVE_CMD_LEN);
-    cbuf = (char *) rs_alloc_slab(sl, RS_REGISTER_SLAVE_CMD_LEN, id);
+    cbuf = (char *) rs_alloc_slab_chunk(sl, RS_REGISTER_SLAVE_CMD_LEN, id);
 
     if(cbuf == NULL) {
         rs_log_err(rs_errno, "rs_alloc_slab failed(), register_slave_cmd");
@@ -168,7 +168,7 @@ void *rs_start_io_thread(void *data)
                 /* alloc memory */
                 d->len = pack_len;
                 d->id = rs_slab_clsid(sl, pack_len);
-                d->data = rs_alloc_slab(sl, pack_len, d->id);
+                d->data = rs_alloc_slab_chunk(sl, pack_len, d->id);
 
                 if(d->data == NULL) {
                     goto free;

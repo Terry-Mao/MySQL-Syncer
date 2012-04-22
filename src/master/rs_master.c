@@ -32,9 +32,10 @@ int rs_init_master()
         goto free;
     }
 
+    rs_master_info = mi;
+
     /* free old master info */
     om = rs_master_info;
-    rs_master_info = mi;
 
     if(om != NULL) {
         rs_free_master(om);
@@ -61,6 +62,7 @@ void rs_free_master(void *data)
 
         rs_log_info("free master");
 
+        /* exit accpet thread */
         if(mi->accept_thread != 0) {
             if((err = pthread_cancel(mi->accept_thread)) != 0) {
                 rs_log_err(err, "pthread_cancel() failed, accept_thread");
@@ -76,8 +78,8 @@ void rs_free_master(void *data)
             rs_close(mi->svr_fd);
         }
 
+        /* close all request_dump*/
         if(mi->req_dump_info != NULL) {
-            /* close all request_dump*/
             rs_destroy_request_dumps(mi->req_dump_info); 
         }
 
