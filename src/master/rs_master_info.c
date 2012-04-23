@@ -40,7 +40,7 @@ rs_master_info_t *rs_init_master_info(rs_master_info_t *om)
                 mi->slab_init_size);
     }
 
-    if(mi->slab_mem_size <= 1 * 1024 * 1024) {
+    if(mi->slab_mem_size <= 5 * 1024 * 1024) {
         mi->slab_mem_size = RS_SLAB_MEM_SIZE; 
         rs_log_info("slab_mem_size use default value, %u", mi->slab_mem_size);
     }
@@ -57,20 +57,6 @@ rs_master_info_t *rs_init_master_info(rs_master_info_t *om)
         } else {
             rs_log_info("reuse svr_fd");
 
-#if 0
-            rs_log_info("stop accept_thread");
-
-            if(om->accept_thread != 0) {
-                if((err = pthread_cancel(om->accept_thread)) != 0) {
-                    rs_log_err(err, "pthread_cancel() failed, accept_thread");
-                } else {
-                    if((err = pthread_join(om->accept_thread, NULL)) != 0) {
-                        rs_log_err(err, "pthread_join() failed, "
-                                "accept_thread");
-                    }
-                }
-            }
-#endif 
             mi->svr_fd = om->svr_fd;
             mi->accept_thread = om->accept_thread;
 
@@ -143,7 +129,6 @@ free:
 
 static int rs_init_master_conf(rs_master_info_t *mi)
 {
-
     rs_conf_t *c;
 
     c = &(mi->conf);
@@ -174,7 +159,6 @@ static int rs_init_master_conf(rs_master_info_t *mi)
 
     /* init master conf */
     if(rs_init_conf(c, rs_conf_path, RS_MASTER_MODULE_NAME) != RS_OK) {
-        rs_log_err(0, "master conf init failed");
         return RS_ERR;
     }
 

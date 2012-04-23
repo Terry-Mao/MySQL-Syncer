@@ -85,5 +85,6 @@ void rs_free_master(void *data)
         free(mi->conf.kv);
     }
 
+    /* free master info */
     free(mi);
 }

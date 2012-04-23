@@ -25,7 +25,7 @@ int rs_def_filter_data_handle(rs_request_dump_t *rd)
         bi->data = rs_alloc_slab_chunk(sl, RS_SYNC_DATA_SIZE, id);
 
         if(bi->data == NULL) {
-            rs_log_err(rs_errno, "malloc() failed, rs_sync_data_size", 
+            rs_log_err(rs_errno, "malloc() failed, RS_SYNC_DATA_SIZE", 
                     RS_SYNC_DATA_SIZE);
             return RS_ERR;
         }

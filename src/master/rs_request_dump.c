@@ -3,11 +3,7 @@
 #include <rs_core.h>
 #include <rs_master.h>
 
-/* static int rs_handle_request_dump(char *buf, rs_request_dump_t *rd); */
-/* static int rs_send_dump_file(int fd, rs_request_dump_t *rd); */
-
 static void *rs_start_io_thread(void *data);
-
 
 void *rs_start_dump_thread(void *data) 
 {
@@ -208,6 +204,7 @@ static void *rs_start_io_thread(void *data)
         goto free;
     }
 
+    /* open binlog index file */
     if((rd->binlog_idx_fp = fopen(rs_master_info->binlog_idx_file, "r"))
             == NULL) 
     {
@@ -219,7 +216,7 @@ static void *rs_start_io_thread(void *data)
     for( ;; ) {
 
         /* open new binlog */
-        rs_log_info("open a new binlog");
+        rs_log_info("open a new binlog, %s", rd->dump_file);
 
         if((rd->binlog_fp = fopen(rd->dump_file, "r")) == NULL) {
             rs_log_err(rs_errno, "fopen(\"%s\", \"r\") failed", 
@@ -231,8 +228,6 @@ static void *rs_start_io_thread(void *data)
         if(rs_read_binlog(rd) == RS_ERR) {
             goto free;
         }
-
-        rs_log_info("close a old binlog");
 
         /* close old binlog */
         if(fclose(rd->binlog_fp) != 0) {
@@ -368,7 +363,6 @@ rs_request_dump_t *rs_get_request_dump(rs_request_dump_info_t *rdi)
     }
 
     rd->open = 1;
-
     return rd;
 }
 
@@ -431,8 +425,7 @@ void rs_free_request_dump(rs_request_dump_info_t *rdi, rs_request_dump_t *rd)
 
     if(rd->binlog_idx_fp != NULL) {
         if(fclose(rd->binlog_idx_fp) != 0) {
-            rs_log_err(rs_errno, "fclose(\"%s\") failed", 
-                    rs_master_info->binlog_idx_file);
+            rs_log_err(rs_errno, "fclose() failed, binlog file");
         }
     }
 
