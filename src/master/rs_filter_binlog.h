@@ -6,7 +6,8 @@
 #include <rs_core.h>
 #include <rs_master.h>
 
-#define RS_RING_BUFFER_FULL_SLEEP_SEC 1
+#define RS_RING_BUFFER_FULL_SLEEP_SEC   1
+#define RS_SKIP_DATA_FLUSH_NUM          900
 
 #define RS_FILTER_DB_NAME           "test"
 

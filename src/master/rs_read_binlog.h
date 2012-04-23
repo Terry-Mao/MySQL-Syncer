@@ -29,6 +29,8 @@ struct rs_binlog_info_s {
     uint32_t    dbl;
     uint64_t    ai;
 
+    uint32_t    skip_n;
+
     char        sql[RS_SQL_MAX_LEN + 1];
     char        db[RS_DATABASE_NAME_MAX_LEN + 1];
     char        tb[RS_TABLE_NAME_MAX_LEN + 1];
@@ -50,6 +52,7 @@ struct rs_binlog_info_s {
         (bi)->np = 0;                                                        \
         (bi)->el = 0;                                                        \
         (bi)->sbl = 0;                                                       \
+        (bi)->skip_n = 0;                                                    \
         (bi)->tbl = 0;                                                       \
         (bi)->sl = 0;                                                        \
         (bi)->dbl = 0;                                                       \
