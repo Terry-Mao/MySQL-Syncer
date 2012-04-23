@@ -52,11 +52,11 @@ struct rs_binlog_info_s {
         (bi)->np = 0;                                                        \
         (bi)->el = 0;                                                        \
         (bi)->sbl = 0;                                                       \
-        (bi)->skip_n = 0;                                                    \
         (bi)->tbl = 0;                                                       \
         (bi)->sl = 0;                                                        \
         (bi)->dbl = 0;                                                       \
         (bi)->ai = 0;                                                        \
+        (bi)->skip_n = 0;                                                    \
         rs_memzero((bi)->sql, RS_SQL_MAX_LEN + 1);                           \
         rs_memzero((bi)->db, RS_DATABASE_NAME_MAX_LEN + 1);                  \
         rs_memzero((bi)->tb, RS_TABLE_NAME_MAX_LEN + 1);                     \

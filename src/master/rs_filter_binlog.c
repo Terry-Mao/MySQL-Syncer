@@ -96,24 +96,26 @@ int rs_def_create_data_handle(rs_request_dump_t *rd)
 
             if(bi->mev == 0) {
 
-                if(bi->skip_n++ % RS_SKIP_DATA_FLUSH_NUM == 0) {
-                    bi->skip_n = 1;
+                if(bi->skip_n++ % RS_SKIP_DATA_FLUSH_NUM != 0) {
+                    break;
+                }
 
-                    d->len = len;
-                    d->id = rs_slab_clsid(sl, len);
-                    d->data = rs_alloc_slab_chunk(sl, len, d->id);
+                bi->skip_n = 1;
 
-                    if(d->data == NULL) {
-                        return RS_ERR;
-                    }
+                d->len = len;
+                d->id = rs_slab_clsid(sl, len);
+                d->data = rs_alloc_slab_chunk(sl, len, d->id);
 
-                    len = snprintf(d->data, d->len, "%s,%u,%c", rd->dump_file, 
-                            rd->dump_pos, bi->mev);
+                if(d->data == NULL) {
+                    return RS_ERR;
+                }
 
-                    if(len < 0) {
-                        rs_log_err(rs_errno, "snprint() failed, dump cmd"); 
-                        return RS_ERR;
-                    }
+                len = snprintf(d->data, d->len, "%s,%u,%c", rd->dump_file, 
+                        rd->dump_pos, bi->mev);
+
+                if(len < 0) {
+                    rs_log_err(rs_errno, "snprint() failed, dump cmd"); 
+                    return RS_ERR;
                 }
 
             } else {

@@ -33,6 +33,7 @@ typedef struct {
 } rs_core_info_t;
 
 #define rs_core_info_t_init(ci)                                              \
+    (ci)->user = NULL;                                                       \
     rs_memzero((ci)->cwd, PATH_MAX + 1);                                     \
     (ci)->pid_path = NULL;                                                   \
     (ci)->daemon = 0;                                                        \

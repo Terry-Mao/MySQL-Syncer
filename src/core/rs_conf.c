@@ -385,8 +385,6 @@ void rs_free_conf(rs_conf_t *c)
     uint32_t    i;
     void        *p;
 
-    p = NULL;
-
     if(c != NULL || c->kv != NULL) {
         for(i = 0; i < c->conf_idx; i++) {
             if(c->kv[i].v.type == RS_CONF_STR) {

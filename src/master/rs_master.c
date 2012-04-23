@@ -28,26 +28,19 @@ int rs_init_master()
     mi = rs_init_master_info(rs_master_info);
     
     if(mi == NULL) {
-        mi = rs_master_info;
-        goto free;
+        return RS_ERR;
     }
-
-    rs_master_info = mi;
 
     /* free old master info */
     om = rs_master_info;
 
+    rs_master_info = mi;
+    
     if(om != NULL) {
         rs_free_master(om);
     }
 
     return RS_OK;
-
-free:
-
-    rs_free_master(mi);
-
-    return RS_ERR;
 }
 
 
@@ -58,38 +51,39 @@ void rs_free_master(void *data)
 
     mi = (data == NULL ? rs_master_info : (rs_master_info_t *) data);
 
-    if(mi != NULL) {
+    if(mi == NULL) {
+        return;
+    }
 
-        rs_log_info("free master");
+    rs_log_info("free master");
 
-        /* exit accpet thread */
-        if(mi->accept_thread != 0) {
-            if((err = pthread_cancel(mi->accept_thread)) != 0) {
-                rs_log_err(err, "pthread_cancel() failed, accept_thread");
-            } else {
-                if((err = pthread_join(mi->accept_thread, NULL)) != 0) {
-                    rs_log_err(err, "pthread_join() failed, "
-                            "accept_thread");
-                }
+    /* exit accpet thread */
+    if(mi->accept_thread != 0) {
+        if((err = pthread_cancel(mi->accept_thread)) != 0) {
+            rs_log_err(err, "pthread_cancel() failed, accept_thread");
+        } else {
+            if((err = pthread_join(mi->accept_thread, NULL)) != 0) {
+                rs_log_err(err, "pthread_join() failed, "
+                        "accept_thread");
             }
         }
-
-        if(mi->svr_fd != -1) {
-            rs_close(mi->svr_fd);
-        }
-
-        /* close all request_dump*/
-        if(mi->req_dump_info != NULL) {
-            rs_destroy_request_dumps(mi->req_dump_info); 
-        }
-
-        /* free conf */
-        rs_free_conf(&(mi->conf));
-
-        if(mi->conf.kv != NULL) {
-            free(mi->conf.kv);
-        }
-
-        free(mi);
     }
+
+    if(mi->svr_fd != -1) {
+        rs_close(mi->svr_fd);
+    }
+
+    /* close all request_dump*/
+    if(mi->req_dump_info != NULL) {
+        rs_destroy_request_dumps(mi->req_dump_info); 
+    }
+
+    /* free conf */
+    rs_free_conf(&(mi->conf));
+
+    if(mi->conf.kv != NULL) {
+        free(mi->conf.kv);
+    }
+
+    free(mi);
 }
