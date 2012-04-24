@@ -51,9 +51,8 @@ int rs_def_filter_data_handle(rs_request_dump_t *rd)
 
 int rs_def_create_data_handle(rs_request_dump_t *rd) 
 {
-    int                     i, r, len, id, pb_len;
+    int                     i, r, len, pb_len;
     char                    *p, istr[UINT32_LEN + 1];
-    void                    *pb_buf;
     rs_binlog_info_t        *bi;
     rs_ring_buffer2_data_t  *d;
     rs_slab_t               *sl;
@@ -85,11 +84,6 @@ int rs_def_create_data_handle(rs_request_dump_t *rd)
         }
 
         if(r == RS_OK) {
-
-            /* free slab chunk */
-            if(d->data != NULL && d->id > 0 && d->len > 0) {
-                rs_free_slab_chunk(sl, d->data, d->id); 
-            }
 
             rs_uint32_to_str(rd->dump_pos, istr);
             len = rs_strlen(rd->dump_file) + rs_strlen(istr) + 1 + 1 + 1; 
@@ -123,14 +117,6 @@ int rs_def_create_data_handle(rs_request_dump_t *rd)
                 rs_create_test_event(&t, bi->data);
                 pb_len = test__get_packed_size(&t);
 
-                /* alloc mem for pb */
-                id = rs_slab_clsid(sl, pb_len);
-                pb_buf = rs_alloc_slab_chunk(sl, pb_len, id);
-
-                if(pb_buf == NULL) {
-                    return RS_ERR;
-                }
-
                 len += pb_len;
 
                 /* alloc mem for cmd */
@@ -151,11 +137,7 @@ int rs_def_create_data_handle(rs_request_dump_t *rd)
                 }
 
                 p = (char *) d->data + len;
-                test__pack(&t, pb_buf);
-                rs_memcpy(p, pb_buf, pb_len);
-
-                /* free pb buffer */
-                rs_free_slab_chunk(sl, pb_buf, id);
+                test__pack(&t, p);
             }
 
             rs_set_ring_buffer2_advance(&(rd->ring_buf));
