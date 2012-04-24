@@ -158,6 +158,7 @@ int rs_init_uid(char *user)
 {
     struct passwd *u;
 
+    rs_errno = 0;
     u = getpwnam(user);
 
     if(u == NULL) {
@@ -175,16 +176,17 @@ int rs_init_uid(char *user)
 
 int rs_init_gid(char *grp) 
 {
-    struct passwd *g;
+    struct group *g;
 
-    g = getpwnam(grp);
+    rs_errno = 0;
+    g = getgrnam(grp);
 
     if(g == NULL) {
-        rs_log_err(rs_errno, "getpwnam(\"%s\") failed", grp);
+        rs_log_err(rs_errno, "getgrnam(\"%s\") failed", grp);
         return RS_ERR;
     }
 
-    if(setgid(g->pw_uid) == -1) {
+    if(setgid(g->gr_gid) == -1) {
         rs_log_err(rs_errno, "setgid() failed");
         return RS_ERR;
     }
