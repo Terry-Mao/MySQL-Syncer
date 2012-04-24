@@ -251,6 +251,7 @@ void rs_free_io_thread(void *data)
     rdi = rs_master_info->req_dump_info;
 
     if(rd != NULL && rdi != NULL) {
+        rd->io_thread = 0;
         rs_free_request_dump(rdi, rd);
     }
 }
@@ -264,6 +265,7 @@ void rs_free_dump_thread(void *data)
     rdi = rs_master_info->req_dump_info;
 
     if(rd != NULL && rdi != NULL) {
+        rd->dump_thread = 0;
         rs_free_request_dump(rdi, rd);
     }
 }

@@ -239,12 +239,11 @@ static int rs_create_dump_cmd(rs_slave_info_t *si, char *buf, uint32_t *len)
 
 static void rs_free_io_thread(void *data)
 {
-    /*
     rs_slave_info_t *si;
 
     si = (rs_slave_info_t *) data;
 
     if(si != NULL) {
+        si->io_thread = 0;
     }
-    */
 }
