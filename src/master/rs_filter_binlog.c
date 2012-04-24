@@ -143,7 +143,7 @@ int rs_def_create_data_handle(rs_request_dump_t *rd)
                 }
 
                 p = (char *) d->data + len;
-                test__pack(&t, p);
+                test__pack(&t, (void *) p);
             }
 
             rs_set_ring_buffer2_advance(&(rd->ring_buf));
