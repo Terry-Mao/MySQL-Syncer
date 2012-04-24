@@ -205,10 +205,10 @@ char *rs_ncp_str_till(char *dst, char *src, char es, size_t len)
 void rs_uint32_to_str(uint32_t n, char *buf) 
 {
     uint32_t    p;
-    char        b[UINT32_LEN], *t, *s;
+    char        b[UINT32_LEN + 1], *t, *s;
 
     s = buf;
-    t = b + UINT64_LEN;
+    t = b + UINT32_LEN;
     p = 0;
 
     do {

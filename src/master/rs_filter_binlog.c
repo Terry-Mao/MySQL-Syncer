@@ -52,7 +52,7 @@ int rs_def_filter_data_handle(rs_request_dump_t *rd)
 int rs_def_create_data_handle(rs_request_dump_t *rd) 
 {
     int                     i, r, len, id, pb_len;
-    char                    *p, istr[UINT32_LEN];
+    char                    *p, istr[UINT32_LEN + 1];
     void                    *pb_buf;
     rs_binlog_info_t        *bi;
     rs_ring_buffer2_data_t  *d;
