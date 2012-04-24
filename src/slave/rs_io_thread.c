@@ -207,7 +207,7 @@ free:
 
     pthread_cleanup_pop(1);
 
-    return NULL;
+    pthread_exit(NULL);
 }
 
 /*

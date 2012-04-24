@@ -114,7 +114,7 @@ free:
     /* pop cleanup handle and execute */
     pthread_cleanup_pop(1);
 
-    return NULL;
+    pthread_exit(NULL);
 }
 
 static int rs_redis_dml_message(rs_slave_info_t *si, char *buf, uint32_t len) 
