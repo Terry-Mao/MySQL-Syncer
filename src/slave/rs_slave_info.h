@@ -32,12 +32,12 @@ struct rs_slave_info_s {
     uint32_t            dump_pos;          
 
     rs_ring_buffer2_t   *ring_buf;
+    rs_slab_t           *slab;
 
     pthread_t           io_thread;
     pthread_t           redis_thread;
     pthread_attr_t      thread_attr;
 
-    rs_slab_t           slab;
     double              slab_factor;        /* slab grow factor */
     uint32_t            slab_mem_size;
     uint32_t            slab_init_size;
@@ -46,23 +46,24 @@ struct rs_slave_info_s {
 };
 
 #define rs_slave_info_t_init(si)                                             \
-    si->info_fd = -1;                                                        \
-    si->svr_fd = -1;                                                         \
-    si->c = NULL;                                                            \
-    si->listen_port = -1;                                                    \
-    si->listen_addr = NULL;                                                  \
-    si->redis_port = -1;                                                     \
-    si->redis_addr = NULL;                                                   \
-    si->slave_info = NULL;                                                   \
-    rs_memzero(si->dump_file, PATH_MAX + 1);                                 \
-    si->dump_pos = 0;                                                        \
-    si->io_thread = 0;                                                       \
-    si->redis_thread = 0;                                                    \
-    si->ring_buf = NULL;                                                     \
-    si->slab_factor = 0;                                                     \
-    si->slab_mem_size = 0;                                                   \
-    si->slab_init_size = 0;                                                  \
-    rs_conf_t_init(&(si->conf))
+    (si)->info_fd = -1;                                                      \
+    (si)->svr_fd = -1;                                                       \
+    (si)->c = NULL;                                                          \
+    (si)->listen_port = -1;                                                  \
+    (si)->listen_addr = NULL;                                                \
+    (si)->redis_port = -1;                                                   \
+    (si)->redis_addr = NULL;                                                 \
+    (si)->slave_info = NULL;                                                 \
+    rs_memzero((si)->dump_file, PATH_MAX + 1);                               \
+    (si)->dump_pos = 0;                                                      \
+    (si)->io_thread = 0;                                                     \
+    (si)->redis_thread = 0;                                                  \
+    (si)->slab_factor = 0;                                                   \
+    (si)->slab_mem_size = 0;                                                 \
+    (si)->slab_init_size = 0;                                                \
+    rs_conf_t_init(&((si)->conf));                                           \
+    (si)->slab = NULL;                                                       \
+    (si)->ring_buf = NULL
 
 
 rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os); 

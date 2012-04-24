@@ -19,11 +19,11 @@ static void rs_free_io_thread(void *data);
  */
 void *rs_start_io_thread(void *data) 
 {
-    int                     r, sock_err, i, id;
+    int                     r, sock_err, i;
     socklen_t               len;
     uint32_t                l, pack_len, cur_len;
     ssize_t                 n;
-    char                    *cbuf;
+    char                    cbuf[RS_REGISTER_SLAVE_CMD_LEN];
     struct                  sockaddr_in svr_addr;
     rs_slave_info_t         *si;
     rs_ring_buffer2_data_t  *d;
@@ -43,15 +43,7 @@ void *rs_start_io_thread(void *data)
         goto free;
     }
 
-    sl = &(si->slab);
-
-    id = rs_slab_clsid(sl, RS_REGISTER_SLAVE_CMD_LEN);
-    cbuf = (char *) rs_alloc_slab_chunk(sl, RS_REGISTER_SLAVE_CMD_LEN, id);
-
-    if(cbuf == NULL) {
-        rs_log_err(rs_errno, "rs_alloc_slab failed(), register_slave_cmd");
-        goto free;
-    } 
+    sl = si->slab;
 
     /* connect to master */
     svr_addr.sin_family = AF_INET;
@@ -247,11 +239,12 @@ static int rs_create_dump_cmd(rs_slave_info_t *si, char *buf, uint32_t *len)
 
 static void rs_free_io_thread(void *data)
 {
+    /*
     rs_slave_info_t *si;
 
     si = (rs_slave_info_t *) data;
 
     if(si != NULL) {
-        kill(rs_pid, SIGQUIT);
     }
+    */
 }

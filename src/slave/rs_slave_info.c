@@ -43,7 +43,7 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
                 si->slab_init_size);
     }
 
-    if(si->slab_mem_size <= 1 * 1024 * 1024) {
+    if(si->slab_mem_size <= 5 * 1024 * 1024) {
         si->slab_mem_size = RS_SLAB_MEM_SIZE; 
         rs_log_info("slab_mem_size use default value, %u", si->slab_mem_size);
     }
@@ -75,9 +75,7 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
         goto free;
     }
 
-    if(os != NULL) {/*{{{*/
-#if 0
-/* TODO RELOAD */
+    if(os != NULL) {
         /* dump file or pos */
         nrb = (os->dump_pos != si->dump_pos || 
                 rs_strcmp(os->dump_file, si->dump_file) != 0);
@@ -101,41 +99,63 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
                     rs_log_err(err, "pthread_cancel() failed, io_thread");
                 }
             }
-
-            rs_close(os->svr_fd);
+        } else {
+            /* reuse io_thread */
+            si->io_thread = os->io_thread;
+            si->svr_fd = os->svr_fd;
+            os->svr_fd = -1; /* NOTICE: SKIP close svr_fd */
+            os->io_thread = 0; /* NOTICE: SKIP cancel io_thread */
         }
 
         if(nr) {
 
             if(os->redis_thread != 0) {
-
                 rs_log_info("start exiting redis thread");
 
                 if((err = pthread_cancel(os->redis_thread)) != 0) {
                     rs_log_err(err, "pthread_cancel() failed, redis_thread");
                 }
             }
+        } else {
+            /* reuse redis thread */ 
+            si->redis_thread = os->redis_thread;
+            si->c = os->c;
+            si->redis_thread = 0; /* NOTICE: SKIP cancel redis_thread */
+            si->c = NULL; /* NOTICE: SKIP close redisContext */
         }
 
         if(!nrb) {
+            si->slab = os->slab;
             si->ring_buf = os->ring_buf;
-        }
-#endif
-    }/*}}}*/
 
-    /* init slab */
-    if(rs_init_slab(&(si->slab), NULL, si->slab_init_size, si->slab_factor
-                , si->slab_mem_size, RS_SLAB_PREALLOC) != RS_OK) 
-    {
-        goto free;
+            os->slab = NULL; /* NOTICE : SKIP free slab */
+            os->ring_buf = NULL; /* NOTICE : SKIP free ring_buf */
+        }
     }
 
     if(nrb) {
+
+        /* init slab */
+        si->slab = (rs_slab_t *) malloc(sizeof(rs_slab_t));
+
+        if(si->slab == NULL) {
+            rs_log_err(rs_errno, "malloc() failed, rs_slab_t");
+            goto free;
+        }
+        
+        if(rs_init_slab(si->slab, NULL, si->slab_init_size, si->slab_factor
+                    , si->slab_mem_size, RS_SLAB_PREALLOC) != RS_OK) 
+        {
+            goto free;
+        }
+
+        /* init ring buf */
         si->ring_buf = (rs_ring_buffer2_t *) 
             malloc(sizeof(rs_ring_buffer2_t));
 
         if(si->ring_buf == NULL) {
             rs_log_err(rs_errno, "malloc() failed, rs_ring_buffer_t");
+            goto free;
         }
 
         /* init ring buffer for io and redis thread */
@@ -145,7 +165,7 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
     }
 
     if(ni) {
-        rs_log_info("io thread start");
+        rs_log_info("start io thread");
 
         /* init io thread */
         if((err = pthread_create(&(si->io_thread), &(si->thread_attr), 
@@ -157,7 +177,7 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
     }
 
     if(nr) {
-        rs_log_info("redis thread start");
+        rs_log_info("start redis thread");
 
         /* init redis thread */
         if((err = pthread_create(&(si->redis_thread), &(si->thread_attr), 
@@ -168,19 +188,6 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
         }
     }
 
-    /* free old slave info */
-#if 0
-    if(os != NULL) {
-        if(nrb) {
-            rs_free_ring_buffer2(os->ring_buf);
-        }
-
-        free(os->ring_buf);
-        free(os->conf);
-        free(os);
-    }
-#endif
-
     return si;
 
 free:
@@ -188,36 +195,6 @@ free:
     /* free new slave info */
     rs_free_slave(si);
 
-#if 0
-    /* rollback */
-    if(os != NULL) {
-        if(ni) {
-            rs_log_info("rollback old slave info");
-
-            rs_log_info("io thread start");
-
-            /* init io thread */
-            if((err = pthread_create(&(si->io_thread), &(si->thread_attr), 
-                            rs_start_io_thread, (void *) si)) != 0) 
-            {
-                rs_log_err(err, "pthread_create() failed, io_thread");
-                goto free;
-            }
-        }
-
-        if(nr) {
-            rs_log_info("redis thread start");
-
-            /* init redis thread */
-            if((err = pthread_create(&(si->redis_thread), &(si->thread_attr), 
-                            rs_start_redis_thread, (void *) si)) != 0) 
-            {
-                rs_log_err(err, "pthread_create() failed redis_thread");
-                goto free;
-            }
-        }
-    }
-#endif
     return NULL;
 }
 

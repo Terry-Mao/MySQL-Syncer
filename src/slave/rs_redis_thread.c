@@ -251,6 +251,7 @@ static redisReply *rs_redis_command(rs_slave_info_t *si, int free,
 
 static void rs_free_redis_thread(void *data)
 {
+    /*
     rs_slave_info_t *si;
 
     si = (rs_slave_info_t *) data;
@@ -258,4 +259,5 @@ static void rs_free_redis_thread(void *data)
     if(si != NULL) {
         kill(rs_pid, SIGQUIT);
     }
+    */
 }
