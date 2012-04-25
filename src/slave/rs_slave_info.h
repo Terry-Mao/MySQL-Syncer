@@ -32,11 +32,12 @@ struct rs_slave_info_s {
     uint32_t            dump_pos;          
 
     rs_ring_buffer2_t   *ring_buf;
+    uint32_t            ring_buf_num;
+
     rs_slab_t           *slab;
 
     pthread_t           io_thread;
     pthread_t           redis_thread;
-    pthread_attr_t      thread_attr;
 
     double              slab_factor;        /* slab grow factor */
     uint32_t            slab_mem_size;
@@ -63,7 +64,8 @@ struct rs_slave_info_s {
     (si)->slab_init_size = 0;                                                \
     rs_conf_t_init(&((si)->conf));                                           \
     (si)->slab = NULL;                                                       \
-    (si)->ring_buf = NULL
+    (si)->ring_buf = NULL;                                                   \
+    (si)->ring_buf_num = 0;
 
 
 rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os); 

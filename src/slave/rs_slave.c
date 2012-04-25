@@ -18,11 +18,11 @@ int rs_init_slave()
     /* free old slave inof */
     os = rs_slave_info;
 
-    rs_slave_info = si;
-
     if(os != NULL) {
         rs_free_slave(os);
     }
+
+    rs_slave_info = si;
 
     return RS_OK;
 }
@@ -40,18 +40,26 @@ void rs_free_slave(void *data)
 
     if(si->io_thread != 0) {
         if((err = pthread_cancel(si->io_thread)) != 0) {
+            if((err = pthread_join(si->io_thread, NULL)) != 0) {
+                rs_log_err(err, "pthread_join() failed, io_thread");
+            }
+        } else {
             rs_log_err(err, "pthread_cancel() failed, io_thread");
+        }
+    }
+
+    if(si->redis_thread != 0) {
+        if((err = pthread_cancel(si->redis_thread)) == 0) {
+            if((err = pthread_join(si->redis_thread, NULL)) != 0) {
+                rs_log_err(err, "pthread_join() failed, redis_thread");
+            }
+        } else {
+            rs_log_err(err, "pthread_cancel() failed, redis_thread");
         }
     }
 
     if(si->svr_fd != -1) {
         rs_close(si->svr_fd);
-    }
-
-    if(si->redis_thread != 0) {
-        if((err = pthread_cancel(si->redis_thread)) != 0) {
-            rs_log_err(err, "pthread_cancel() failed, redis_thread");
-        }
     }
 
     if(si->c != NULL) {
@@ -73,10 +81,6 @@ void rs_free_slave(void *data)
     /* close slave info file */
     if(si->info_fd != -1) {
         rs_close(si->info_fd);
-    }
-
-    if((err = pthread_attr_destroy(&(si->thread_attr))) != 0) {
-        rs_log_err(err, "pthread_attr_destroy() failed, thread_attr");
     }
 
     /* free conf */

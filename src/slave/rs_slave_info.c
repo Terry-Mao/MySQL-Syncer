@@ -48,6 +48,13 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
         rs_log_info("slab_mem_size use default value, %u", si->slab_mem_size);
     }
 
+    /* ring buf num */
+    if(si->ring_buf_num <= 0) {
+        si->ring_buf_num = RS_RING_BUFFER_NUM;
+        rs_log_info("ring_buf_num use default value, %u", si->ring_buf_num);
+    }
+
+#if 0
     /* init thread attr */
     if((err = pthread_attr_init(&(si->thread_attr))) != 0) {
         rs_log_err(err, "pthread_attr_init() failed, thread_attr");
@@ -61,6 +68,7 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
         rs_log_err(err, "pthread_attr_setdetachstate() failed, DETACHED");
         goto free;
     }
+#endif
 
     /* slave info */
     si->info_fd = open(si->slave_info, O_CREAT | O_RDWR, 00666);
@@ -78,7 +86,8 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
     if(os != NULL) {
         /* dump file or pos */
         nrb = (os->dump_pos != si->dump_pos || 
-                rs_strcmp(os->dump_file, si->dump_file) != 0);
+                rs_strcmp(os->dump_file, si->dump_file) != 0) || 
+            (os->ring_buf_num != si->ring_buf_num);
 
         /* redis addr or port */
         nr = (os->redis_port != si->redis_port || 
@@ -142,7 +151,7 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
             rs_log_err(rs_errno, "malloc() failed, rs_slab_t");
             goto free;
         }
-        
+
         if(rs_init_slab(si->slab, NULL, si->slab_init_size, si->slab_factor
                     , si->slab_mem_size, RS_SLAB_PREALLOC) != RS_OK) 
         {
@@ -168,7 +177,7 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
         rs_log_info("start io thread");
 
         /* init io thread */
-        if((err = pthread_create(&(si->io_thread), &(si->thread_attr), 
+        if((err = pthread_create(&(si->io_thread), NULL, 
                         rs_start_io_thread, (void *) si)) != 0) 
         {
             rs_log_err(err, "pthread_create() failed, io_thread");
@@ -180,7 +189,7 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
         rs_log_info("start redis thread");
 
         /* init redis thread */
-        if((err = pthread_create(&(si->redis_thread), &(si->thread_attr), 
+        if((err = pthread_create(&(si->redis_thread), NULL, 
                         rs_start_redis_thread, (void *) si)) != 0) 
         {
             rs_log_err(err, "pthread_create() failed redis_thread");
@@ -227,6 +236,9 @@ static int rs_init_slave_conf(rs_slave_info_t *si)
                             RS_CONF_UINT32) != RS_OK)
             ||
             (rs_add_conf_kv(c, "slab.initsize", &(si->slab_init_size), 
+                            RS_CONF_UINT32) != RS_OK)
+            ||
+            (rs_add_conf_kv(c, "ringbuf.num", &(si->ring_buf_num), 
                             RS_CONF_UINT32) != RS_OK)
             ) 
             {
