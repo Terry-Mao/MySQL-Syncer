@@ -247,7 +247,6 @@ void rs_free_io_thread(void *data)
     rd = (rs_request_dump_t *) data;
 
     if(rd != NULL) {
-        rd->io_thread = 0;
         rs_free_request_dump(rd->rdi, rd);
     }
 }
@@ -259,7 +258,6 @@ void rs_free_dump_thread(void *data)
     rd = (rs_request_dump_t *) data;
 
     if(rd != NULL) {
-        rd->dump_thread = 0;
         rs_free_request_dump(rd->rdi, rd);
     }
 }

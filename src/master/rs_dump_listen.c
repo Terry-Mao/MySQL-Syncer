@@ -184,6 +184,5 @@ static void rs_free_accept_thread(void *data)
 
     /* NOTICE : if reload signal, must skip send SIGQUIT */
     if(mi != NULL) {
-        mi->accept_thread = 0;
     }
 }
