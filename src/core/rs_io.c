@@ -7,8 +7,6 @@ ssize_t rs_read(int fd, void *buf, size_t count)
     ssize_t n;
     int     err;
 
-    err = 0;
-
     for( ;; ) {
         n = read(fd, buf, count);
 
@@ -17,7 +15,7 @@ ssize_t rs_read(int fd, void *buf, size_t count)
             if(err == EINTR)
                 continue;
 
-            rs_log_err(err, "read() failed");
+            rs_log_err(rs_errno, "read() failed");
         }
 
         break;
@@ -31,8 +29,6 @@ ssize_t rs_write(int fd, const void *buf, size_t count)
     ssize_t n;
     int     err;
 
-    err = 0;
-
     for( ;; ) {
         n = write(fd, buf, count);
 
@@ -41,7 +37,7 @@ ssize_t rs_write(int fd, const void *buf, size_t count)
             if(err == EINTR)
                 continue;
 
-            rs_log_err(err, "write() failed");
+            rs_log_err(rs_errno, "write() failed");
         }
 
         break;
