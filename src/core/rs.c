@@ -76,17 +76,19 @@ int main(int argc, char * const *argv)
             }
 
             oc = rs_core_info;
-            rs_core_info = ci;
-
 #if MASTER
             rs_init_master();
 #elif SLAVE
             rs_init_slave();
 #endif
-
-            rs_free_core(oc);
+            
+            if(oc != NULL) {
+                rs_free_core(oc);
+            }
 
             rs_reload = 0;
+
+            rs_core_info = ci;
 
             continue;
         }
@@ -130,28 +132,28 @@ static int rs_get_options(int argc, char *const *argv)
         while (*p) {
 
             switch (*p++) {
-            case '?':
-            case 'h':
-                rs_show_help = 1;
-                break;
+                case '?':
+                case 'h':
+                    rs_show_help = 1;
+                    break;
 
-            case 'c':
-                if (*p) {
-                    rs_conf_path = p;
-                    goto next;
-                }
+                case 'c':
+                    if (*p) {
+                        rs_conf_path = p;
+                        goto next;
+                    }
 
-                if (argv[++i]) {
-                    rs_conf_path = argv[i];
-                    goto next;
-                }
+                    if (argv[++i]) {
+                        rs_conf_path = argv[i];
+                        goto next;
+                    }
 
-                rs_log_stderr(0, "option \"-c\" requires config file");
-                return RS_ERR;
+                    rs_log_stderr(0, "option \"-c\" requires config file");
+                    return RS_ERR;
 
-            default:
-                rs_log_stderr(0, "invalid option: \"%c\"", *(p - 1));
-                return RS_ERR;
+                default:
+                    rs_log_stderr(0, "invalid option: \"%c\"", *(p - 1));
+                    return RS_ERR;
             }
         }
 

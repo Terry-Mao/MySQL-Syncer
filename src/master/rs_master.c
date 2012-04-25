@@ -33,12 +33,12 @@ int rs_init_master()
 
     /* free old master info */
     om = rs_master_info;
-
-    rs_master_info = mi;
-    
+ 
     if(om != NULL) {
         rs_free_master(om);
     }
+
+    rs_master_info = mi;
 
     return RS_OK;
 }
