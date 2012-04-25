@@ -247,6 +247,7 @@ void rs_free_io_thread(void *data)
     rd = (rs_request_dump_t *) data;
 
     if(rd != NULL) {
+        rd->io_thread = 0;
         rs_free_request_dump(rd->rdi, rd);
     }
 }
@@ -258,6 +259,7 @@ void rs_free_dump_thread(void *data)
     rd = (rs_request_dump_t *) data;
 
     if(rd != NULL) {
+        rd->dump_thread = 0;
         rs_free_request_dump(rd->rdi, rd);
     }
 }
@@ -364,7 +366,8 @@ rs_request_dump_t *rs_get_request_dump(rs_request_dump_info_t *rdi)
 
 void rs_free_request_dump(rs_request_dump_info_t *rdi, rs_request_dump_t *rd) 
 {
-    int err;
+    int         err;
+    pthread_t   tid;
 
     if(rdi == NULL || rd == NULL || !rd->open) {
         return;
@@ -395,8 +398,9 @@ void rs_free_request_dump(rs_request_dump_info_t *rdi, rs_request_dump_t *rd)
 
     /* free request dump */
     if(rd->io_thread != 0) {
-        if((err = pthread_cancel(rd->io_thread)) == 0) {
-            if((err = pthread_join(rd->io_thread, NULL)) != 0) {
+        tid = rd->io_thread;
+        if((err = pthread_cancel(tid)) == 0) {
+            if((err = pthread_join(tid, NULL)) != 0) {
                 rs_log_err(err, "pthread_join() failed, io_thread");
             }
         } else {
@@ -405,8 +409,9 @@ void rs_free_request_dump(rs_request_dump_info_t *rdi, rs_request_dump_t *rd)
     }
 
     if(rd->dump_thread != 0) {
-        if((err = pthread_cancel(rd->dump_thread)) == 0) {
-            if((err = pthread_join(rd->dump_thread, NULL)) != 0) {
+        tid = rd->dump_thread;
+        if((err = pthread_cancel(tid)) == 0) {
+            if((err = pthread_join(tid, NULL)) != 0) {
                 rs_log_err(err, "pthread_join() failed, dump_thread");
             }
         } else {

@@ -48,6 +48,7 @@ void rs_free_master(void *data)
 {
     int                 err;
     rs_master_info_t    *mi;
+    pthread_t           tid;
 
     mi = (data == NULL ? rs_master_info : (rs_master_info_t *) data);
 
@@ -59,8 +60,9 @@ void rs_free_master(void *data)
 
     /* exit accpet thread */
     if(mi->accept_thread != 0) {
-        if((err = pthread_cancel(mi->accept_thread)) == 0) {
-            if((err = pthread_join(mi->accept_thread, NULL)) != 0) {
+        tid = mi->accept_thread;
+        if((err = pthread_cancel(tid)) == 0) {
+            if((err = pthread_join(tid, NULL)) != 0) {
                 rs_log_err(err, "pthread_join() failed, "
                         "accept_thread");
             }
