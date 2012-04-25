@@ -34,6 +34,9 @@ int rs_init_strerror()
 
     for (err = 0; err < RS_SYS_NERR; err++) {
 
+        msg = NULL;
+        p = NULL;
+
         msg = strerror(err);
         len = rs_strlen(msg);
 
