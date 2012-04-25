@@ -21,6 +21,6 @@ extern rs_master_info_t             *rs_master_info;
 #include <rs_parse_binlog.h>
 #include <rs_request_dump.h>
 #include <rs_filter_binlog.h>
-#include <test.pb-c.h>
+#include <message.pb-c.h>
 
 #endif

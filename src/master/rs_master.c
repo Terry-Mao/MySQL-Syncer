@@ -59,13 +59,13 @@ void rs_free_master(void *data)
 
     /* exit accpet thread */
     if(mi->accept_thread != 0) {
-        if((err = pthread_cancel(mi->accept_thread)) != 0) {
-            rs_log_err(err, "pthread_cancel() failed, accept_thread");
-        } else {
+        if((err = pthread_cancel(mi->accept_thread)) == 0) {
             if((err = pthread_join(mi->accept_thread, NULL)) != 0) {
                 rs_log_err(err, "pthread_join() failed, "
                         "accept_thread");
             }
+        } else {
+            rs_log_err(err, "pthread_cancel() failed, accept_thread");
         }
     }
 
@@ -76,6 +76,7 @@ void rs_free_master(void *data)
     /* close all request_dump*/
     if(mi->req_dump_info != NULL) {
         rs_destroy_request_dumps(mi->req_dump_info); 
+        free(mi->req_dump_info);
     }
 
     /* free conf */
