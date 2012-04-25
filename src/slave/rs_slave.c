@@ -39,7 +39,7 @@ void rs_free_slave(void *data)
     }
 
     if(si->io_thread != 0) {
-        if((err = pthread_cancel(si->io_thread)) != 0) {
+        if((err = pthread_cancel(si->io_thread)) == 0) {
             if((err = pthread_join(si->io_thread, NULL)) != 0) {
                 rs_log_err(err, "pthread_join() failed, io_thread");
             }
