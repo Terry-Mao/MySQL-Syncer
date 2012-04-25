@@ -144,8 +144,6 @@ void *rs_start_accept_thread(void *data)
             continue;
         } 
 
-        rd->cli_fd = cli_fd;
-
         /* init ring buffer */
         if(rs_init_ring_buffer2(&(rd->ring_buf), RS_RING_BUFFER_NUM) != RS_OK) 
         {
@@ -159,9 +157,12 @@ void *rs_start_accept_thread(void *data)
             goto free;
         }
 
+        rd->cli_fd = cli_fd;
+        rd->binlog_idx_file = mi->binlog_idx_file;
+        rd->rdi = mi->req_dump_info;
+
         /* create dump thread */
-        if((err = pthread_create(&(rd->dump_thread), 
-                        &(mi->req_dump_info->thread_attr), 
+        if((err = pthread_create(&(rd->dump_thread), NULL, 
                         rs_start_dump_thread, (void *) rd)) != 0) 
         {
             rs_log_err(err, "pthread_create() failed, req_dump thread");

@@ -45,7 +45,25 @@ rs_master_info_t *rs_init_master_info(rs_master_info_t *om)
         rs_log_info("slab_mem_size use default value, %u", mi->slab_mem_size);
     }
 
+    /* ring buf num */
+    if(mi->ring_buf_num <= 0) {
+        mi->ring_buf_num = RS_RING_BUFFER_NUM;
+        rs_log_info("ring_buf_num use default value, %u", mi->ring_buf_num);
+    }
+
     if(om != NULL) {
+
+        /* exit accpet thread */
+        if(om->accept_thread != 0) {
+            if((err = pthread_cancel(om->accept_thread)) != 0) {
+                rs_log_err(err, "pthread_cancel() failed, accept_thread");
+            } else {
+                if((err = pthread_join(om->accept_thread, NULL)) != 0) {
+                    rs_log_err(err, "pthread_join() failed, "
+                            "accept_thread");
+                }
+            }
+        }
 
         /* init dump listen */
         if((nl = ((rs_strcmp(mi->listen_addr, om->listen_addr) != 0) || 
@@ -58,15 +76,14 @@ rs_master_info_t *rs_init_master_info(rs_master_info_t *om)
             rs_log_info("reuse svr_fd");
 
             mi->svr_fd = om->svr_fd;
-            mi->accept_thread = om->accept_thread;
-
-            om->accept_thread = 0; /* NOTICE : don't restop accept thread */
             om->svr_fd = -1; /* NOTICE : reuse fd, don't reclose svr_fd */
         }
 
 
-        if(!(nd = (rs_strcmp(mi->binlog_idx_file, om->binlog_idx_file) != 0))) 
-        {
+        nd = (rs_strcmp(mi->binlog_idx_file, om->binlog_idx_file) != 0) && 
+            (om->ring_buf_num != mi->ring_buf_num);
+
+        if(!nd) {
             if(nl) {
                 rs_log_info("free dump threads");
                 /* free dump threads */
@@ -89,16 +106,6 @@ rs_master_info_t *rs_init_master_info(rs_master_info_t *om)
         }
     }
 
-    rs_log_info("start accept thread");
-
-    /* start accept thread */
-    if((err = pthread_create(&(mi->accept_thread), NULL, 
-                    rs_start_accept_thread, mi)) != 0) 
-    {
-        rs_log_err(err, "pthread_create() failed, accept thread");
-        goto free;
-    }
-
     if(nd) {
         rs_log_info("start init dump threads");
 
@@ -116,6 +123,16 @@ rs_master_info_t *rs_init_master_info(rs_master_info_t *om)
         {
             goto free;
         }
+    }
+
+    rs_log_info("start accept thread");
+
+    /* start accept thread */
+    if((err = pthread_create(&(mi->accept_thread), NULL, 
+                    rs_start_accept_thread, mi)) != 0) 
+    {
+        rs_log_err(err, "pthread_create() failed, accept thread");
+        goto free;
     }
 
     return mi;
@@ -151,11 +168,14 @@ static int rs_init_master_conf(rs_master_info_t *mi)
             ||
             (rs_add_conf_kv(c, "slab.initsize", &(mi->slab_init_size), 
                             RS_CONF_UINT32) != RS_OK)
-      )
-    {
-        rs_log_err(0, "rs_add_conf_kv() failed");
-        return RS_ERR;
-    }
+            ||
+            (rs_add_conf_kv(c, "ringbuf.num", &(mi->ring_buf_num), 
+                            RS_CONF_UINT32) != RS_OK)
+            )
+            {
+                rs_log_err(0, "rs_add_conf_kv() failed");
+                return RS_ERR;
+            }
 
     /* init master conf */
     if(rs_init_conf(c, rs_conf_path, RS_MASTER_MODULE_NAME) != RS_OK) {

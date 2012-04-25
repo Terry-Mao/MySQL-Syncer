@@ -13,26 +13,6 @@
 #define RS_RING_BUFFER_EMPTY_SLEEP_SEC  1
 
 
-#define rs_request_dump_t_init(rd)                                           \
-    rs_ring_buffer2_t *rb;                                                   \
-    rs_binlog_info_t *bi;                                                    \
-    (rd)->dump_pos = 0;                                                      \
-    (rd)->cli_fd = -1;                                                       \
-    (rd)->notify_fd = -1;                                                    \
-    (rd)->open = 0;                                                          \
-    (rd)->dump_num = 0;                                                      \
-    (rd)->binlog_fp = NULL;                                                  \
-    (rd)->binlog_idx_fp = NULL;                                              \
-    (rd)->dump_thread = 0;                                                   \
-    (rd)->io_thread = 0;                                                     \
-    rs_memzero((rd)->dump_file, PATH_MAX + 1);                               \
-    rb = &(rd->ring_buf);                                                    \
-    bi = &(rd->binlog_info);                                                 \
-    rs_ring_buffer2_t_init(rb);                                              \
-    rs_binlog_info_t_init(bi)                                               
-
-
-
 struct rs_request_dump_s {
 
     int                 cli_fd;
@@ -41,6 +21,7 @@ struct rs_request_dump_s {
     uint32_t            dump_pos;
     uint32_t            dump_num;
     char                dump_file[PATH_MAX + 1];
+    char                *binlog_idx_file;
 
     FILE                *binlog_fp;  /* binlog fp */
     FILE                *binlog_idx_fp; /* binlog idx fp */
@@ -52,10 +33,31 @@ struct rs_request_dump_s {
     pthread_t           io_thread;
     pthread_t           dump_thread;
 
-    rs_request_dump_t   *data;
+    rs_request_dump_t       *data;
+    rs_request_dump_info_t  *rdi;
     
     unsigned            open:1;
 }; 
+
+#define rs_request_dump_t_init(rd)                                           \
+    rs_ring_buffer2_t *rb;                                                   \
+    rs_binlog_info_t *bi;                                                    \
+    (rd)->dump_pos = 0;                                                      \
+    (rd)->cli_fd = -1;                                                       \
+    (rd)->notify_fd = -1;                                                    \
+    (rd)->open = 0;                                                          \
+    (rd)->dump_num = 0;                                                      \
+    (rd)->binlog_fp = NULL;                                                  \
+    (rd)->binlog_idx_fp = NULL;                                              \
+    (rd)->binlog_idx_file = NULL;                                            \
+    (rd)->dump_thread = 0;                                                   \
+    (rd)->rdi = NULL;                                                        \
+    (rd)->io_thread = 0;                                                     \
+    rs_memzero((rd)->dump_file, PATH_MAX + 1);                               \
+    rb = &(rd->ring_buf);                                                    \
+    bi = &(rd->binlog_info);                                                 \
+    rs_ring_buffer2_t_init(rb);                                              \
+    rs_binlog_info_t_init(bi)                                               
 
 struct rs_request_dump_info_s {
 
@@ -65,7 +67,7 @@ struct rs_request_dump_info_s {
     rs_request_dump_t   *free_req_dump;
 
     pthread_mutex_t     req_dump_mutex;
-    pthread_attr_t      thread_attr;
+    /* pthread_attr_t      thread_attr; */
 };
 
 void *rs_start_dump_thread(void *data); 

@@ -6,7 +6,7 @@
 #include <rs_core.h>
 #include <rs_master.h>
 
-#define RS_RING_BUFFER_NUM              50000
+#define RS_RING_BUFFER_NUM              5000
 #define RS_SLAB_GROW_FACTOR             1.5
 #define RS_SLAB_INIT_SIZE               100
 #define RS_SLAB_MEM_SIZE                (100 * 1024 * 1024)
@@ -24,6 +24,8 @@ struct rs_master_info_s {
     double                  slab_factor;        /* slab grow factor */
     uint32_t                slab_mem_size;
     uint32_t                slab_init_size;
+
+    uint32_t                ring_buf_num;
 
     rs_conf_t               conf;
 };

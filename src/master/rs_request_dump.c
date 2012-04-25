@@ -11,7 +11,6 @@ void *rs_start_dump_thread(void *data)
     ssize_t                 n;
     char                    *cbuf, *p;
     rs_request_dump_t       *rd;
-    rs_request_dump_info_t  *rdi;
     rs_ring_buffer2_data_t  *d;
     rs_slab_t               *sl;
     fd_set                  rset, tset;
@@ -20,7 +19,6 @@ void *rs_start_dump_thread(void *data)
     s = 0;
     cbuf = NULL;
     rd = (rs_request_dump_t *) data;
-    rdi = rs_master_info->req_dump_info;
     FD_ZERO(&rset);
     FD_ZERO(&tset);
     mfd = 0;
@@ -28,10 +26,16 @@ void *rs_start_dump_thread(void *data)
 
     pthread_cleanup_push(rs_free_dump_thread, (void *) rd);
 
-    if(rd == NULL || rdi == NULL) {
-        rs_log_err(rs_errno, "rd or rdi is null");
+    if(rd == NULL) {
+        rs_log_err(rs_errno, "rd is null");
         goto free;
     }
+
+    if(rd->rdi == NULL) {
+        rs_log_err(rs_errno, "rdi is null");
+        goto free;
+    }
+
 
     sl = &(rd->slab);
 
@@ -75,13 +79,12 @@ void *rs_start_dump_thread(void *data)
     rs_log_info("dump_file = %s, dump_num = %u, dump_pos = %u", 
             rd->dump_file, rd->dump_num, rd->dump_pos);
 
-    if((err = pthread_create(&(rd->io_thread), &(rdi->thread_attr)
+    if((err = pthread_create(&(rd->io_thread), NULL
                     , rs_start_io_thread, (void *) rd)) != 0) 
     {
         rs_log_err(err, "pthread_create() failed, rs_dump_io");
         goto free;
     }
-
 
     for( ;; ) {
 
@@ -183,7 +186,6 @@ void *rs_start_dump_thread(void *data)
 free:
 
     pthread_cleanup_pop(1);
-
     pthread_exit(NULL);
 }
 
@@ -201,7 +203,7 @@ static void *rs_start_io_thread(void *data)
     }
 
     /* open binlog index file */
-    if((rd->binlog_idx_fp = fopen(rs_master_info->binlog_idx_file, "r"))
+    if((rd->binlog_idx_fp = fopen(rd->binlog_idx_file, "r"))
             == NULL) 
     {
         rs_log_err(rs_errno, "fopen(\"%s\") failed, binlog_idx_file");
@@ -241,28 +243,24 @@ free:
 void rs_free_io_thread(void *data)
 {
     rs_request_dump_t           *rd;
-    rs_request_dump_info_t      *rdi;
 
     rd = (rs_request_dump_t *) data;
-    rdi = rs_master_info->req_dump_info;
 
-    if(rd != NULL && rdi != NULL) {
+    if(rd != NULL) {
         rd->io_thread = 0;
-        rs_free_request_dump(rdi, rd);
+        rs_free_request_dump(rd->rdi, rd);
     }
 }
 
 void rs_free_dump_thread(void *data)
 {
     rs_request_dump_t           *rd;
-    rs_request_dump_info_t      *rdi;
 
     rd = (rs_request_dump_t *) data;
-    rdi = rs_master_info->req_dump_info;
 
-    if(rd != NULL && rdi != NULL) {
+    if(rd != NULL) {
         rd->dump_thread = 0;
-        rs_free_request_dump(rdi, rd);
+        rs_free_request_dump(rd->rdi, rd);
     }
 }
 
@@ -290,6 +288,7 @@ int rs_init_request_dump(rs_request_dump_info_t *rdi, uint32_t dump_num)
         return RS_ERR;
     }
 
+#if 0  
     /* init thread attr */
     if((err = pthread_attr_init(&(rdi->thread_attr))) != 0) {
         rs_log_err(err, "pthread_attr_init() failed, thread_attr");
@@ -303,6 +302,7 @@ int rs_init_request_dump(rs_request_dump_info_t *rdi, uint32_t dump_num)
         rs_log_err(err, "pthread_attr_setdetachstate() failed, DETACHED");
         return RS_ERR;
     }
+#endif
 
     rdi->dump_num = dump_num;
     rdi->free_dump_num = dump_num;
@@ -397,13 +397,21 @@ void rs_free_request_dump(rs_request_dump_info_t *rdi, rs_request_dump_t *rd)
 
     /* free request dump */
     if(rd->io_thread != 0) {
-        if((err = pthread_cancel(rd->io_thread)) != 0) {
+        if((err = pthread_cancel(rd->io_thread)) == 0) {
+            if((err = pthread_join(rd->io_thread, NULL)) != 0) {
+                rs_log_err(err, "pthread_join() failed, io_thread");
+            }
+        } else {
             rs_log_err(err, "pthread_cancel() failed, io_thread");
         } 
     }
 
     if(rd->dump_thread != 0) {
-        if((err = pthread_cancel(rd->dump_thread)) != 0) {
+        if((err = pthread_cancel(rd->dump_thread)) == 0) {
+            if((err = pthread_join(rd->dump_thread, NULL)) != 0) {
+                rs_log_err(err, "pthread_join() failed, dump_thread");
+            }
+        } else {
             rs_log_err(err, "pthread_cancel() failed, dump_thread");
         }
     }
@@ -466,12 +474,14 @@ void rs_destroy_request_dumps(rs_request_dump_info_t *rdi)
             rs_log_err(err, "pthread_mutex_destroy() failed, dump_mutex");
         }
 
-        if((err = pthread_attr_destroy(&(rdi->thread_attr))) != 0) {
-            rs_log_err(err, "pthread_attr_destroy() failed, thread_attr");
-        }
-        
-        free(rdi->req_dumps);
+        /*
+           if((err = pthread_attr_destroy(&(rdi->thread_attr))) != 0) {
+           rs_log_err(err, "pthread_attr_destroy() failed, thread_attr");
+           }
+        */
 
-        free(rdi);
+        if(rdi->req_dumps != NULL) {
+            free(rdi->req_dumps);
+        }
     }
 }
