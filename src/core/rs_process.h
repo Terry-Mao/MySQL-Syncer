@@ -6,7 +6,7 @@
 #include <rs_config.h>
 #include <rs_core.h>
 
-int rs_init_daemon();
+int rs_init_daemon(rs_core_info_t *ci);
 
 int rs_init_signals(sigset_t *waitset);
 void rs_sig_handle(int signum);

@@ -85,7 +85,7 @@ rs_core_info_t *rs_init_core_info(rs_core_info_t *oc)
     if(nd) {
         /* daemon */
         if(ci->daemon == 1) {
-            if(rs_init_daemon() != RS_OK) {
+            if(rs_init_daemon(ci) != RS_OK) {
                 goto free;
             }
         }

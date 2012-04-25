@@ -7,7 +7,7 @@ volatile sig_atomic_t rs_reload;
 
 pid_t rs_pid;
 
-int rs_init_daemon()
+int rs_init_daemon(rs_core_info_t *ci)
 {
     int  fd;
 
@@ -21,6 +21,7 @@ int rs_init_daemon()
         break;
 
     default:
+        rs_close(ci->log_fd);
         exit(0);
     }
 

@@ -58,8 +58,8 @@ extern volatile sig_atomic_t     rs_reload;
 #include <rs_slab.h>
 #include <rs_ring_buffer.h>
 #include <rs_ring_buffer2.h>
-#include <rs_process.h>
 #include <rs_conf.h>
 #include <rs_core_info.h>
+#include <rs_process.h>
 
 #endif
