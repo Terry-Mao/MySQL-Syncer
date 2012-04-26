@@ -41,6 +41,7 @@ int rs_init_strerror()
         len = rs_strlen(msg);
 
         p = malloc(len);
+
         if (p == NULL) {
             goto failed;
         }

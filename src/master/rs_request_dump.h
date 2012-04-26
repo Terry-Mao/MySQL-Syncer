@@ -67,7 +67,7 @@ struct rs_request_dump_info_s {
     rs_request_dump_t   *free_req_dump;
 
     pthread_mutex_t     req_dump_mutex;
-    /* pthread_attr_t      thread_attr; */
+    pthread_attr_t      thread_attr;
 };
 
 void *rs_start_dump_thread(void *data); 

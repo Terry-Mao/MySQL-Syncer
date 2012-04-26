@@ -92,7 +92,6 @@ uint32_t rs_estr_to_uint32(char *s)
 char *rs_cp_utf8_str(char *dst, char *src) 
 {
     int cl;
-    char t;
 
     for( ;; ) {
 
@@ -103,12 +102,13 @@ char *rs_cp_utf8_str(char *dst, char *src)
             if(*src == '\\') {
                 src++;
 
-                t = rs_ansi_escape_char(*src);
-                dst = rs_cpymem(dst, &t, 1);
+                /* dst = rs_cpymem(dst, &t, 1); */
+                *dst++ = rs_ansi_escape_char(*src);
             } else if(*src == '\'' || *src == '\0') {
                 break;
             } else { 
-                dst = rs_cpymem(dst, src, 1);
+                /* dst = rs_cpymem(dst, src, 1); */
+                *dst++ = *src;
             }
 
             src++;
@@ -118,64 +118,23 @@ char *rs_cp_utf8_str(char *dst, char *src)
     return src;
 }
 
-char *rs_strstr_end(char *src, char *sea, uint32_t len) 
-{
-    if((src = rs_strstr(src, sea)) == NULL) {
-        return NULL;     
-    }
-
-    src = src + len;
-
-    return src;
-}
-
-
-void rs_convert_to_hex(char *buf, char *src, uint32_t len) 
-{
-    uint32_t ui32, i;
-    static u_char hex[] = "0123456789abcdef";
-
-    buf = buf + 2 * len;
-    src = src + len;
-    ui32 = 0;
-
-    do {
-        i = 0;
-        ui32 = (uint32_t) ((u_char) *--src - '\0');
-
-        do {
-
-            *--buf = hex[(uint32_t) (ui32 & 0xf)];
-            i++;
-
-        } while(ui32 >>= 4);
-
-        if(i == 1) {
-            *--buf = '0';
-        }
-
-    } while (--len);
-}
-
-
 char *rs_cp_binary_str(char *dst, uint32_t *len, char *src) 
 {
-    char t;
-
     *len = 0;
 
     for( ;; ) {
         if(*src == '\\') {
             src++;
 
-            t = rs_ansi_escape_char(*src);
-            dst = rs_cpymem(dst, &t, 1);
+            *dst++ = rs_ansi_escape_char(*src);
+            /* dst = rs_cpymem(dst, &t, 1); */
 
             *len += 1;
         } else if(*src == '\'' || *src == '\0') {
             break;
         } else { 
-            dst = rs_cpymem(dst, src, 1);
+            /* dst = rs_cpymem(dst, src, 1); */
+            *dst++ = *src;
             *len += 1;
         }
 
@@ -183,62 +142,6 @@ char *rs_cp_binary_str(char *dst, uint32_t *len, char *src)
     }
 
     return src;
-}
-
-char *rs_ncp_str_till(char *dst, char *src, char es, size_t len) 
-{
-    size_t n;
-
-    n = len;
-
-    while(*src != es && n) {
-        *dst++ = *src++; 
-        n--;
-    }
-
-    *dst = '\0';
-    src++;
-
-    return src;
-}
-
-void rs_uint32_to_str(uint32_t n, char *buf) 
-{
-    uint32_t    p;
-    char        b[UINT32_LEN + 1], *t, *s;
-
-    s = buf;
-    t = b + UINT32_LEN;
-    p = 0;
-
-    do {
-        *--t = (n % 10 + '0');
-        p += 1;
-    } while (n /= 10);
-
-    s = rs_cpymem(s, t, p);
-    *s = '\0';
-}
-
-int64_t rs_timestr_to_msec(char *time) 
-{
-    struct tm tm;
-    int64_t tsec;
-
-    tsec = 0;
-
-    if(strptime(time, RS_TIME_CONVERT_FORMAT, &tm) == 0) {
-        rs_log_err(rs_errno, "strptime(\"%s\",&tm) failed", time);
-        return RS_ERR;
-    }
-
-    tsec = (int64_t) mktime(&tm);
-    if(tsec == -1) {
-        rs_log_err(rs_errno, "mktime() failed");
-        return RS_ERR;
-    }
-
-    return tsec * 1000;
 }
 
 static char rs_ansi_escape_char(char src) 
@@ -287,4 +190,82 @@ static char rs_ansi_escape_char(char src)
     }
 
     return t;
+}
+
+char *rs_strstr_end(char *src, char *sea, uint32_t len) 
+{
+    if((src = rs_strstr(src, sea)) == NULL) {
+        return NULL;     
+    }
+
+    return src + len;
+}
+
+
+void rs_convert_to_hex(char *dst, char *src, uint32_t len) 
+{
+    static u_char hex[] = "0123456789abcdef";
+
+    while (len--) {
+        *dst++ = hex[*src >> 4];
+        *dst++ = hex[*src++ & 0xf];
+    }
+}
+
+char *rs_ncp_str_till(char *dst, char *src, char es, size_t len) 
+{
+    size_t n;
+
+    n = len;
+
+    while(*src != es && n) {
+        *dst++ = *src++; 
+        n--;
+    }
+
+    *dst = '\0';
+    src++;
+
+    return src;
+}
+
+void rs_uint32_to_str(uint32_t n, char *buf) 
+{
+    uint32_t    p;
+    char        b[UINT32_LEN + 1], *t, *s;
+
+    s = buf;
+    t = b + UINT32_LEN;
+    p = 0;
+
+    do {
+        *--t = (n % 10 + '0');
+        p += 1;
+    } while (n /= 10);
+
+    s = rs_cpymem(s, t, p);
+    *s = '\0';
+}
+
+int64_t rs_timestr_to_msec(char *time) 
+{
+    struct tm tm;
+    int64_t tsec;
+
+    rs_memzero(&tm, sizeof(struct tm));
+    tsec = 0;
+
+    if(strptime(time, RS_TIME_CONVERT_FORMAT, &tm) == 0) {
+        rs_log_err(rs_errno, "strptime(\"%s\",&tm) failed", time);
+        return RS_ERR;
+    }
+
+    tsec = (int64_t) mktime(&tm);
+
+    if(tsec == -1) {
+        rs_log_err(rs_errno, "mktime() failed");
+        return RS_ERR;
+    }
+
+    return tsec * 1000;
 }

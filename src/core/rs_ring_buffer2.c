@@ -78,9 +78,9 @@ void rs_get_ring_buffer2_advance(rs_ring_buffer2_t *rb)
     rb->rn++;
 
 #if x86_64
-    rs_log_debug(0, "ring buffer write : %lu, read : %lu", rb->wn, rb->rn);
+    rs_log_info("ring buffer write : %lu, read : %lu", rb->wn, rb->rn);
 #elif x86_32
-    rs_log_debug(0, "ring buffer write : %llu, read : %llu", rb->wn, rb->rn);
+    rs_log_info("ring buffer write : %llu, read : %llu", rb->wn, rb->rn);
 #endif
 }
 
@@ -117,9 +117,9 @@ void rs_set_ring_buffer2_advance(rs_ring_buffer2_t *rb)
 
     rb->wn++;
 #if x86_64
-    rs_log_debug(0, "ring buffer write : %lu, read : %lu", rb->wn, rb->rn);
+    rs_log_info("ring buffer write : %lu, read : %lu", rb->wn, rb->rn);
 #elif x86_32
-    rs_log_debug(0, "ring buffer write : %llu, read : %llu", rb->wn, rb->rn);
+    rs_log_info("ring buffer write : %llu, read : %llu", rb->wn, rb->rn);
 #endif
 }
 

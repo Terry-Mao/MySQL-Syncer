@@ -162,7 +162,7 @@ void *rs_start_accept_thread(void *data)
         rd->rdi = mi->req_dump_info;
 
         /* create dump thread */
-        if((err = pthread_create(&(rd->dump_thread), NULL, 
+        if((err = pthread_create(&(rd->dump_thread), &(rd->rdi->thread_attr), 
                         rs_start_dump_thread, (void *) rd)) != 0) 
         {
             rs_log_err(err, "pthread_create() failed, req_dump thread");

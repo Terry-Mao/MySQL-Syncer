@@ -76,12 +76,17 @@ int main(int argc, char * const *argv)
             }
 
             oc = rs_core_info;
+
 #if MASTER
             rs_init_master();
 #elif SLAVE
+#if 0
             rs_init_slave();
 #endif
-            
+            rs_free_slave(NULL);
+            break;
+#endif
+
             if(oc != NULL) {
                 rs_free_core(oc);
             }
