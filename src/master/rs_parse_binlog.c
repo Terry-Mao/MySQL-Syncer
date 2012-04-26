@@ -6,53 +6,43 @@
 int rs_def_header_handle(rs_request_dump_t *rd) 
 {
     int                 r;
-    uint32_t            p;
     rs_binlog_info_t    *bi;
+    char                eh[RS_BINLOG_EVENT_HEADER_LEN], *p;
 
     bi = &(rd->binlog_info);
+    p = eh;
 
-    p = rd->dump_pos + RS_BINLOG_TIMESTAMP_LEN + 
-        (rd->dump_pos == 0 ? RS_MAGIC_NUM_LEN : 0);
+    /* skip magic num */
+    if(rd->dump_pos == 0) {
+        if(fseek(rd->binlog_fp, RS_BINLOG_MAGIC_NUM_LEN, SEEK_SET) == -1) {
+            rs_log_err(rs_errno, "fseek() failed, seek_set pos = %u", p);
+            return RS_ERR;
+        }
+    }
+
+    /* get event header */ 
+    if((r = rs_eof_read_binlog(rd, eh, RS_BINLOG_EVENT_HEADER_LEN)) != RS_OK) 
+    {
+        return r;
+    }
 
     /* skip timestamp */
-    if(fseek(rd->binlog_fp, p, SEEK_SET) == -1) {
-        rs_log_err(rs_errno, "fseek() failed, seek_set pos = %u", p);
-        return RS_ERR;
-    }
+    p += RS_BINLOG_TIMESTAMP_LEN;
+
     /* get event type */
-    if((r = rs_eof_read_binlog(rd, &(bi->t), RS_BINLOG_TYPE_CODE_LEN)) 
-            != RS_OK) 
-    {
-        return r;
-    }
+    bi->t = *p;
 
     /* skip server id */
-    if(fseek(rd->binlog_fp, RS_BINLOG_SERVER_ID_LEN, SEEK_CUR) == -1) {
-        rs_log_err(rs_errno, "fseek() failed, seek_cur pos = %u", 
-                RS_BINLOG_SERVER_ID_LEN);
-        return RS_ERR;
-    }
+    p += RS_BINLOG_TYPE_CODE_LEN + RS_BINLOG_SERVER_ID_LEN;
 
     /* get event_length */
-    if((r = rs_eof_read_binlog(rd, &(bi->el), RS_BINLOG_EVENT_LENGTH_LEN)) 
-            != RS_OK) 
-    {
-        return r;
-    }
+    rs_memcpy(&(bi->el), p, RS_BINLOG_EVENT_LENGTH_LEN);
+    p += RS_BINLOG_EVENT_LENGTH_LEN;
 
     /* get next position */
-    if((r = rs_eof_read_binlog(rd, &(bi->np), RS_BINLOG_NEXT_POSITION_LEN)) 
-            != RS_OK) 
-    {
-        return r;
-    }
+    rs_memcpy(&(bi->np), p, RS_BINLOG_NEXT_POSITION_LEN);
 
     rd->dump_pos = bi->np;
-
-    if(!bi->el) {
-        rs_log_err(0, "binlog crash");
-        return RS_ERR;
-    }
 
     rs_log_debug(0, 
             "\n========== event header =============\n"
@@ -72,52 +62,41 @@ int rs_def_header_handle(rs_request_dump_t *rd)
 
 int rs_def_query_handle(rs_request_dump_t *rd) 
 {
-    int r;
-    rs_binlog_info_t *bi;
+    int                 r;
+    rs_binlog_info_t    *bi;
+    char                fixed[RS_BINLOG_QUERY_FIXED_DATA_LEN], *p;
 
+    p = fixed;
     bi = &(rd->binlog_info);
 
-    /* seek after flags and unwant fixed data */
-    if(fseek(rd->binlog_fp, RS_BINLOG_FLAGS_LEN + 
-                RS_BINLOG_SKIP_FIXED_DATA_LEN, SEEK_CUR) == -1) {
-        return RS_ERR;
+    /* get query event fixed data */ 
+    if((r = rs_eof_read_binlog(rd, fixed, RS_BINLOG_QUERY_FIXED_DATA_LEN)) 
+            != RS_OK) 
+    {
+        return r;
     }
+
+    /* seek after flags and unwant fixed data */
+    p += RS_BINLOG_QUERY_THREAD_ID_LEN + RS_BINLOG_QUERY_EXEC_SEC_LEN;
 
     /* get database name len */
-    if((r = rs_eof_read_binlog(rd, &(bi->dbl), RS_BINLOG_DATABASE_NAME_LEN)) 
-            != RS_OK) {
-        return r;
-    }
-
+    rs_memcpy(&(bi->dbl), p, RS_BINLOG_QUERY_DB_NAME_LEN);
     bi->dbl = bi->dbl & 0x000000FF;
     bi->dbl++;
-
-    /* seek after error code */
-    if(fseek(rd->binlog_fp, RS_BINLOG_ERROR_CODE_LEN, SEEK_CUR) == -1) {
-        return RS_ERR;
-    }
+    p += RS_BINLOG_QUERY_DB_NAME_LEN + RS_BINLOG_QUERY_ERR_CODE_LEN;
 
     /* get status block len */
-    if((r = rs_eof_read_binlog(rd, &(bi->sbl), RS_BINLOG_STATUS_BLOCK_LEN)) != 
-            RS_OK) {
-        return r;
-    }
-
+    rs_memcpy(&(bi->sbl), p, RS_BINLOG_QUERY_STAT_BLOCK_LEN);
     bi->sbl = bi->sbl & 0x0000FFFF;
 
-    /* seek after status block */
-    if(fseek(rd->binlog_fp, bi->sbl, SEEK_CUR) == -1) {
-        return RS_ERR;
-    }
+    p += RS_BINLOG_QUERY_STAT_BLOCK_LEN + bi->sbl;
 
     /* get database name */
-    if((r = rs_eof_read_binlog(rd, bi->db, bi->dbl)) != RS_OK) {
-        return r;
-    }
+    rs_memcpy(bi->db, p, bi->dbl);
 
     /* filter care about list */
     bi->sl = bi->el - RS_BINLOG_EVENT_HEADER_LEN - bi->sbl - 
-        RS_BINLOG_FIXED_DATA_LEN - bi->dbl; 
+        RS_BINLOG_QUERY_FIXED_DATA_LEN - bi->dbl; 
 
     bi->sl = rs_min(RS_SQL_MAX_LEN, bi->sl);
 
@@ -160,29 +139,28 @@ int rs_def_intvar_handle(rs_request_dump_t *rd)
 {
     int                 r;
     rs_binlog_info_t    *bi;
+    char                intvar[RS_BINLOG_INTVAR_EVENT_LEN], *p;
 
+    p = intvar;
     bi = &(rd->binlog_info);
 
-    /* seek after flags */
-    if(fseek(rd->binlog_fp, RS_BINLOG_FLAGS_LEN, SEEK_CUR) == -1) {
-        return RS_ERR;
+    /* get intvar event */
+    if((r = rs_eof_read_binlog(rd, intvar, RS_BINLOG_INTVAR_EVENT_LEN)) 
+            != RS_OK) 
+    {
+        return r;
     }
 
     /* get intvar type */
-    if((r = rs_eof_read_binlog(rd, &(bi->intvar_t), 
-                    RS_BINLOG_INTVAR_TYPE_LEN)) != RS_OK) {
-        return r;
-    }
+    bi->intvar_t = *p;
+    p += RS_BINLOG_INTVAR_TYPE_LEN;
 
     if(bi->intvar_t != RS_BINLOG_INTVAR_TYPE_INCR) { 
         return RS_OK;
     }
 
     /* get auto_increment id */
-    if((r = rs_eof_read_binlog(rd, &(bi->ai), RS_BINLOG_INTVAR_INSERT_ID_LEN)) 
-            != RS_OK) {
-        return r;
-    }
+    rs_memcpy(&(bi->ai), p, RS_BINLOG_INTVAR_INSERT_ID_LEN);
 
 #if x86_64
     rs_log_debug(0, 
@@ -210,17 +188,6 @@ int rs_def_xid_handle(rs_request_dump_t *rd)
 
     bi = &(rd->binlog_info);
 
-#if 0
-    /* flush events */
-    if(bi->flush) {
-
-        /* add to ring buffer */
-        if(rs_binlog_create_data(rd) != RS_OK) {
-            return RS_ERR;
-        }
-    }
-#endif
-
     bi->tran = 0;
 
     rs_log_debug(0, 
@@ -234,6 +201,7 @@ int rs_def_xid_handle(rs_request_dump_t *rd)
 
 int rs_def_table_map_handle(rs_request_dump_t *rd)
 {
+#if 0
     int                     r;
     rs_binlog_info_t        *bi;
 
@@ -275,6 +243,7 @@ int rs_def_table_map_handle(rs_request_dump_t *rd)
     if((r = rs_eof_read_binlog(rd, bi->tb, bi->tbl)) != RS_OK) {
         return r;
     }
+#endif
 
     return RS_OK;
 }
@@ -287,8 +256,9 @@ int rs_def_finish_handle(rs_request_dump_t *rd)
 
     if((!bi->tran && !bi->sent) || bi->flush) {
 
-        rs_log_info("send dump file = %s, send dump pos = %u", rd->dump_file, 
-                rd->dump_pos);
+        rs_log_info("send dump file = %s, send dump pos = %u, tran = %d, "
+                "sent = %d, flush = %d", rd->dump_file, 
+                rd->dump_pos, bi->tran, bi->sent, bi->flush);
 
         /* add to ring buffer */
         if(rs_binlog_create_data(rd) != RS_OK) {

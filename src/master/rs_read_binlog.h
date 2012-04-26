@@ -31,6 +31,7 @@ struct rs_binlog_info_s {
 
     uint32_t    skip_n;
 
+    /* char        eh[RS_BINLOG_EVENT_HEADER_LEN]; */
     char        sql[RS_SQL_MAX_LEN + 1];
     char        db[RS_DATABASE_NAME_MAX_LEN + 1];
     char        tb[RS_TABLE_NAME_MAX_LEN + 1];
@@ -70,7 +71,7 @@ struct rs_binlog_info_s {
         (bi)->auto_incr = 0
 
 /* binlog event type */
-#define RS_MAGIC_NUM_LEN               4
+#define RS_BINLOG_MAGIC_NUM_LEN        4
 #define RS_QUERY_EVENT                 2
 #define RS_STOP_EVENT                  3
 #define RS_ROTATE_EVENT                4
@@ -88,18 +89,20 @@ struct rs_binlog_info_s {
 #define RS_BINLOG_FLAGS_LEN            2
 #define RS_BINLOG_EVENT_HEADER_LEN     19
 
-/* binlog fixed data */
-#define RS_BINLOG_SKIP_FIXED_DATA_LEN  8
-#define RS_BINLOG_DATABASE_NAME_LEN    1
+/* binlog query event */
+#define RS_BINLOG_QUERY_THREAD_ID_LEN  4
+#define RS_BINLOG_QUERY_EXEC_SEC_LEN   4
+#define RS_BINLOG_QUERY_DB_NAME_LEN    1
+#define RS_BINLOG_QUERY_ERR_CODE_LEN   2
+#define RS_BINLOG_QUERY_STAT_BLOCK_LEN 2
 #define RS_BINLOG_TABLE_NAME_LEN       1
-#define RS_BINLOG_ERROR_CODE_LEN       2
-#define RS_BINLOG_STATUS_BLOCK_LEN     2
-#define RS_BINLOG_FIXED_DATA_LEN       13
+#define RS_BINLOG_QUERY_FIXED_DATA_LEN 13
 
 /* intvar*/
 #define RS_BINLOG_INTVAR_TYPE_LEN      1
 #define RS_BINLOG_INTVAR_TYPE_INCR     2
 #define RS_BINLOG_INTVAR_INSERT_ID_LEN 8
+#define RS_BINLOG_INTVAR_EVENT_LEN     9
 
 /* table_map */
 #define RS_BINLOG_TABLE_MAP_TABLE_ID_LEN  6

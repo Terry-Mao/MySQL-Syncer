@@ -83,6 +83,7 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
         goto free;
     }
 
+#if 0
     if(os != NULL) {
         /* dump file or pos */
         nrb = (os->dump_pos != si->dump_pos || 
@@ -141,6 +142,7 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
             os->ring_buf = NULL; /* NOTICE : SKIP free ring_buf */
         }
     }
+#endif
 
     if(nrb) {
 
@@ -310,10 +312,12 @@ int rs_flush_slave_info(rs_slave_info_t *si, char *buf, size_t len)
         return RS_ERR;
     } 
 
+#if 0
     if(fdatasync(si->info_fd) != 0) {
         rs_log_err(rs_errno, "fdatasync() failed, %s", si->slave_info);
         return RS_ERR;
     }
+#endif
 
     /* truncate other remained file bytes */
     if(truncate(si->slave_info, len) != 0) {

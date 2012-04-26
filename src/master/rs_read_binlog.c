@@ -234,7 +234,7 @@ int rs_eof_read_binlog(rs_request_dump_t *rd, void *buf, size_t size)
     } // end for( ;; ) 
 
     r = RS_OK; 
-    clearerr(fp);
+    /* clearerr(fp); */
 
 free:
 
