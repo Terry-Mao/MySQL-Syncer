@@ -49,7 +49,7 @@ uint64_t rs_str_to_uint64(char *p)
     i = 0;
 
     while(*p >= '0' && *p <= '9') {
-        i = i * 10.0 + *p++ - '0';
+        i = i * 10 + *p++ - '0';
     }
 
     return i;
@@ -92,7 +92,6 @@ uint32_t rs_estr_to_uint32(char *s)
 char *rs_cp_utf8_str(char *dst, char *src) 
 {
     int cl;
-    char t;
 
     for( ;; ) {
 
@@ -103,12 +102,13 @@ char *rs_cp_utf8_str(char *dst, char *src)
             if(*src == '\\') {
                 src++;
 
-                t = rs_ansi_escape_char(*src);
-                dst = rs_cpymem(dst, &t, 1);
+                /* dst = rs_cpymem(dst, &t, 1); */
+                *dst++ = rs_ansi_escape_char(*src);
             } else if(*src == '\'' || *src == '\0') {
                 break;
             } else { 
-                dst = rs_cpymem(dst, src, 1);
+                /* dst = rs_cpymem(dst, src, 1); */
+                *dst++ = *src;
             }
 
             src++;
@@ -124,58 +124,38 @@ char *rs_strstr_end(char *src, char *sea, uint32_t len)
         return NULL;     
     }
 
-    src = src + len;
-
-    return src;
+    return src + len;
 }
 
 
-void rs_convert_to_hex(char *buf, char *src, uint32_t len) 
+void rs_convert_to_hex(char *dst, char *src, uint32_t len) 
 {
-    uint32_t ui32, i;
-    static u_char hex[] = "0123456789abcdef";
+    static      u_char hex[] = "0123456789abcdef";
 
-    buf = buf + 2 * len;
-    src = src + len;
-    ui32 = 0;
+    while (len--) {
+        *dst++ = hex[(u_char) *src >> 4];
+        *dst++ = hex[(u_char) *src++ & 0xf];
+    }
 
-    do {
-        i = 0;
-        ui32 = (uint32_t) ((u_char) *--src - '\0');
-
-        do {
-
-            *--buf = hex[(uint32_t) (ui32 & 0xf)];
-            i++;
-
-        } while(ui32 >>= 4);
-
-        if(i == 1) {
-            *--buf = '0';
-        }
-
-    } while (--len);
 }
-
 
 char *rs_cp_binary_str(char *dst, uint32_t *len, char *src) 
 {
-    char t;
-
     *len = 0;
 
     for( ;; ) {
         if(*src == '\\') {
             src++;
 
-            t = rs_ansi_escape_char(*src);
-            dst = rs_cpymem(dst, &t, 1);
+            *dst++ = rs_ansi_escape_char(*src);
+            /* dst = rs_cpymem(dst, &t, 1); */
 
             *len += 1;
         } else if(*src == '\'' || *src == '\0') {
             break;
         } else { 
-            dst = rs_cpymem(dst, src, 1);
+            /* dst = rs_cpymem(dst, src, 1); */
+            *dst++ = *src;
             *len += 1;
         }
 
@@ -184,6 +164,7 @@ char *rs_cp_binary_str(char *dst, uint32_t *len, char *src)
 
     return src;
 }
+
 
 char *rs_ncp_str_till(char *dst, char *src, char es, size_t len) 
 {
@@ -225,6 +206,7 @@ int64_t rs_timestr_to_msec(char *time)
     struct tm tm;
     int64_t tsec;
 
+    rs_memzero(&tm, sizeof(struct tm));
     tsec = 0;
 
     if(strptime(time, RS_TIME_CONVERT_FORMAT, &tm) == 0) {
@@ -233,6 +215,7 @@ int64_t rs_timestr_to_msec(char *time)
     }
 
     tsec = (int64_t) mktime(&tm);
+
     if(tsec == -1) {
         rs_log_err(rs_errno, "mktime() failed");
         return RS_ERR;
@@ -288,3 +271,4 @@ static char rs_ansi_escape_char(char src)
 
     return t;
 }
+

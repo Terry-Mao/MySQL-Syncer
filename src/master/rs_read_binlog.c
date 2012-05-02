@@ -80,13 +80,12 @@ free:
 int rs_eof_read_binlog(rs_request_dump_t *rd, void *buf, size_t size) 
 {
     int         r, err, mfd, wd1, wd2, ready, i;
-    FILE        *fp;
-    size_t      n, tl, rl;
+    size_t      n, tl;
     ssize_t     l;
     int64_t     cpos;
-    struct      inotify_event *e;
     struct      timeval tv;
-    char        eb[1024], *p, *s;
+    struct      inotify_event *e;
+    char        eb[1024], *p;
     fd_set      rset, tset;
 
     i = 0;
@@ -94,12 +93,7 @@ int rs_eof_read_binlog(rs_request_dump_t *rd, void *buf, size_t size)
     r = RS_ERR;
     wd1 = -1;
     wd2 = -1;
-    fp = rd->binlog_fp;
-    FD_ZERO(&rset);
-    FD_ZERO(&tset);
-    s = buf;
-    rl = size;
-    cpos = ftell(fp);
+    cpos = ftell(rd->binlog_fp);
 
     if(cpos == -1) {
         rs_log_err(rs_errno, "ftell() failed, binlog file"); 
@@ -108,26 +102,21 @@ int rs_eof_read_binlog(rs_request_dump_t *rd, void *buf, size_t size)
 
     for( ;; ) {
 
-        if(fseek(fp, cpos, SEEK_SET) == -1) {
-            rs_log_err(rs_errno, "fseek() failed, binlog file"); 
-            goto free;
-        }
-
-        n = fread(s, rl, 1, fp);
+        n = fread(buf, size, 1, rd->binlog_fp);
 
         /* read finish */
-        if(n * size == size) {
+        if(n == 1) {
             break;
         }
 
-        /* file error */
-        if((err = ferror(fp)) != 0) {
-            rs_log_err(err, "ferror(\"%s\") failed", rd->dump_file);
-            goto free;
-        }
-
         /* file eof */
-        if(feof(fp) != 0) {
+        if(feof(rd->binlog_fp) != 0) {
+
+            if(fseek(rd->binlog_fp, cpos, SEEK_SET) == -1) {
+                rs_log_err(rs_errno, "fseek() failed, binlog file"); 
+                goto free;
+            }
+
             /* set inotify */
             if(rd->notify_fd == -1) {
                 rd->notify_fd = rs_init_io_watch();
@@ -162,6 +151,8 @@ int rs_eof_read_binlog(rs_request_dump_t *rd, void *buf, size_t size)
             }
 
             /* use select to monitor inotify */
+            FD_ZERO(&rset);
+            FD_ZERO(&tset);
             FD_SET(rd->notify_fd, &rset);
             tset = rset;
             mfd = rs_max(rd->notify_fd, mfd);
@@ -190,8 +181,6 @@ int rs_eof_read_binlog(rs_request_dump_t *rd, void *buf, size_t size)
                 goto free;
             }
 
-            rs_log_info("select success");
-
             if(!FD_ISSET(rd->notify_fd, &tset)) {
                 goto free;
             }
@@ -212,10 +201,8 @@ int rs_eof_read_binlog(rs_request_dump_t *rd, void *buf, size_t size)
 
             while (((char *) e - eb) < l) {
                 if (e->wd == wd1 && e->mask & RS_IN_MODIFY) {
-                    rs_log_info("binlog file has changed");
                     break;
                 } else if(e->wd == wd2 && e->mask & RS_IN_MODIFY) {
-                    rs_log_info("binlog index file has changed");
                     break;
                 }
 
@@ -230,7 +217,12 @@ int rs_eof_read_binlog(rs_request_dump_t *rd, void *buf, size_t size)
             } // end while
 
             FD_CLR(rd->notify_fd, &rset);
+        } else if((err = ferror(rd->binlog_fp)) != 0) {
+            /* file error */
+            rs_log_err(err, "ferror(\"%s\") failed", rd->dump_file);
+            goto free;
         }
+
     } // end for( ;; ) 
 
     r = RS_OK; 
