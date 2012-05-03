@@ -254,7 +254,15 @@ int rs_def_finish_handle(rs_request_dump_t *rd)
 {
     rs_binlog_info_t        *bi;
 
+    if(rd == NULL) {
+        return RS_ERR;
+    }
+
     bi = &(rd->binlog_info);
+
+    if(bi == NULL) {
+        return RS_ERR;
+    }
 
     if((!bi->tran && !bi->sent) || bi->flush) {
 
