@@ -43,6 +43,8 @@ struct rs_slave_info_s {
     uint32_t            slab_mem_size;
     uint32_t            slab_init_size;
 
+    char                *filter_tables;
+
     rs_conf_t           conf;
 };
 
@@ -65,7 +67,8 @@ struct rs_slave_info_s {
     rs_conf_t_init(&((si)->conf));                                           \
     (si)->slab = NULL;                                                       \
     (si)->ring_buf = NULL;                                                   \
-    (si)->ring_buf_num = 0;
+    (si)->filter_tables = NULL;                                              \
+    (si)->ring_buf_num = 0
 
 
 rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os); 

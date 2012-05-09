@@ -10,6 +10,9 @@
 #define RS_TABLE_NAME_MAX_LEN          64
 #define RS_SQL_MAX_LEN                 1024
 
+#define RS_BINLOG_FORMAT_SQL_STATEMENT 0
+#define RS_BINLOG_FORMAT_ROW_BASED     1
+
 #define RS_TRAN_KEYWORD                "BEGIN"
 #define RS_TRAN_KEYWORD_LEN            sizeof("BEGIN") - 1
 
@@ -46,6 +49,8 @@ struct rs_binlog_info_s {
     unsigned    sent       :1;
     unsigned    tran       :1;
     unsigned    auto_incr  :1;
+    unsigned    log_format :1;
+    unsigned    filter     :1;
 
 };
 
@@ -76,8 +81,10 @@ struct rs_binlog_info_s {
 #define RS_STOP_EVENT                  3
 #define RS_ROTATE_EVENT                4
 #define RS_INTVAR_EVENT                5
-#define RS_XID_EVENT                   16
 #define RS_FORMAT_DESCRIPTION_EVENT    15
+#define RS_XID_EVENT                   16
+#define RS_TABLE_MAP_EVENT             19
+#define RS_WRITE_ROWS_EVENT            23
 
 
 /* binlog event header field */
@@ -106,7 +113,13 @@ struct rs_binlog_info_s {
 
 /* table_map */
 #define RS_BINLOG_TABLE_MAP_TABLE_ID_LEN  6
-#define RS_BINLOG_TABLE_MAP_RESERVED_LEN   2
+#define RS_BINLOG_TABLE_MAP_RESERVED_LEN  2
+#define RS_BINLOG_TABLE_MAP_DB_NAME_LEN   1
+#define RS_BINLOG_TABLE_MAP_TB_NAME_LEN   1
+
+/* write_rows */
+#define RS_BINLOG_WRITE_ROWS_TABLE_ID_LEN 6
+#define RS_BINLOG_WRITE_ROWS_RESERVED_LEN 2
 
 int rs_read_binlog(rs_request_dump_t *rd);
 int rs_has_next_binlog(rs_request_dump_t *rd);

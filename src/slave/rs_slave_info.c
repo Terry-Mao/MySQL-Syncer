@@ -242,6 +242,9 @@ static int rs_init_slave_conf(rs_slave_info_t *si)
             ||
             (rs_add_conf_kv(c, "ringbuf.num", &(si->ring_buf_num), 
                             RS_CONF_UINT32) != RS_OK)
+            ||
+            (rs_add_conf_kv(c, "filter.tables", &(si->filter_tables), 
+                            RS_CONF_STR) != RS_OK)
             ) 
             {
                 rs_log_err(0, "rs_add_conf_kv() failed"); 

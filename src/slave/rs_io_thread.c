@@ -92,10 +92,18 @@ void *rs_start_io_thread(void *data)
             goto free;
         }
 
-        /* send command */
-        rs_log_info("send cmd = %s, dump_file = %s, dump_pos = %u", 
-                cbuf, si->dump_file, si->dump_pos);
+        rs_log_info("send cmd = %s, dump_file = %s, dump_pos = %u, "
+                "filter_tables = %s", 
+                cbuf, si->dump_file, si->dump_pos, si->filter_tables);
 
+        /* send command length */
+        n = rs_write(si->svr_fd, &l, 4); 
+
+        if(n != 4) {
+            goto retry;
+        }
+
+        /* send command */
         n = rs_write(si->svr_fd, cbuf, l); 
 
         if(n != (ssize_t) l) {
@@ -224,8 +232,8 @@ static int rs_create_dump_cmd(rs_slave_info_t *si, char *buf, uint32_t *len)
 {
     int l;
 
-    l = snprintf(buf, RS_REGISTER_SLAVE_CMD_LEN, "%s,%u", si->dump_file, 
-            si->dump_pos);
+    l = snprintf(buf, RS_REGISTER_SLAVE_CMD_LEN, "%s,%u,%s,", si->dump_file, 
+            si->dump_pos, si->filter_tables);
 
     if(l < 0) {
         rs_log_err(rs_errno, "snprintf() failed, dump_cmd"); 

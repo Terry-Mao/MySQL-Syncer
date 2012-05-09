@@ -15,6 +15,9 @@
 #define RS_MYSQL_INSERT_TEST        1
 #define RS_MYSQL_DELETE_TEST        2
 
+
+#define RS_MYSQL_TEST_ROW_BASED     3
+
 #define RS_SYNC_DATA_CMD_SIZE           (PATH_MAX + UINT32_LEN + 3)
 
 typedef struct {

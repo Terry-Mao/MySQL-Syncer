@@ -15,6 +15,9 @@ static int rs_redis_insert_test(rs_slave_info_t *si, void *data,
 static int rs_redis_delete_test(rs_slave_info_t *si, void *data, 
         uint32_t len);
 
+static int rs_redis_insert_row_based_test(rs_slave_info_t *si, void *data, 
+        uint32_t len);
+
 void *rs_start_redis_thread(void *data) 
 {
     int                         r, n, i, s;
@@ -135,6 +138,8 @@ static int rs_redis_dml_message(rs_slave_info_t *si, char *buf, uint32_t len)
         return rs_redis_insert_test(si, p, len - 2);
     } else if(t == RS_MYSQL_DELETE_TEST) {
         return rs_redis_delete_test(si, p, len - 2); 
+    } else if(t == RS_MYSQL_ROW_BASED) {
+        return rs_redis_insert_row_based_test(si, p, len - 2); 
     }
 
     rs_log_info("unkonw cmd type = %d", t);
@@ -175,6 +180,110 @@ static int rs_redis_delete_test(rs_slave_info_t *si, void *data, uint32_t len)
 
     /* free pb test */
     test__free_unpacked(test, NULL);
+
+    return RS_OK;
+}
+
+static int rs_redis_insert_row_based_test(rs_slave_info_t *si, void *data, 
+        uint32_t len) 
+{
+    /* TODO PARSE WRITE_ROWS EVENT */
+    char        *p, *msg;
+    uint64_t    cn;
+    uint32_t    un, nn, sn, i, j, is_null, id;
+
+    p = data;
+    msg = NULL;
+    p += 8;
+
+
+    rs_log_debug(0, "packed integer : %d", *p);
+
+    if((u_char) *p <= 250) {
+        cn = (u_char) *p - '\0'; 
+        p++;
+    } else if((u_char) *p <= 252) {
+        rs_memcpy(&cn, p, 2);
+        cn &= 0x000000000000FFFF;
+        p += 2;
+    } else if((u_char) *p <= 253) {
+        rs_memcpy(&cn, p, 3);
+        cn &= 0x0000000000FFFFFF;
+        p += 3;
+    } else if((u_char) *p <= 254) {
+        rs_memcpy(&cn, p, 4);
+        cn &= 0x00000000FFFFFFFF;
+        p += 4;
+    } else {
+        rs_memcpy(&cn, p, 8);
+        p += 8;
+    }
+
+    rs_log_debug(0, "column number : %llu", cn);
+
+    un = (cn + 7) / 8;
+    char use_bits[un];
+
+    rs_memcpy(use_bits, p, un);
+    p += un;
+
+    while(p < (char *) data + len) {
+
+        j = 0;    
+        nn = (un + 7) / 8;
+        char null_bits[nn];
+
+        rs_memcpy(null_bits, p, nn);
+        p += nn;
+
+        for(i = 0; i < cn; i++) {
+
+            if(!(use_bits[i / 8] >> (i % 8))  & 0x01) {
+                continue;
+            }
+
+            is_null = (null_bits[j / 8] >> (j % 8)) & 0x01;
+
+            switch(i) {
+                /* id */
+                case 0:
+                if(is_null) {
+                    id = 0;
+                } else {
+                    rs_memcpy(&id, p, 4);
+                    p += 4;
+                }
+                break;
+                /* msg */
+                case 1:
+                if(is_null) {
+                    msg = NULL; 
+                } else {
+                    if((u_char) *p >= 255) {
+                        rs_memcpy(&sn, p, 2);
+                        sn &= 0x0000FFFF;
+                        p += 2;
+                    } else {
+                        sn = (u_char) *p;
+                        p++;
+                    }
+
+                    msg = p;
+                    p += sn;
+                }
+            }
+
+            j++;
+        }
+
+        rs_log_debug(0, "\n==============\n"
+            "id     : %u\n"
+            "msg    : %*.*s\n"
+            "============\n",
+        id, sn, sn, msg);
+
+        //update to redis
+    }
 
     return RS_OK;
 }

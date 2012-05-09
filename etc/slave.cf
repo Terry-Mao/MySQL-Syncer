@@ -40,3 +40,6 @@ slab.memsize 10485760
 
 # slab slab class grow factor
 slab.factor 1.5
+
+# filter tables
+filter.tables test.t1

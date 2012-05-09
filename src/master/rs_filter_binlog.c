@@ -12,8 +12,16 @@ int rs_def_filter_data_handle(rs_request_dump_t *rd)
     rs_binlog_info_t    *bi;
     rs_slab_t           *sl;
 
+    if(rd == NULL) {
+        return RS_ERR;
+    }
+
     bi = &(rd->binlog_info);
     sl = &(rd->slab);
+
+    if(bi == NULL || sl == NULL) {
+        return RS_ERR;
+    }
 
     if(rs_strncmp(bi->db, RS_FILTER_DB_NAME, bi->dbl) != 0) {
         return RS_OK;
@@ -57,9 +65,24 @@ int rs_def_create_data_handle(rs_request_dump_t *rd)
     rs_ring_buffer2_data_t  *d;
     rs_slab_t               *sl;
 
+    if(rd == NULL) {
+        return RS_ERR;
+    }
+
     i = 0;
     bi = &(rd->binlog_info);
     sl = &(rd->slab);
+
+    if(bi == NULL || sl == NULL) {
+        return RS_ERR;
+    }
+
+    if(bi->mev == 0) {
+        if(bi->skip_n++ % RS_SKIP_DATA_FLUSH_NUM != 0) {
+            bi->skip_n = 1;
+            return RS_OK;
+        }
+    }
 
     for( ;; ) {
 
@@ -91,16 +114,11 @@ int rs_def_create_data_handle(rs_request_dump_t *rd)
                 rs_ring_buffer2_data_t_init(d);
             }
 
-            rs_uint32_to_str(rd->dump_pos, istr);
-            len = rs_strlen(rd->dump_file) + rs_strlen(istr) + 1 + 1 + 1; 
+            /* rs_uint32_to_str(rd->dump_pos, istr); */
+            len = snprintf(istr, UINT32_LEN + 1, "%u", rd->dump_pos);
+            len += rs_strlen(rd->dump_file) + 1 + 1 + 1; 
 
             if(bi->mev == 0) {
-
-                if(bi->skip_n++ % RS_SKIP_DATA_FLUSH_NUM != 0) {
-                    break;
-                }
-
-                bi->skip_n = 1;
 
                 d->len = len;
                 d->id = rs_slab_clsid(sl, len);
@@ -110,8 +128,8 @@ int rs_def_create_data_handle(rs_request_dump_t *rd)
                     return RS_ERR;
                 }
 
-                len = snprintf(d->data, d->len, "%s,%u,%c", rd->dump_file, 
-                        rd->dump_pos, bi->mev);
+                len = snprintf(d->data, d->len, "%s,%s,%c", rd->dump_file, 
+                        istr, bi->mev);
 
                 if(len < 0) {
                     rs_log_err(rs_errno, "snprint() failed, dump cmd"); 
@@ -119,31 +137,57 @@ int rs_def_create_data_handle(rs_request_dump_t *rd)
                 }
 
             } else {
-                Test t = TEST__INIT;
-                rs_create_test_event(&t, bi->data);
-                pb_len = test__get_packed_size(&t);
+                if(bi->log_format == RS_BINLOG_FORMAT_SQL_STATEMENT) {
 
-                len += pb_len;
+                    /* SBR */
+                    Test t = TEST__INIT;
+                    rs_create_test_event(&t, bi->data);
+                    pb_len = test__get_packed_size(&t);
 
-                /* alloc mem for cmd */
-                d->len = len;
-                d->id = rs_slab_clsid(sl, len);
-                d->data = rs_alloc_slab_chunk(sl, len, d->id);
+                    len += pb_len;
 
-                if(d->data == NULL) {
-                    return RS_ERR;
+                    /* alloc mem for cmd */
+                    d->len = len;
+                    d->id = rs_slab_clsid(sl, len);
+                    d->data = rs_alloc_slab_chunk(sl, len, d->id);
+
+                    if(d->data == NULL) {
+                        return RS_ERR;
+                    }
+
+                    len = snprintf(d->data, d->len, "%s,%u,%c", rd->dump_file, 
+                            rd->dump_pos, bi->mev);
+
+                    if(len < 0) {
+                        rs_log_err(rs_errno, "snprint() failed, dump cmd"); 
+                        return RS_ERR;
+                    }
+
+                    p = (char *) d->data + len;
+                    test__pack(&t, (void *) p);
+                } else if(bi->log_format == RS_BINLOG_FORMAT_ROW_BASED) {
+
+                    /* RBR */
+                    len += bi->el - RS_BINLOG_EVENT_HEADER_LEN;
+
+                    d->len = len;
+                    d->id = rs_slab_clsid(sl, len);
+                    d->data = rs_alloc_slab_chunk(sl, len, d->id);
+
+                    if(d->data == NULL) {
+                        return RS_ERR;
+                    }
+
+                    len = snprintf(d->data, d->len, "%s,%u,%c", rd->dump_file, 
+                            rd->dump_pos, bi->mev);
+
+                    if(len < 0) {
+                        rs_log_err(rs_errno, "snprint() failed, dump cmd"); 
+                        return RS_ERR;
+                    }
+
+                    rs_memcpy((char *) d->data + len, bi->data, d->len - len);
                 }
-
-                len = snprintf(d->data, d->len, "%s,%u,%c", rd->dump_file, 
-                        rd->dump_pos, bi->mev);
-
-                if(len < 0) {
-                    rs_log_err(rs_errno, "snprint() failed, dump cmd"); 
-                    return RS_ERR;
-                }
-
-                p = (char *) d->data + len;
-                test__pack(&t, (void *) p);
             }
 
             rs_set_ring_buffer2_advance(&(rd->ring_buf));

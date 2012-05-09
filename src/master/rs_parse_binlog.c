@@ -63,14 +63,19 @@ int rs_def_query_handle(rs_request_dump_t *rd)
 {
     int                 r;
     rs_binlog_info_t    *bi;
-    char                fixed[RS_BINLOG_QUERY_FIXED_DATA_LEN], *p;
 
-    p = fixed;
     bi = &(rd->binlog_info);
 
+    if((bi->el - RS_BINLOG_EVENT_HEADER_LEN) > RS_SQL_MAX_LEN * 2) {
+        return RS_OK;
+    }
+
+    char                query[bi->el - RS_BINLOG_EVENT_HEADER_LEN], *p;
+    p = query;
+
     /* get query event fixed data */ 
-    if((r = rs_eof_read_binlog(rd, fixed, RS_BINLOG_QUERY_FIXED_DATA_LEN)) 
-            != RS_OK) 
+    if((r = rs_eof_read_binlog(rd, query, 
+                    bi->el - RS_BINLOG_EVENT_HEADER_LEN)) != RS_OK) 
     {
         return r;
     }
@@ -85,8 +90,10 @@ int rs_def_query_handle(rs_request_dump_t *rd)
 
     /* get status block len */
     rs_memcpy(&(bi->sbl), p, RS_BINLOG_QUERY_STAT_BLOCK_LEN);
-    bi->sbl = bi->sbl & 0x0000FFFF;
+    bi->sbl = bi->sbl & 0x0000FFFF; 
+    p += RS_BINLOG_QUERY_STAT_BLOCK_LEN + bi->sbl;
 
+#if 0
     /* seek after status block */
     if(fseek(rd->binlog_fp, bi->sbl, SEEK_CUR) == -1) {
         return RS_ERR;
@@ -96,6 +103,9 @@ int rs_def_query_handle(rs_request_dump_t *rd)
     if((r = rs_eof_read_binlog(rd, bi->db, bi->dbl)) != RS_OK) {
         return r;
     }
+#endif
+    rs_memcpy(bi->db, p, bi->dbl);
+    p += bi->dbl;
 
     /* filter care about list */
     bi->sl = bi->el - RS_BINLOG_EVENT_HEADER_LEN - bi->sbl - 
@@ -103,9 +113,12 @@ int rs_def_query_handle(rs_request_dump_t *rd)
 
     bi->sl = rs_min(RS_SQL_MAX_LEN, bi->sl);
 
+#if 0
     if((r = rs_eof_read_binlog(rd, bi->sql, bi->sl)) != RS_OK) {
         return r;
     }
+#endif
+    rs_memcpy(bi->sql, p, bi->sl);
 
     bi->sql[bi->sl] = '\0';
 
@@ -128,7 +141,8 @@ int rs_def_query_handle(rs_request_dump_t *rd)
             bi->np,
             bi->tran);
 
-
+    bi->log_format = RS_BINLOG_FORMAT_SQL_STATEMENT;
+    
     if(rs_binlog_filter_data(rd) != RS_OK) {
         return RS_ERR;
     }
@@ -203,49 +217,118 @@ int rs_def_xid_handle(rs_request_dump_t *rd)
 
 int rs_def_table_map_handle(rs_request_dump_t *rd)
 {
-#if 0
     int                     r;
     rs_binlog_info_t        *bi;
 
     bi = &(rd->binlog_info);
 
-    /* seek after error code */
-    if(fseek(rd->binlog_fp, RS_BINLOG_TABLE_MAP_TABLE_ID_LEN + 
-                RS_BINLOG_TABLE_MAP_RESERVED_LEN, SEEK_CUR) == -1) 
-    {
-        return RS_ERR;
-    }
+    char                    tm[bi->el - RS_BINLOG_EVENT_HEADER_LEN], *p,
+                            dt[RS_DATABASE_NAME_MAX_LEN + 
+                                RS_TABLE_NAME_MAX_LEN + 3];
+    p = tm;
 
-    /* get database name len */
-    if((r = rs_eof_read_binlog(rd, &(bi->dbl), RS_BINLOG_DATABASE_NAME_LEN)) 
+    if((r = rs_eof_read_binlog(rd, tm, bi->el - RS_BINLOG_EVENT_HEADER_LEN)) 
             != RS_OK) 
     {
         return r;
     }
 
+    /* seek after table id and reserved */
+    p += RS_BINLOG_TABLE_MAP_TABLE_ID_LEN + RS_BINLOG_TABLE_MAP_RESERVED_LEN;
+
+    /* get database name len */
+    rs_memcpy(&(bi->dbl), p, RS_BINLOG_TABLE_MAP_DB_NAME_LEN);
     bi->dbl = bi->dbl & 0x000000FF;
     bi->dbl++;
+    p += RS_BINLOG_TABLE_MAP_DB_NAME_LEN;
 
     /* get database name */
-    if((r = rs_eof_read_binlog(rd, bi->db, bi->dbl)) != RS_OK) {
-        return r;
-    }
+    rs_memcpy(bi->db, p, bi->dbl);
+    p += bi->dbl;
 
     /* get table name len */
-    if((r = rs_eof_read_binlog(rd, &(bi->tbl), RS_BINLOG_TABLE_NAME_LEN)) != 
-            RS_OK) 
+    rs_memcpy(&(bi->tbl), p, RS_BINLOG_TABLE_MAP_TB_NAME_LEN);
+    bi->tbl = bi->dbl & 0x000000FF;
+    bi->tbl++;
+    p += RS_BINLOG_TABLE_MAP_TB_NAME_LEN;
+
+    /* get table name */
+    rs_memcpy(bi->tb, p, bi->tbl);
+    p += bi->tbl;
+
+    /* filter db and tables */
+    if(rd->filter_tables != NULL) {
+
+        if(snprintf(dt, RS_DATABASE_NAME_MAX_LEN + RS_TABLE_NAME_MAX_LEN + 3,
+                    ",%s.%s,", bi->db, bi->tb) < 0)
+        {
+            rs_log_err(rs_errno, "snprintf() failed, ,db.tb,");
+            return RS_ERR;
+        }
+
+        if(rs_strstr(rd->filter_tables, dt) != NULL) {
+            bi->filter = 0;
+        } else {
+            bi->filter = 1;
+        }
+
+    } else {
+        bi->filter = 0;
+    }
+
+    rs_log_debug(0, 
+            "\n========== table map event ==============\n"
+            "database                   : %s\n"
+            "table                      : %s\n"
+            "skip                       : %d"
+            "\n=========================================\n",
+            bi->db,
+            bi->tb,
+            bi->filter);
+
+    return RS_OK;
+}
+
+int rs_def_write_rows_handle(rs_request_dump_t *rd)
+{
+    int                     r;
+    rs_binlog_info_t        *bi;
+
+    if(rd == NULL) {
+        return RS_ERR;
+    }
+
+    bi = &(rd->binlog_info);
+
+    if(bi == NULL) {
+        return RS_ERR;
+    }
+
+    if(bi->filter) {
+        return RS_OK;
+    }
+
+    char                    wr[bi->el - RS_BINLOG_EVENT_HEADER_LEN];
+
+    if((r = rs_eof_read_binlog(rd, wr, bi->el - RS_BINLOG_EVENT_HEADER_LEN)) 
+            != RS_OK) 
     {
         return r;
     }
 
-    bi->tbl = bi->tbl & 0x000000FF;
-    bi->tbl++;
+    bi->data = wr;
+    bi->log_format = RS_BINLOG_FORMAT_ROW_BASED;
+    bi->mev = RS_MYSQL_TEST_ROW_BASED;
 
-    /* get table name */
-    if((r = rs_eof_read_binlog(rd, bi->tb, bi->tbl)) != RS_OK) {
+    if((r = rs_binlog_create_data(rd)) != RS_OK) {
         return r;
     }
-#endif
+
+    bi->flush = 1;
+
+    rs_log_debug(0, 
+            "\n========== write rows event =============\n"
+            );
 
     return RS_OK;
 }

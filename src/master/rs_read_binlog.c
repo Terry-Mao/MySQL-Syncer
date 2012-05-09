@@ -60,7 +60,18 @@ int rs_read_binlog(rs_request_dump_t *rd)
                 goto free;
             }
             break;
-
+        case RS_TABLE_MAP_EVENT:
+            /* TABLE_MAP EVENT */
+            if((r = rs_binlog_table_map_event(rd)) != RS_OK) {
+                goto free;
+            }
+            break;
+        case RS_WRITE_ROWS_EVENT:
+            /* WRITE_ROWS EVENT */
+            if((r = rs_binlog_write_rows_event(rd)) != RS_OK) {
+                goto free;
+            }
+            break;
         default:
             /* SKIP EVENTS */
             break;

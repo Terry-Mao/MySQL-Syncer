@@ -13,6 +13,8 @@ static rs_binlog_action_t rs_def_binlog_actions = {
     rs_def_create_data_handle,
     rs_def_intvar_handle,
     rs_def_xid_handle,
+    rs_def_table_map_handle,
+    rs_def_write_rows_handle,
     rs_def_finish_handle
 };
 

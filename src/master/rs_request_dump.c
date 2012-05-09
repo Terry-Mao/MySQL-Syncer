@@ -5,11 +5,20 @@
 
 static void *rs_start_io_thread(void *data);
 
+/*
+ * DESCRIPTION 
+ *    dump thread start routine
+ *    
+ *
+ * RETURN VALUE
+ *    No return value
+ */
 void *rs_start_dump_thread(void *data) 
 {
     int                     err, i, ready, mfd, s, id;
+    uint32_t                pack_len, cur_len;
     ssize_t                 n;
-    char                    *cbuf, *p;
+    char                    *cbuf, *p, pack_buf[4];
     rs_request_dump_t       *rd;
     rs_ring_buffer2_data_t  *d;
     rs_slab_t               *sl;
@@ -23,45 +32,59 @@ void *rs_start_dump_thread(void *data)
     FD_ZERO(&tset);
     mfd = 0;
     ready = 0;
-
     pthread_cleanup_push(rs_free_dump_thread, (void *) rd);
 
-    if(rd == NULL) {
-        rs_log_err(rs_errno, "rd is null");
+    if(rd == NULL || rd->rdi == NULL) {
+        rs_log_err(rs_errno, "rd or rdi is null");
         goto free;
     }
-
-    if(rd->rdi == NULL) {
-        rs_log_err(rs_errno, "rdi is null");
-        goto free;
-    }
-
 
     sl = &(rd->slab);
 
-    id = rs_slab_clsid(sl, RS_REGISTER_SLAVE_CMD_LEN);
-    cbuf = (char *) rs_alloc_slab_chunk(sl, RS_REGISTER_SLAVE_CMD_LEN, id);
+    /* get packet length (litte endian) */
+    cur_len = 0;
+    while(cur_len != RS_SLAVE_CMD_PACK_HEADER_LEN) {
+        n = rs_read(rd->cli_fd, pack_buf + cur_len, 
+                RS_SLAVE_CMD_PACK_HEADER_LEN - cur_len);
+
+        if(n <= 0) {
+            rs_log_err(rs_errno, "rs_read() failed, error or shutdown");
+            goto free;
+        }
+
+        cur_len += (uint32_t) n;
+    }
+
+    rs_memcpy(&pack_len, pack_buf, RS_SLAVE_CMD_PACK_HEADER_LEN);
+
+    if(n <= 0) {
+        rs_log_err(rs_errno, "rs_read() failed, error or shutdown");
+        goto free;
+    }
+
+    /* alloc cmd buf from mempool */
+    id = rs_slab_clsid(sl, pack_len);
+    cbuf = (char *) rs_alloc_slab_chunk(sl, pack_len, id);
 
     if(cbuf == NULL) {
         rs_log_err(rs_errno, "rs_alloc_slab failed(), register_slave_cmd");
         goto free;
     } 
 
-    /* blocking read until client send command */
-    n = rs_read(rd->cli_fd, cbuf, RS_REGISTER_SLAVE_CMD_LEN);
+    /* while get a full packet */
+    cur_len = 0;
+    while(cur_len != pack_len) {
+        n = rs_read(rd->cli_fd, cbuf + cur_len, pack_len - cur_len);
 
-    if(n < 0) {
-        rs_log_debug(0, "rs_read() failed, can't get cmd");
-        goto free;
-    } else if(n == 0) {
-        /* server shutdown */
-        rs_log_info("slave server shutdown, finish dump");
-        goto free;
+        if(n <= 0) {
+            rs_log_err(rs_errno, "rs_read() failed, error or shutdown");
+            goto free;
+        }
+
+        cur_len += (uint32_t) n;
     }
 
     cbuf[n] = '\0';
-
-    rs_log_info("get slave cmd = %s", cbuf);
 
     /* parse command then open and seek file */
     if((p = rs_strchr(cbuf, ',')) == NULL) {
@@ -73,11 +96,20 @@ void *rs_start_dump_thread(void *data)
     rd->dump_num = rs_estr_to_uint32(p - 1);
     rd->dump_pos = rs_str_to_uint32(p + 1);
 
+    /* get filter tables */
+    if((p = rs_strchr(p + 1, ',')) != NULL) {
+        rd->filter_tables = p;
+    }
+
+
+#if 0
     /* free cmd buffer */
     rs_free_slab_chunk(sl, cbuf, id);
+#endif
 
-    rs_log_info("dump_file = %s, dump_num = %u, dump_pos = %u", 
-            rd->dump_file, rd->dump_num, rd->dump_pos);
+    rs_log_info("cmd = %s, dump_file = %s, dump_num = %u, dump_pos = %u, "
+            "filter_tables = %s", cbuf, rd->dump_file, rd->dump_num, 
+            rd->dump_pos, rd->filter_tables);
 
     if((err = pthread_create(&(rd->io_thread), &(rd->rdi->thread_attr)
                     , rs_start_io_thread, (void *) rd)) != 0) 
@@ -116,20 +148,18 @@ void *rs_start_dump_thread(void *data)
                 tset = rset;
                 mfd = rs_max(rd->cli_fd, mfd);
 
-                tv.tv_sec = RS_RING_BUFFER_EMPTY_SLEEP_SEC;
-                tv.tv_usec = 0;
+                tv.tv_sec = 0;
+                tv.tv_usec = RS_RING_BUFFER_EMPTY_SLEEP_USEC;
 
                 ready = select(mfd + 1, &tset, NULL, NULL, &tv);
 
                 if(ready == 0) {
-                    if(s % 60 == 0) {
+                    if(s % 60000000 == 0) {
                         s = 0;
                         rs_log_info("dump thread wait ring buf fill data");
                     }
 
-                    s += RS_RING_BUFFER_EMPTY_SLEEP_SEC;
-
-                    sleep(RS_RING_BUFFER_EMPTY_SLEEP_SEC);
+                    s += RS_RING_BUFFER_EMPTY_SLEEP_USEC;
 
                     continue;
                 }
@@ -147,19 +177,14 @@ void *rs_start_dump_thread(void *data)
                     goto free;
                 }
 
+                /* test slave alive */
                 n = rs_read(rd->cli_fd, cbuf, 1);
 
-                if(n < 0) {
-                    rs_log_err(rs_errno, "rs_read() failed, ");
+                if(n <= 0) {
+                    rs_log_err(rs_errno, "rs_read() failed, err or shutdown");
                     goto free;
                 }
 
-                if(n == 0) {
-                    rs_log_info("slave server shutdown, finish dump");
-                    goto free;
-                }
-
-                /* >0 don't exist */
                 FD_CLR(rd->cli_fd, &rset);
                 continue;
             }

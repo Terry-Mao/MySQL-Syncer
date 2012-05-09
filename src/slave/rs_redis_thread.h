@@ -15,6 +15,8 @@
 #define RS_MYSQL_INSERT_TEST                1
 #define RS_MYSQL_DELETE_TEST                2
 
+#define RS_MYSQL_ROW_BASED                  3
+
 void *rs_start_redis_thread(void *data);
 
 #endif
