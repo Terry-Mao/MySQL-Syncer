@@ -61,14 +61,14 @@ void *rs_start_redis_thread(void *data)
             }
 
             if(r != RS_OK) {
-                if(s % 60 == 0) {
+                if(s % 60000000 == 0) {
                     s = 0;
                     rs_log_info("redis thread wait ring buffer fill data");
                 }
 
-                s += RS_RING_BUFFER_EMPTY_SLEEP_SEC;
+                s += RS_RING_BUFFER_EMPTY_SLEEP_USEC;
 
-                sleep(RS_RING_BUFFER_EMPTY_SLEEP_SEC);
+                usleep(RS_RING_BUFFER_EMPTY_SLEEP_USEC);
                 continue;
             }
         }

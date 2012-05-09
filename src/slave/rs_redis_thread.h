@@ -9,7 +9,7 @@
 
 
 #define RS_REDIS_CONNECT_RETRY_SLEEP_SEC    10
-#define RS_RING_BUFFER_EMPTY_SLEEP_SEC      1      
+#define RS_RING_BUFFER_EMPTY_SLEEP_USEC     (1000 * 10)
 
 #define RS_MYSQL_SKIP_DATA                  0
 #define RS_MYSQL_INSERT_TEST                1
