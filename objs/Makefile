@@ -1,7 +1,7 @@
 
 CC =      gcc
 CPUBIT = x86_64
-CFLAGS =  -pipe  -O -W -Wall -Wpointer-arith -Wno-unused-parameter -Wunused-function -Wunused-variable -Wunused-value -Werror -g \
+CFLAGS =  -pg -pipe  -O -W -Wall -Wpointer-arith -Wno-unused-parameter -Wunused-function -Wunused-variable -Wunused-value -Werror -g \
 		  -D$(CPUBIT)
 LINK =	$(CC)
 
@@ -33,7 +33,7 @@ MASTER_DEPS =  src/master/rs_master.h \
 
 MASTER_INCS = -I src/master -I /usr/local/include
 
-MASTER_DEFINE = -DMASTER -D$(CPUBIT)
+MASTER_DEFINE = -DMASTER -D$(CPUBIT) -pg
 
 MASTER_LIBS = -lprotobuf-c
 
@@ -47,7 +47,7 @@ SLAVE_INCS = -I src/slave -I /usr/local/include -I /usr/local/include/hiredis
 
 SLAVE_LIBS = -lhiredis -lprotobuf-c
 
-SLAVE_DEFINE = -DSLAVE -D$(CPUBIT)
+SLAVE_DEFINE = -DSLAVE -D$(CPUBIT) -pg
 
 TEST_INCS = -I test/unit -I /usr/local/include -I /usr/local/include/CUnit
 

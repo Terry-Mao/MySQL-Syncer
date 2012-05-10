@@ -77,6 +77,7 @@ int rs_def_create_data_handle(rs_request_dump_t *rd)
         return RS_ERR;
     }
 
+    /* not all skip event must send to slave */
     if(bi->mev == 0) {
         if(bi->skip_n++ % RS_SKIP_DATA_FLUSH_NUM != 0) {
             bi->skip_n = 1;

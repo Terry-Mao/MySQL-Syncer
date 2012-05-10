@@ -25,19 +25,20 @@ void *rs_start_dump_thread(void *data)
     fd_set                  rset, tset;
     struct timeval          tv;
 
-    s = 0;
-    cbuf = NULL;
     rd = (rs_request_dump_t *) data;
-    FD_ZERO(&rset);
-    FD_ZERO(&tset);
-    mfd = 0;
-    ready = 0;
-    pthread_cleanup_push(rs_free_dump_thread, (void *) rd);
 
     if(rd == NULL || rd->rdi == NULL) {
         rs_log_err(rs_errno, "rd or rdi is null");
         goto free;
     }
+
+    s = 0;
+    cbuf = NULL;
+    FD_ZERO(&rset);
+    FD_ZERO(&tset);
+    mfd = 0;
+    ready = 0;
+    pthread_cleanup_push(rs_free_dump_thread, (void *) rd);
 
     sl = &(rd->slab);
 
@@ -56,11 +57,6 @@ void *rs_start_dump_thread(void *data)
     }
 
     rs_memcpy(&pack_len, pack_buf, RS_SLAVE_CMD_PACK_HEADER_LEN);
-
-    if(n <= 0) {
-        rs_log_err(rs_errno, "rs_read() failed, error or shutdown");
-        goto free;
-    }
 
     /* alloc cmd buf from mempool */
     id = rs_slab_clsid(sl, pack_len);
@@ -101,15 +97,9 @@ void *rs_start_dump_thread(void *data)
         rd->filter_tables = p;
     }
 
-
-#if 0
-    /* free cmd buffer */
-    rs_free_slab_chunk(sl, cbuf, id);
-#endif
-
-    rs_log_info("cmd = %s, dump_file = %s, dump_num = %u, dump_pos = %u, "
-            "filter_tables = %s", cbuf, rd->dump_file, rd->dump_num, 
-            rd->dump_pos, rd->filter_tables);
+    rs_log_info("get a slave cmd = %s, dump_file = %s, dump_num = %u, "
+            "dump_pos = %u, filter_tables = %s", cbuf, rd->dump_file, 
+            rd->dump_num, rd->dump_pos, rd->filter_tables);
 
     if((err = pthread_create(&(rd->io_thread), &(rd->rdi->thread_attr)
                     , rs_start_io_thread, (void *) rd)) != 0) 
@@ -129,6 +119,7 @@ void *rs_start_dump_thread(void *data)
 
         if(err == RS_EMPTY) {
 
+            /* test and sleep */
             for (n = 1; n < RS_RING_BUFFER_SPIN; n <<= 1) {
 
                 for (i = 0; i < n; i++) {
@@ -153,6 +144,7 @@ void *rs_start_dump_thread(void *data)
 
                 ready = select(mfd + 1, &tset, NULL, NULL, &tv);
 
+                /* select timedout */
                 if(ready == 0) {
                     if(s % 60000000 == 0) {
                         s = 0;
@@ -164,6 +156,7 @@ void *rs_start_dump_thread(void *data)
                     continue;
                 }
 
+                /* select error */
                 if(ready == -1) {
                     if(rs_errno == EINTR) {
                         continue;
@@ -173,6 +166,7 @@ void *rs_start_dump_thread(void *data)
                     goto free;
                 }
 
+                /* unknown fd */
                 if(!FD_ISSET(rd->cli_fd, &tset)) {
                     goto free;
                 }
@@ -221,11 +215,11 @@ static void *rs_start_io_thread(void *data)
 
     rd = (rs_request_dump_t *) data;
 
-    pthread_cleanup_push(rs_free_io_thread, rd);
-
     if(rd == NULL) {
         goto free;
     }
+
+    pthread_cleanup_push(rs_free_io_thread, rd);
 
     /* open binlog index file */
     if((rd->binlog_idx_fp = fopen(rd->binlog_idx_file, "r"))
@@ -239,13 +233,13 @@ static void *rs_start_io_thread(void *data)
     for( ;; ) {
 
         /* open new binlog */
-        rs_log_info("open a new binlog, %s", rd->dump_file);
-
         if((rd->binlog_fp = fopen(rd->dump_file, "r")) == NULL) {
             rs_log_err(rs_errno, "fopen(\"%s\", \"r\") failed", 
                     rd->dump_file);
             goto free;
         }
+
+        rs_log_info("open a new binlog = %s", rd->dump_file);
 
         /* read binlog */
         if(rs_read_binlog(rd) == RS_ERR) {

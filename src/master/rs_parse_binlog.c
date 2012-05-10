@@ -121,30 +121,28 @@ int rs_def_query_handle(rs_request_dump_t *rd)
     rs_memcpy(bi->sql, p, bi->sl);
 
     bi->sql[bi->sl] = '\0';
-
-    if(rs_strncmp(bi->sql, RS_TRAN_KEYWORD, RS_TRAN_KEYWORD_LEN) == 0) {
-        bi->tran = 1;
-    } else if(rs_strncmp(bi->sql, RS_TRAN_END_KEYWORD, 
-                RS_TRAN_END_KEYWORD_LEN) == 0) {
-        bi->tran = 0;
-    }
+    bi->log_format = RS_BINLOG_FORMAT_SQL_STATEMENT;
 
     rs_log_debug(0, 
             "\n========== query event ==============\n"
             "database name          : %s\n"
             "query sql              : %s\n"
             "next position          : %u\n"
-            "tran                   : %d\n"
             "\n=====================================\n",
             bi->db,
             bi->sql,
-            bi->np,
-            bi->tran);
+            bi->np
+            );
 
-    bi->log_format = RS_BINLOG_FORMAT_SQL_STATEMENT;
-    
-    if(rs_binlog_filter_data(rd) != RS_OK) {
-        return RS_ERR;
+    if(rs_strncmp(bi->sql, RS_TRAN_KEYWORD, RS_TRAN_KEYWORD_LEN) == 0) {
+        bi->tran = 1;
+    } else if(rs_strncmp(bi->sql, RS_TRAN_END_KEYWORD, 
+                RS_TRAN_END_KEYWORD_LEN) == 0) {
+        bi->tran = 0;
+    } else {
+        if(rs_binlog_filter_data(rd) != RS_OK) {
+            return RS_ERR;
+        }
     }
 
     return RS_OK;
@@ -238,8 +236,7 @@ int rs_def_table_map_handle(rs_request_dump_t *rd)
 
     /* get database name len */
     rs_memcpy(&(bi->dbl), p, RS_BINLOG_TABLE_MAP_DB_NAME_LEN);
-    bi->dbl = bi->dbl & 0x000000FF;
-    bi->dbl++;
+    bi->dbl = (bi->dbl & 0x000000FF) + 1;
     p += RS_BINLOG_TABLE_MAP_DB_NAME_LEN;
 
     /* get database name */
@@ -248,8 +245,7 @@ int rs_def_table_map_handle(rs_request_dump_t *rd)
 
     /* get table name len */
     rs_memcpy(&(bi->tbl), p, RS_BINLOG_TABLE_MAP_TB_NAME_LEN);
-    bi->tbl = bi->dbl & 0x000000FF;
-    bi->tbl++;
+    bi->tbl = (bi->dbl & 0x000000FF) + 1;
     p += RS_BINLOG_TABLE_MAP_TB_NAME_LEN;
 
     /* get table name */
@@ -266,14 +262,9 @@ int rs_def_table_map_handle(rs_request_dump_t *rd)
             return RS_ERR;
         }
 
-        if(rs_strstr(rd->filter_tables, dt) != NULL) {
-            bi->filter = 0;
-        } else {
+        if(rs_strstr(rd->filter_tables, dt) == NULL) {
             bi->filter = 1;
         }
-
-    } else {
-        bi->filter = 0;
     }
 
     rs_log_debug(0, 
@@ -305,6 +296,7 @@ int rs_def_write_rows_handle(rs_request_dump_t *rd)
     }
 
     if(bi->filter) {
+        bi->filter = 0;
         return RS_OK;
     }
 
@@ -360,10 +352,6 @@ int rs_def_finish_handle(rs_request_dump_t *rd)
     }
 
     bi->sent = 0;
-
-    rs_log_debug(0, "tran = %d, sent = %d", bi->tran, bi->sent);
-
-    rs_log_debug(0, "seek binlog pos = %u", bi->np);
 
     /* seek after server_id and event_length */
     if(fseek(rd->binlog_fp, bi->np, SEEK_SET) == -1) {

@@ -9,7 +9,7 @@ user terry terry
 pid /tmp/rs_master.pid
 
 # daemon
-daemon 0
+daemon 1
 
 # log path
 log /tmp/rs_master.log
