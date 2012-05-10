@@ -104,8 +104,6 @@ int rs_def_query_handle(rs_request_dump_t *rd)
         return r;
     }
 #endif
-    rs_memcpy(bi->db, p, bi->dbl);
-    p += bi->dbl;
 
     /* filter care about list */
     bi->sl = bi->el - RS_BINLOG_EVENT_HEADER_LEN - bi->sbl - 
@@ -118,6 +116,7 @@ int rs_def_query_handle(rs_request_dump_t *rd)
         return r;
     }
 #endif
+
     rs_memcpy(bi->sql, p, bi->sl);
 
     bi->sql[bi->sl] = '\0';

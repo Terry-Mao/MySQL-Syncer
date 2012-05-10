@@ -26,12 +26,6 @@ void *rs_start_dump_thread(void *data)
     struct timeval          tv;
 
     rd = (rs_request_dump_t *) data;
-
-    if(rd == NULL || rd->rdi == NULL) {
-        rs_log_err(rs_errno, "rd or rdi is null");
-        goto free;
-    }
-
     s = 0;
     cbuf = NULL;
     FD_ZERO(&rset);
@@ -39,6 +33,11 @@ void *rs_start_dump_thread(void *data)
     mfd = 0;
     ready = 0;
     pthread_cleanup_push(rs_free_dump_thread, (void *) rd);
+
+    if(rd == NULL || rd->rdi == NULL) {
+        rs_log_err(rs_errno, "rd or rdi is null");
+        goto free;
+    }
 
     sl = &(rd->slab);
 
@@ -215,11 +214,11 @@ static void *rs_start_io_thread(void *data)
 
     rd = (rs_request_dump_t *) data;
 
+    pthread_cleanup_push(rs_free_io_thread, rd);
+
     if(rd == NULL) {
         goto free;
     }
-
-    pthread_cleanup_push(rs_free_io_thread, rd);
 
     /* open binlog index file */
     if((rd->binlog_idx_fp = fopen(rd->binlog_idx_file, "r"))
