@@ -62,7 +62,7 @@ int main(int argc, char * const *argv)
 
         if(rs_quit) {
 
-        rs_log_info("redisync exiting");
+        rs_log_info("mysql syncer exiting");
 
 #if MASTER
             rs_free_master(NULL);
@@ -74,7 +74,7 @@ int main(int argc, char * const *argv)
 
             /* init core info */
             if((ci = rs_init_core_info(rs_core_info)) == NULL) {
-                rs_log_err(0, "redisync reload failed");
+                rs_log_err(0, "mysql syncer reload failed");
                 rs_reload = 0;
                 continue;
             }
@@ -104,10 +104,12 @@ int main(int argc, char * const *argv)
     }
 
     if(ci->pid_path != NULL) {
+        rs_log_info("delete pid file");
         rs_delete_pidfile(ci->pid_path);
     }
 
 
+    rs_log_info("free core, app stop");
     rs_free_core(ci);
 
     rs_free_strerr();

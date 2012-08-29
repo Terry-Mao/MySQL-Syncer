@@ -2,16 +2,16 @@
 # this is a master config file
 
 # execute user group
-user root root
+user terry terry
 
 # pid file
-pid /var/run/rs_master.pid
+pid /var/run/rs/rs_master.pid
 
 # daemon
 daemon 1
 
 # log path
-log /tmp/rs_master.log
+log /var/log/rs/rs_master.log
 
 # log debug level(DEBUG : 2, INFO : 1, ERR : 0)
 log.level 2

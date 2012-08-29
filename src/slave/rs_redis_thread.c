@@ -492,13 +492,17 @@ static int rs_redis_get_replies(rs_slave_info_t *si, uint32_t cmdn)
 }/*}}}*/
 
 static void rs_free_redis_thread(void *data)
-{/*{{{*/
+{
     rs_slave_info_t *si;
 
     si = (rs_slave_info_t *) data;
 
     if(si != NULL) {
+        rs_log_info("set redis thread exit state");
         si->redis_thread_exit = 1;
-        kill(rs_pid, SIGQUIT);
+        if(rs_quit == 0 && rs_reload == 0) {
+            rs_log_info("redis thread send SIGQUIT signal");
+            kill(rs_pid, SIGQUIT);
+        }
     }
-}/*}}}*/
+}

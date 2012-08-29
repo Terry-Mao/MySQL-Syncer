@@ -498,8 +498,6 @@ int rs_has_next_binlog(rs_request_dump_t *rd)
 
         n = rs_estr_to_uint32(s + rs_strlen(s) - 2);  /* skip /n */
 
-        rs_log_debug(0, "mysql-bin.index num : %u, dump_dump : %u", n, 
-                rd->dump_num);
     } while(n <= rd->dump_num);
 
     rs_memcpy(rd->dump_file, path, rs_strlen(path) + 1);

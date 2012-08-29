@@ -321,7 +321,11 @@ static void rs_free_io_thread(void *data)
     si = (rs_slave_info_t *) data;
 
     if(si != NULL) {
+        rs_log_info("set io thread exit state");
         si->io_thread_exit = 1;
-        kill(rs_pid, SIGQUIT);
+        if(rs_quit == 0 && rs_reload == 0) {
+            rs_log_info("io thread send SIGQUIT signal");
+            kill(rs_pid, SIGQUIT);
+        }
     }
 }
