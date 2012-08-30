@@ -187,7 +187,7 @@ void *rs_start_accept_thread(void *data)
         }
     }
 
-free:
+free:;
 
     pthread_cleanup_pop(1);
     pthread_exit(NULL);

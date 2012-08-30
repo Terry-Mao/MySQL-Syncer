@@ -7,7 +7,7 @@ static void rs_free_redis_thread(void *data);
 static int rs_redis_dml_data(rs_slave_info_t *si, char *buf, uint32_t len);
 
 void *rs_start_redis_thread(void *data) 
-{/*{{{*/
+{
     int                         r, n, i, s;
     char                        *p;
     rs_ring_buffer2_data_t      *d;
@@ -111,13 +111,13 @@ void *rs_start_redis_thread(void *data)
         rs_get_ring_buffer2_advance(si->ring_buf);
     } 
 
-free:
+free:;
 
     /* pop cleanup handle and execute */
     pthread_cleanup_pop(1);
 
     pthread_exit(NULL);
-}/*}}}*/
+}
 
 static int rs_redis_dml_data(rs_slave_info_t *si, char *buf, uint32_t len) 
 {/*{{{*/

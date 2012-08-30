@@ -247,7 +247,7 @@ void *rs_start_dump_thread(void *data)
 
     } // END FOR
 
-free:
+free:;
 
     pthread_cleanup_pop(1);
     pthread_exit(NULL);

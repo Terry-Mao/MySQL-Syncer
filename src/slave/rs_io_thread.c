@@ -280,7 +280,7 @@ retry:
     }
 
 
-free:
+free:;
 
     pthread_cleanup_pop(1);
 
