@@ -22,7 +22,6 @@ struct rs_slave_info_s {
     int                 info_fd;
     int                 svr_fd;
     redisContext        *c;
-    redisContext        *c1;
 
     int                 listen_port;
     char                *listen_addr;
@@ -73,7 +72,6 @@ struct rs_slave_info_s {
     (si)->info_fd = -1;                                                      \
     (si)->svr_fd = -1;                                                       \
     (si)->c = NULL;                                                          \
-    (si)->c1 = NULL;                                                         \
     (si)->listen_port = -1;                                                  \
     (si)->listen_addr = NULL;                                                \
     (si)->redis_port = -1;                                                   \

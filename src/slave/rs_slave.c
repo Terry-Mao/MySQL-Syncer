@@ -86,11 +86,6 @@ void rs_free_slave(void *data)
         redisFree(si->c); 
     }
 
-    if(si->c1 != NULL) {
-        rs_log_info("free redis");
-        redisFree(si->c1); 
-    }
-
     /* free ring buffer2 */
     if(si->ring_buf != NULL) {
         rs_log_info("free ring buffer");
