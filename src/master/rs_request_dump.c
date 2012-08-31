@@ -308,7 +308,7 @@ static void *rs_start_io_thread(void *data)
         }
     }
 
-free:
+free:;
 
     pthread_cleanup_pop(1);
     pthread_exit(NULL);
