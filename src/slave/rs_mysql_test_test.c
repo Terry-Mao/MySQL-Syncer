@@ -133,9 +133,9 @@ int rs_insert_test_test(rs_slave_info_t *si, void *obj)
 }
 
 int rs_before_update_test_test(rs_slave_info_t *si, void *obj)
-{/*{{{*/
+{
     return RS_OK;
-}/*}}}*/
+}
 
 int rs_update_test_test(rs_slave_info_t *si, void *obj)
 {/*{{{*/

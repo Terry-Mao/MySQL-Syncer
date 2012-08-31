@@ -293,6 +293,9 @@ static char *rs_binlog_parse_varchar(char *p, u_char *cm, uint32_t ml,
 
     pack_len = (max_len + 254) / 255;
 
+    rs_log_debug(0, "parse_varchar max_len : %u, pack_len : %u", max_len, 
+            pack_len);
+
     rs_memcpy(dl, p, pack_len);
 
     return p + pack_len;    
@@ -353,6 +356,9 @@ static char *rs_binlog_parse_string(char *p, u_char *cm, uint32_t ml,
 
     pack_len = (max_len + 254) / 255;
 
+    rs_log_debug(0, "parse_string max_len : %u, pack_len : %u", max_len, 
+            pack_len);
+
     rs_memcpy(dl, p, pack_len);
 
     return p + pack_len;
@@ -366,7 +372,7 @@ int rs_dml_binlog_row(rs_slave_info_t *si, void *data,
         rs_dml_binlog_row_pt  delete_handle,
         rs_parse_binlog_row_pt parse_handle, void *obj)
 {
-    char                        *p;
+    char                        *p, *ubp;
     u_char                      *ctp, *cmp;
     uint32_t                    i, j, un, nn, before, ml, cn, cl, cmdn, dl, t;
     int                         cmd;
@@ -378,6 +384,7 @@ int rs_dml_binlog_row(rs_slave_info_t *si, void *data,
     cmdn = 0;
     dl = 0;
     t = 0;
+    ubp = NULL;
     handle = NULL;
     ctp = NULL;
     cmp = NULL;
@@ -417,10 +424,15 @@ int rs_dml_binlog_row(rs_slave_info_t *si, void *data,
     /* get used bits */
     un = (cn + 7) / 8;
 
-    char use_bits[un];
+    char use_bits[un], use_bits_after[un];
 
     rs_memcpy(use_bits, p, un);
     p += un;
+
+    if(type == RS_UPDATE_ROWS_EVENT) {
+        rs_memcpy(use_bits_after, p, un);
+        p += un;
+    }
 
     /* get column value */
     while(p < (char *) data + len) {
@@ -434,6 +446,13 @@ int rs_dml_binlog_row(rs_slave_info_t *si, void *data,
 
         rs_memcpy(null_bits, p, nn);
         p += nn;
+
+
+        if((type != RS_UPDATE_ROWS_EVENT || before == 0)) {
+            ubp = use_bits;
+        } else {
+            ubp = use_bits_after;
+        }
 
 
         /* parse every column */
@@ -461,7 +480,7 @@ int rs_dml_binlog_row(rs_slave_info_t *si, void *data,
             rs_log_debug(0, "column type : %u, data len : %u", t, dl);
 
             /* used */
-            if((use_bits[i / 8] >> (i % 8))  & 0x01) {
+            if((ubp[i / 8] >> (i % 8))  & 0x01) {
 
                 /* not null */
                 if(!((null_bits[j / 8] >> (j % 8)) & 0x01)) {
@@ -471,6 +490,8 @@ int rs_dml_binlog_row(rs_slave_info_t *si, void *data,
                 }
 
                 j++;
+            } else {
+                rs_log_debug(0, "column index : %u not used", i);
             }
             
             /* next column type */
