@@ -510,7 +510,7 @@ int rs_dml_binlog_row(rs_slave_info_t *si, void *data,
             } else {
                 handle = before_update_handle;
             }
-        } else if(type == RS_UPDATE_ROWS_EVENT) {
+        } else if(type == RS_DELETE_ROWS_EVENT) {
             handle = delete_handle;
         } else {
             return RS_ERR;
