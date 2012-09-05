@@ -291,7 +291,11 @@ static char *rs_binlog_parse_varchar(char *p, u_char *cm, uint32_t ml,
 
     rs_memcpy(&max_len, cm, ml);
 
-    pack_len = (max_len + 254) / 255;
+    if(max_len < 256) {
+       pack_len = 1; 
+    } else {
+        pack_len = 2;
+    }
 
     rs_log_debug(0, "parse_varchar max_len : %u, pack_len : %u", max_len, 
             pack_len);
@@ -348,18 +352,29 @@ static char *rs_binlog_parse_varstring(char *p, u_char *cm, uint32_t ml,
 static char *rs_binlog_parse_string(char *p, u_char *cm, uint32_t ml, 
         uint32_t fl, uint32_t *dl) 
 {
-    uint32_t pack_len, max_len;
+    uint32_t pack_len, max_len, type;
 
     max_len = 0;
+    type = 0;
 
-    rs_memcpy(&max_len, cm + 1, 1);
+    /* MYSQL BUG : 37426 */
+    if((*cm & 0x30) != 0x30) {
+        max_len =  *(cm + 1) | (((*cm & 0x30) ^ 0x30) << 4);
+        type = *cm | 0x30;
+    } else {
+        rs_memcpy(&max_len, cm + 1, 1);
+    }
 
-    pack_len = (max_len + 254) / 255;
-
-    rs_log_debug(0, "parse_string max_len : %u, pack_len : %u", max_len, 
-            pack_len);
+    if(max_len < 256) {
+       pack_len = 1; 
+    } else {
+        pack_len = 2;
+    }
 
     rs_memcpy(dl, p, pack_len);
+
+    rs_log_debug(0, "parse_string max_len : %u, pack_len : %u, type : %u", 
+            max_len, pack_len, type);
 
     return p + pack_len;
 }
