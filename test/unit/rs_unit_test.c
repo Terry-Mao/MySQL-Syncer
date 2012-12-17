@@ -12,6 +12,7 @@ static int rs_clean_suite(void);
 static void rs_ring_buffer2_test(void);
 static void rs_slab_test(void);
 static void rs_conf_test(void);
+static void rs_shash_test(void);
 
 
 /* static rs_core_info_t  *ci; */
@@ -37,7 +38,9 @@ int main(int argc, char *const *argv)
             (NULL == CU_add_test(pSuite, "test of rs_ring_buffer2_test", 
                                  rs_ring_buffer2_test)) ||
             (NULL == CU_add_test(pSuite, "test of rs_conf_test",
-                                 rs_conf_test))
+                                 rs_conf_test)) ||
+            (NULL == CU_add_test(pSuite, "test of rs_shash_test", 
+                                 rs_shash_test))
        )
     {
         CU_cleanup_registry();
@@ -74,6 +77,38 @@ static int rs_init_suite(void)
 static int rs_clean_suite(void)
 {
     return 0;
+}
+
+
+static void rs_shash_test(void) 
+{
+    rs_shash_t      *h;  
+
+    h = rs_init_shash(30);
+    CU_ASSERT(h != NULL && h->size == 30);
+
+
+    int val = 10, val1 = 11, val2 = 12, val3= 13;
+    CU_ASSERT(RS_OK == rs_add_shash("test1", (void *) &val, h));
+    CU_ASSERT(RS_OK == rs_add_shash("test2", (void *) &val1, h));
+    CU_ASSERT(RS_EXISTS == rs_add_shash("test2", (void *) &val1, h));
+    CU_ASSERT(RS_OK == rs_add_shash("test3", (void *) &val2, h));
+    CU_ASSERT(RS_OK == rs_add_shash("test4", (void *) &val3, h));
+
+
+    int *v1, *v2, *v3, *v4;
+
+    CU_ASSERT(RS_OK == rs_get_shash("test1", h, (void *) &v1));
+    CU_ASSERT(RS_OK == rs_get_shash("test2", h, (void *) &v2));
+    CU_ASSERT(RS_OK == rs_get_shash("test3", h, (void *) &v3));
+    CU_ASSERT(RS_OK == rs_get_shash("test4", h, (void *) &v4));
+
+    CU_ASSERT(*v1 == 10);
+    CU_ASSERT(*v2 == 11);
+    CU_ASSERT(*v3 == 12);
+    CU_ASSERT(*v4 == 13);
+
+    rs_free_shash(h);
 }
 
 static void rs_conf_test(void)

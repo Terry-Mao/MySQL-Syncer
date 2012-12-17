@@ -9,12 +9,12 @@ build:
 clean:
 	make -f objs/Makefile clean
 
-unitest_64:
+test_64:
 	/bin/mkdir -p objs/src/core
 	/bin/mkdir -p objs/src/test
 	make -f objs/Makefile test CPUBIT='x86_64'
 
-unitest_32:
+test_32:
 	/bin/mkdir -p objs/src/core
 	/bin/mkdir -p objs/src/test
 	make -f objs/Makefile test CPUBIT='x86_32'
