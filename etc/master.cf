@@ -37,7 +37,7 @@ slab.memsize 10485976
 slab.factor 1.5
 
 # ring buffer num
-ringbuf.num 10000
+ringbuf.num 5000
 
 # send buf length
 sendbuf.len 10485760
