@@ -3,7 +3,37 @@
 #include <rs_core.h>
 #include <rs_master.h>
 
-int rs_def_header_handle(rs_request_dump_t *rd) 
+rs_binlog_event_map_t[] rs_binlog_event_map = {
+    { "1", rs_skip_handler      },
+    { "2", rs_query_handler     },
+    { "3", rs_stop_handler      },
+    { "4", rs_stop_handler      },
+    { "5", rs_intvar_handler    },
+    { "6", rs_skip_handler      },
+    { "7", rs_skip_handler      },
+    { "8", rs_skip_handler      },
+    { "9", rs_skip_handler      },
+    { "10", rs_skip_handler     },
+    { "11", rs_skip_handler     },
+    { "12", rs_skip_handler     },
+    { "13", rs_skip_handler     },
+    { "14", rs_skip_handler     },
+    { "15", rs_skip_handler     },
+    { "16", rs_xid_handler      },
+    { "17", rs_skip_handler     },
+    { "18", rs_skip_handler     },
+    { "19", rs_table_map_handler},
+    { "20", rs_skip_handler     },
+    { "21", rs_skip_handler     },
+    { "22", rs_skip_handler     },
+    { "23", rs_write_handler    },
+    { "24", rs_update_handler   },
+    { "25", rs_delete_handler   },
+    { "26", rs_skip_handler     },
+    { "27", rs_skip_handler     }
+};
+
+int rs_header_handler(rs_request_dump_t *rd) 
 {
     int                 r;
     rs_binlog_info_t    *bi;
@@ -64,7 +94,7 @@ int rs_def_header_handle(rs_request_dump_t *rd)
     return RS_OK;
 }
 
-int rs_def_query_handle(rs_request_dump_t *rd) 
+int rs_query_handler(rs_request_dump_t *rd) 
 {
     int                 r;
     rs_binlog_info_t    *bi;
@@ -140,7 +170,7 @@ int rs_def_query_handle(rs_request_dump_t *rd)
 }
 
 
-int rs_def_intvar_handle(rs_request_dump_t *rd) 
+int rs_intvar_handler(rs_request_dump_t *rd) 
 {
     int                 r;
     rs_binlog_info_t    *bi;
@@ -187,7 +217,7 @@ int rs_def_intvar_handle(rs_request_dump_t *rd)
     return RS_OK;
 }
 
-int rs_def_xid_handle(rs_request_dump_t *rd) 
+int rs_xid_handler(rs_request_dump_t *rd) 
 {
     int                     r;
     rs_binlog_info_t        *bi;
@@ -211,7 +241,7 @@ int rs_def_xid_handle(rs_request_dump_t *rd)
     return RS_OK;
 }
 
-int rs_def_table_map_handle(rs_request_dump_t *rd)
+int rs_table_map_handler(rs_request_dump_t *rd)
 {
     int                     r;
     uint32_t                len;
@@ -292,7 +322,7 @@ int rs_def_table_map_handle(rs_request_dump_t *rd)
     return RS_OK;
 }
 
-int rs_def_write_rows_handle(rs_request_dump_t *rd)
+int rs_write_rows_handler(rs_request_dump_t *rd)
 {
     int                     r;
     rs_binlog_info_t        *bi;
@@ -329,7 +359,7 @@ int rs_def_write_rows_handle(rs_request_dump_t *rd)
     return RS_OK;
 }
 
-int rs_def_update_rows_handle(rs_request_dump_t *rd)
+int rs_update_rows_handler(rs_request_dump_t *rd)
 {
     int                     r;
     rs_binlog_info_t        *bi;
@@ -370,7 +400,7 @@ int rs_def_update_rows_handle(rs_request_dump_t *rd)
     return RS_OK;
 }
 
-int rs_def_delete_rows_handle(rs_request_dump_t *rd)
+int rs_delete_rows_handler(rs_request_dump_t *rd)
 {
     int                     r;
     rs_binlog_info_t        *bi;
@@ -411,7 +441,7 @@ int rs_def_delete_rows_handle(rs_request_dump_t *rd)
     return RS_OK;
 }
 
-int rs_def_finish_handle(rs_request_dump_t *rd) 
+int rs_finish_handler(rs_request_dump_t *rd) 
 {
     rs_binlog_info_t        *bi;
 
@@ -448,6 +478,35 @@ int rs_def_finish_handle(rs_request_dump_t *rd)
         }
 
         bi->skip = 0;
+    }
+
+    return RS_OK;
+}
+
+int rs_skip_handler(rs_request_dump_t *rd)
+{
+    rd->binlog_info.skip = 1; 
+    return RS_OK;
+}
+
+int rs_stop_handler(rs_request_dump_t *rd)
+{
+    if(rd->server_id != rd->binlog_info.svrid) {
+        rs_log_info("server id is not match, skip rotate event or "
+                "stop event");
+        rd->binlog_info.skip = 1;
+        return RS_OK;
+    }
+
+    for( ;; ) {
+
+        if((err = rs_has_next_binlog(rd)) == RS_OK) {
+            return RS_HAS_BINLOG;
+        } else if(err == RS_ERR) {
+            return RS_ERR;
+        } else if(err == RS_NO_BINLOG) {
+            sleep(RS_BINLOG_EOF_WAIT_SEC);
+        }
     }
 
     return RS_OK;

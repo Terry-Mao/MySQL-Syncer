@@ -8,16 +8,7 @@ int rs_def_filter_data_handle(rs_request_dump_t *rd)
 {
     return RS_OK;
 }
-/*
- * DESCRIPTION 
- *   cmd format:
- *
- *
- *
- *
- *
- *
- */
+
 int rs_def_create_data_handle(rs_request_dump_t *rd) 
 {
     int                     i, r, len;

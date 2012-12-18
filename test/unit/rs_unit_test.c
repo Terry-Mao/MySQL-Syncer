@@ -175,7 +175,7 @@ static void rs_slab_test(void)
     char        *p;
 
     /* init slab  */
-    CU_ASSERT(rs_init_slab(&slab, NULL, 100, 1.5, 1024 * 1024 * 2, 
+    CU_ASSERT(rs_init_slab(&slab, 100, 1.5, 1024 * 1024 * 2, 
                 RS_SLAB_PREALLOC) == RS_OK) 
 
         /* alloc slab */
@@ -224,6 +224,14 @@ static void rs_slab_test(void)
     for(i = 0; i < 10485; i++) {
         CU_ASSERT(rs_alloc_slab_chunk(&slab, 100, id) != NULL); 
     }
+
+    CU_ASSERT((id = rs_slab_clsid(&slab, 1 * 1024 * 1024 + 1)) 
+            == RS_SLAB_OVERFLOW)
+
+    CU_ASSERT((p = (char *) rs_alloc_slab_chunk(&slab, 1 * 1024 * 1024 + 1, id)) != NULL); 
+    rs_free_slab_chunk(&slab, (void *) p, id);
+
+    rs_free_slabs(&slab);
 }
 
 static void rs_ring_buffer2_test(void)

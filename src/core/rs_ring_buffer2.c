@@ -123,6 +123,25 @@ void rs_set_ring_buffer2_advance(rs_ring_buffer2_t *rb)
 #endif
 }
 
+int rs_sleep_ring_buffer2(rs_ring_buffer2_t *rb, rs_ring_buffer2_data_t **d)
+{
+    int err, n, i;
+
+    /* test and sleep */
+    for (n = 1; n < RS_RING_BUFFER_SPIN; n <<= 1) {
+
+        for (i = 0; i < n; i++) {
+            rs_cpu_pause();
+        }
+
+        if((err = rs_get_ring_buffer2(rb, d)) == RS_OK) {
+            return RS_OK;
+        }
+    }
+
+    return err;
+}
+
 void rs_free_ring_buffer2(rs_ring_buffer2_t *rb)
 {
     if(rb != NULL && rb->start != NULL) {

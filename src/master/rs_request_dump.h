@@ -8,7 +8,6 @@
 #include <rs_master.h>
 
 #define RS_SLAVE_CMD_PACK_HEADER_LEN        4
-#define RS_REGISTER_SLAVE_CMD_LEN           (1 + PATH_MAX + UINT32_LEN)
 #define RS_CMD_RETRY_TIMES                  600
 
 #define RS_RING_BUFFER_EMPTY_SLEEP_USEC     (1000 * 10)
@@ -21,7 +20,8 @@ struct rs_request_dump_s {
 
     uint32_t            dump_pos;
     uint32_t            dump_num;
-    char                dump_file[PATH_MAX + 1];
+    char                *dump_file;
+    char                *dump_tmp_file;
     char                *binlog_idx_file;
     
     char                *filter_tables;
@@ -38,6 +38,7 @@ struct rs_request_dump_s {
     pthread_t           io_thread;
     pthread_t           dump_thread;
     rs_buf_t            send_buf;
+    rs_shash_t          event_handler;
     
     rs_buf_t            io_buf;
 
@@ -68,7 +69,8 @@ struct rs_request_dump_s {
     (rd)->dump_thread = 0;                                                   \
     (rd)->rdi = NULL;                                                        \
     (rd)->io_thread = 0;                                                     \
-    rs_memzero((rd)->dump_file, PATH_MAX + 1);                               \
+    (rd)->dump_file = NULL;                                                  \
+    (rd)->dump_tmp_file = NULL;                                              \
     rb = &(rd->ring_buf);                                                    \
     bi = &(rd->binlog_info);                                                 \
     sb = &(rd->send_buf);                                                    \

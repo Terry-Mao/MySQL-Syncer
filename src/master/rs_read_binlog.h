@@ -99,6 +99,8 @@ struct rs_binlog_info_s {
 
 #define RS_BINLOG_MAGIC_NUM_LEN         4
 
+#define RS_BINLOG_EVENT_NUM             27
+
 /* binlog event type */
 #define RS_START_EVENT_V3               1
 #define RS_QUERY_EVENT                  2
@@ -165,7 +167,6 @@ struct rs_binlog_info_s {
 
 int rs_read_binlog(rs_request_dump_t *rd);
 int rs_has_next_binlog(rs_request_dump_t *rd);
-int rs_eof_read_binlog(rs_request_dump_t *rd, void *buf, size_t size);
 int rs_eof_read_binlog2(rs_request_dump_t *rd, void *buf, size_t size);
 
 #endif

@@ -2,7 +2,6 @@
 
 default : build
 
-
 build:
 	make -f objs/Makefile master_x86_64
 

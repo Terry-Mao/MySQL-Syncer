@@ -26,6 +26,7 @@ struct rs_buf_s {
     (b)->size = 0
 
 int rs_create_temp_buf(rs_buf_t *b, uint32_t size);
+int rs_send_temp_buf(int fd, rs_buf_t *b);
 void rs_free_temp_buf(rs_buf_t *b);
 
 #endif

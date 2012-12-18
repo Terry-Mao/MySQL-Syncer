@@ -4,28 +4,10 @@
 #include <rs_master.h>
 
 rs_master_info_t    *rs_master_info = NULL;
-rs_binlog_action_t  rs_binlog_actions;
-
-static rs_binlog_action_t rs_def_binlog_actions = {
-    rs_def_header_handle,
-    rs_def_query_handle,
-    rs_def_filter_data_handle,
-    rs_def_create_data_handle,
-    rs_def_intvar_handle,
-    rs_def_xid_handle,
-    rs_def_table_map_handle,
-    rs_def_write_rows_handle,
-    rs_def_update_rows_handle,
-    rs_def_delete_rows_handle,
-    rs_def_finish_handle
-};
 
 int rs_init_master() 
 {
     rs_master_info_t    *mi, *om;
-
-    /* set binlog actions */
-    rs_binlog_actions = rs_def_binlog_actions;
 
     /* init master info */
     mi = rs_init_master_info(rs_master_info);

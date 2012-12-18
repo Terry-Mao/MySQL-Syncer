@@ -105,11 +105,12 @@ free :
 
 void *rs_start_accept_thread(void *data) 
 {
-    int                     err, cli_fd;
+    int                     err, cli_fd, i;
     socklen_t               socklen;
     rs_master_info_t        *mi;
     struct                  sockaddr_in cli_addr;
     rs_request_dump_t       *rd;
+    rs_shash_t              *sh;
 
     mi = (rs_master_info_t *) data;
 
@@ -158,7 +159,7 @@ void *rs_start_accept_thread(void *data)
         }
 
         /* init slab */
-        if(rs_init_slab(&(rd->slab), NULL, mi->slab_init_size, mi->slab_factor
+        if(rs_init_slab(&(rd->slab), mi->slab_init_size, mi->slab_factor
                     , mi->slab_mem_size, RS_SLAB_PREALLOC) != RS_OK) 
         {
             goto free;
@@ -172,6 +173,23 @@ void *rs_start_accept_thread(void *data)
         /* init iobuf */
         if(rs_create_temp_buf(&(rd->io_buf), mi->iobuf_len) != RS_OK) {
             goto free;
+        }
+
+        /* init event_hander hash */
+        if(sh = rs_init_shash(RS_BINLOG_EVENT_NUM) != NULL) {
+            goto free;
+        }
+
+        //rd->event_handler = 
+
+        /* register events */
+        for(i = 0; i < RS_BINLOG_EVENT_NUM; i++) {
+            if(rs_add_shash(rs_binlog_event_map[i].key, 
+                        &(rs_binlog_event_map[i].handler), 
+                        &(rd->event_handler)) != RS_OK) 
+            {
+                goto free; 
+            }
         }
 
         rd->cli_fd = cli_fd;

@@ -56,6 +56,7 @@ void rs_get_ring_buffer2_advance(rs_ring_buffer2_t *rb);
 int rs_set_ring_buffer2(rs_ring_buffer2_t *rb, rs_ring_buffer2_data_t **data); 
 void rs_set_ring_buffer2_advance(rs_ring_buffer2_t *rb);
 
+int rs_sleep_ring_buffer2(rs_ring_buffer2_t *rb, rs_ring_buffer2_data_t **d);
 void rs_free_ring_buffer2(rs_ring_buffer2_t *rb);
 
 #endif

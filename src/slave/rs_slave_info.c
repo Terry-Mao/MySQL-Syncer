@@ -172,7 +172,7 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
             goto free;
         }
 
-        if(rs_init_slab(si->slab, NULL, si->slab_init_size, si->slab_factor
+        if(rs_init_slab(si->slab, si->slab_init_size, si->slab_factor
                     , si->slab_mem_size, RS_SLAB_PREALLOC) != RS_OK) 
         {
             goto free;
