@@ -61,11 +61,6 @@ int rs_init_daemon(rs_core_info_t *ci)
 
 int rs_init_signals(sigset_t *waitset) 
 {
-    if(waitset == NULL) {
-        rs_log_err(0, "rs_init_signals() failed, *waitset is null");
-        return RS_ERR;
-    }
-
     sigemptyset(waitset);
 
     sigaddset(waitset, SIGINT);     /* CTRL + C */
@@ -151,7 +146,7 @@ int rs_create_pidfile(char *name)
 void rs_delete_pidfile(char *name)
 {
     if(unlink(name) == -1) {
-        rs_log_err(rs_errno, "unlink(\"%s\") failed", name);
+        rs_log_err(rs_errno, "unlink(\"%s\")  failed", name);
     }
 }
 
@@ -163,7 +158,7 @@ int rs_init_uid(char *user)
     u = getpwnam(user);
 
     if(u == NULL) {
-        rs_log_err(rs_errno, "getpwnam(\"%s\") failed", user);
+        rs_log_err(rs_errno, "getpwnam(\"%s\")  failed", user);
         return RS_ERR;
     }
 
@@ -183,7 +178,7 @@ int rs_init_gid(char *grp)
     g = getgrnam(grp);
 
     if(g == NULL) {
-        rs_log_err(rs_errno, "getgrnam(\"%s\") failed", grp);
+        rs_log_err(rs_errno, "getgrnam(\"%s\")  failed", grp);
         return RS_ERR;
     }
 

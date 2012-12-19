@@ -69,7 +69,7 @@ rs_core_info_t *rs_init_core_info(rs_core_info_t *oc)
 
     /* init log */
     if(nl) {
-        if((ci->log_fd = rs_log_init(ci->log_path, ci->cwd, 
+        if((rs_log_fd = rs_log_init(ci->log_path, ci->cwd, 
                         O_CREAT| O_RDWR| O_APPEND)) == -1) 
         {
             rs_log_stderr(rs_errno, "open(\"%s\") failed", ci->log_path);
@@ -126,15 +126,15 @@ static int rs_init_core_conf(rs_core_info_t *ci)
             ||
             (rs_add_conf_kv(c, "daemon", &(ci->daemon), 
                             RS_CONF_UINT32) != RS_OK)
+            ||
+            (rs_add_conf_kv(c, "cwd", &(ci->cwd), RS_CONF_STR) != RS_OK) 
       )
     {
-        rs_log_err(0, "rs_add_conf_kv() failed");
         return RS_ERR;
     }
 
     /* init core conf */
     if(rs_init_conf(c, rs_conf_path, RS_CORE_MODULE_NAME) != RS_OK) {
-        rs_log_err(0, "core conf init failed, %s", rs_conf_path);
         return RS_ERR;
     }
 
@@ -145,8 +145,8 @@ void rs_free_core(rs_core_info_t *ci)
 {
     if(ci != NULL) {
 
-        if(ci->log_fd != -1) {
-            rs_close(ci->log_fd);
+        if(rs_log_fd != STDOUT_FILENO)
+            rs_close(rs_log_fd);
         }
 
         /* free conf */

@@ -5,14 +5,14 @@
 #include <rs_config.h>
 #include <rs_core.h>
 
-#define RS_CORE_MODULE_NAME    "core"
-#define RS_CORE_CONF_NUM       6 
+#define RS_CORE_MODULE_NAME     "core"
+#define RS_CORE_CONF_NUM        6 
 
 
-#define RS_MAX_KEY_LEN       12
-#define RS_MAX_VALUE_LEN     PATH_MAX
+#define RS_MAX_KEY_LEN          12
+#define RS_MAX_VALUE_LEN        PATH_MAX
 
-#define RS_MAX_MODULE_LEN    6
+#define RS_MAX_MODULE_LEN       6
 
 typedef struct {
     char            *user;
@@ -23,7 +23,6 @@ typedef struct {
     uint32_t        daemon;
 
     char            *log_path;
-    int             log_fd;
 
     sigset_t        sig_set;
     siginfo_t       sig_info;
@@ -38,7 +37,6 @@ typedef struct {
     (ci)->pid_path = NULL;                                                   \
     (ci)->daemon = 0;                                                        \
     (ci)->log_path = NULL;                                                   \
-    (ci)->log_fd = -1;                                                       \
     rs_conf_t_init(&((ci)->conf))
 
 

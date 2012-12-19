@@ -12,6 +12,7 @@ static rs_str_t rs_log_level_list[] = {
 };
 
 uint32_t rs_log_level = RS_LOG_LEVEL_DEBUG;
+int rs_log_fd = STDOUT_FILENO;
 
 int rs_log_init(char *name, char *cwd, int flags) 
 {
@@ -26,7 +27,7 @@ int rs_log_init(char *name, char *cwd, int flags)
         len = rs_strlen(name);
 
         if(len >= PATH_MAX) {
-            rs_log_stderr(0, "rs_log_init() failed, log path too long");
+            rs_log_stderr(0, "path \"%s\" too long", name);
             return RS_ERR;
         }
 
@@ -36,7 +37,7 @@ int rs_log_init(char *name, char *cwd, int flags)
         len = rs_strlen(cwd);
 
         if(len >= PATH_MAX) {
-            rs_log_stderr(0, "rs_log_init() failed, log path too long");
+            rs_log_stderr(0, "path \"%s\" too long", cwd);
             return RS_ERR;
         }
 
@@ -47,7 +48,7 @@ int rs_log_init(char *name, char *cwd, int flags)
 
         len = rs_strlen(name);
         if(len + (p - path) >= PATH_MAX) {
-            rs_log_stderr(0, "rs_log_init() failed, log path too long");
+            rs_log_stderr(0, "path \"%s/%s\" too long", cwd, name);
             return RS_ERR;
         }
 
@@ -60,32 +61,18 @@ int rs_log_init(char *name, char *cwd, int flags)
 void rs_log_err(rs_err_t err, const char *fmt, ...) 
 {
     va_list args;
-    int     log_fd;
-
-    if(rs_core_info == NULL || rs_core_info->log_fd == -1) {
-        log_fd = STDERR_FILENO;
-    } else {
-        log_fd = rs_core_info->log_fd;
-    }
 
     va_start(args, fmt);
-    rs_log_core(err, log_fd, RS_LOG_LEVEL_ERR, fmt, args);
+    rs_log_core(err, rs_log_fd, RS_LOG_LEVEL_ERR, fmt, args);
     va_end(args);
 }
 
 void rs_log_debug(rs_err_t err, const char *fmt, ...) 
 {
     va_list args;
-    int     log_fd;
-
-    if(rs_core_info == NULL || rs_core_info->log_fd == -1) {
-        log_fd = STDERR_FILENO;
-    } else {
-        log_fd = rs_core_info->log_fd;
-    }
 
     va_start(args, fmt);
-    rs_log_core(err, log_fd, RS_LOG_LEVEL_DEBUG, fmt, args);
+    rs_log_core(err, rs_log_fd, RS_LOG_LEVEL_DEBUG, fmt, args);
     va_end(args);
 
 }
@@ -93,16 +80,9 @@ void rs_log_debug(rs_err_t err, const char *fmt, ...)
 void rs_log_info(const char *fmt, ...) 
 {
     va_list args;
-    int     log_fd;
-
-    log_fd = STDERR_FILENO;
-
-    if(rs_core_info != NULL && rs_core_info->log_fd != -1) {
-        log_fd = rs_core_info->log_fd;
-    }
 
     va_start(args, fmt);
-    rs_log_core(0, log_fd, RS_LOG_LEVEL_INFO, fmt, args);
+    rs_log_core(0, rs_log_fd, RS_LOG_LEVEL_INFO, fmt, args);
     va_end(args);
 }
 

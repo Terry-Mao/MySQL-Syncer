@@ -4,7 +4,6 @@
 #include <rs.h>
 
 static int rs_get_options(int argc, char *const *argv);
-
 static int      rs_show_help = 0;
 
 
@@ -24,7 +23,7 @@ int main(int argc, char * const *argv)
 
     if(rs_show_help == 1) {
         printf( 
-                "Usage: redis_[master|slave] [-?h] [-c filename]\n"
+                "Usage: rs_[master|slave] [-?h] [-c filename]\n"
                 "Options:\n"
                 "   -?, -h          : this help\n"
                 "   -c filename     : set configure file\n");
@@ -37,9 +36,6 @@ int main(int argc, char * const *argv)
     }
 
     rs_core_info = ci;
-
-    rs_log_info("main thread opened");
-
 #if MASTER
         rs_init_master();
 #elif SLAVE
@@ -61,9 +57,6 @@ int main(int argc, char * const *argv)
         rs_sig_handle(ci->sig_info.si_signo);
 
         if(rs_quit) {
-
-        rs_log_info("mysql syncer exiting");
-
 #if MASTER
             rs_free_master(NULL);
 #elif SLAVE
@@ -74,7 +67,6 @@ int main(int argc, char * const *argv)
 
             /* init core info */
             if((ci = rs_init_core_info(rs_core_info)) == NULL) {
-                rs_log_err(0, "mysql syncer reload failed");
                 rs_reload = 0;
                 continue;
             }
@@ -104,14 +96,11 @@ int main(int argc, char * const *argv)
     }
 
     if(ci->pid_path != NULL) {
-        rs_log_info("delete pid file");
         rs_delete_pidfile(ci->pid_path);
     }
 
 
-    rs_log_info("free core, app stop");
     rs_free_core(ci);
-
     rs_free_strerr();
 
     return 0;

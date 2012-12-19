@@ -19,6 +19,7 @@ extern void rs_free_slave(void *data);
 extern char             *rs_conf_path;
 extern pid_t            rs_pid;
 extern uint32_t         rs_log_level;
+extern int              rs_log_fd;
 
 extern volatile sig_atomic_t     rs_quit;
 extern volatile sig_atomic_t     rs_reload;
