@@ -8,13 +8,15 @@ rs_core_info_t  *rs_core_info = NULL;
 
 rs_core_info_t *rs_init_core_info(rs_core_info_t *oc) 
 {
-    int             nl, nd;
+    int             nl, nd, fd;
     char            *p;
     rs_core_info_t  *ci;  
 
     p = NULL;
     nl = 1;
     nd = 1;
+
+
     ci = (rs_core_info_t *) malloc(sizeof(rs_core_info_t));
 
     if(ci == NULL) {
@@ -31,11 +33,15 @@ rs_core_info_t *rs_init_core_info(rs_core_info_t *oc)
 
     if(oc != NULL) {
 
+#if 0
         if(!(nl = (rs_strcmp(oc->log_path, ci->log_path) != 0))) {
             ci->log_fd = oc->log_fd;  
+            rs_log_fd = 
             oc->log_fd = -1;
         }
 
+#endif
+        nl = rs_strcmp(oc->log_path, ci->log_path) != 0;
         nd = (oc->daemon != ci->daemon);
 
         if(strcmp(oc->pid_path, ci->pid_path) != 0) {
@@ -69,13 +75,15 @@ rs_core_info_t *rs_init_core_info(rs_core_info_t *oc)
 
     /* init log */
     if(nl) {
-        if((rs_log_fd = rs_log_init(ci->log_path, ci->cwd, 
+        if((fd = rs_log_init(ci->log_path, ci->cwd, 
                         O_CREAT| O_RDWR| O_APPEND)) == -1) 
         {
             rs_log_stderr(rs_errno, "open(\"%s\") failed", ci->log_path);
             goto free;
         }
-    } 
+
+        rs_log_fd = fd;
+    }
 
     /* init signals */
     if(rs_init_signals(&(ci->sig_set)) != RS_OK) {
@@ -126,8 +134,6 @@ static int rs_init_core_conf(rs_core_info_t *ci)
             ||
             (rs_add_conf_kv(c, "daemon", &(ci->daemon), 
                             RS_CONF_UINT32) != RS_OK)
-            ||
-            (rs_add_conf_kv(c, "cwd", &(ci->cwd), RS_CONF_STR) != RS_OK) 
       )
     {
         return RS_ERR;
@@ -143,19 +149,12 @@ static int rs_init_core_conf(rs_core_info_t *ci)
 
 void rs_free_core(rs_core_info_t *ci)
 {
-    if(ci != NULL) {
+    /* free conf */
+    rs_free_conf(&(ci->conf));
 
-        if(rs_log_fd != STDOUT_FILENO)
-            rs_close(rs_log_fd);
-        }
-
-        /* free conf */
-        rs_free_conf(&(ci->conf));
-
-        if(ci->conf.kv != NULL) {
-            free(ci->conf.kv);
-        }
-
-        free(ci);
+    if(ci->conf.kv != NULL) {
+        free(ci->conf.kv);
     }
+
+    free(ci);
 }

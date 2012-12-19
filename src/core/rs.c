@@ -99,8 +99,12 @@ int main(int argc, char * const *argv)
         rs_delete_pidfile(ci->pid_path);
     }
 
-
     rs_free_core(ci);
+
+    if(rs_log_fd != STDOUT_FILENO) {
+        rs_close(fd);
+    }
+
     rs_free_strerr();
 
     return 0;

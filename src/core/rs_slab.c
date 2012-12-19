@@ -3,327 +3,331 @@
 #include <rs_core.h>
 
 
-static void *rs_slab_allocmem(rs_slab_t *sl, uint32_t size);
-static int rs_grow_slab(rs_slab_t *sl, int id);
+static char *rs_alloc_memslab(rs_memslab_t *ms, uint32_t size);
+static int rs_grow_memslab(rs_memslab_t *ms, int id);
+static int rs_new_memslab(rs_memslab_t *sl, int id);
 
-
-int rs_init_slab(rs_slab_t *sl, uint32_t size, double factor, uint32_t mem_size
-        , int32_t flags)
+static int rs_grow_memslab(rs_memslab_t *ms, int id)
 {
-    int         i;
-
-    if(sl == NULL) {
-        rs_log_err(0, "rs_slab_init() failed, sl is NULL");    
-        return RS_ERR;
-    }
-
-    sl->max_size = mem_size;
-
-    /* Prealloc memory */
-    if(flags == RS_SLAB_PREALLOC) {
-        sl->start = malloc(mem_size); 
-
-        if(sl->start == NULL) {
-            rs_log_err(rs_errno, "malloc() in rs_init_slab failed");
-            return RS_ERR;
-        }
-
-        sl->used_size = 0;
-        sl->free_size = mem_size;
-        sl->cur = sl->start;
-    }
-
-    rs_memzero(sl->slab_class, sizeof(sl->slab_class));
-
-    for(i = RS_SLAB_CLASS_IDX_MIN; 
-            i < RS_SLAB_CLASS_IDX_MAX && size < RS_SLAB_CHUNK_SIZE; i++) 
-    {
-        size = rs_align(size, RS_ALIGNMENT); 
-
-        sl->slab_class[i].size = size;
-        sl->slab_class[i].num = RS_SLAB_CHUNK_SIZE / 
-            sl->slab_class[i].size;
-
-        sl->slab_class[i].free_chunks = NULL;
-
-        sl->slab_class[i].slabs = NULL;
-        sl->slab_class[i].chunk = NULL;
-
-        sl->slab_class[i].used_slab_n = 0;
-        sl->slab_class[i].total_slab_n = 0;
-        sl->slab_class[i].last_slab_n = 0;
-        sl->slab_class[i].free_slab_n = 0;
-        sl->slab_class[i].used_free_slab_n = 0;
-
-        rs_log_debug(0, "slab class = %d, chunk size = %u, num = %u",
-                i, sl->slab_class[i].size, sl->slab_class[i].num);
-
-        size *= factor;
-    }
-
-    sl->class_idx = i;
-    sl->slab_class[i].size = RS_SLAB_CHUNK_SIZE;
-    sl->slab_class[i].num = 1;
-
-    return RS_OK;
-}
-
-int rs_slab_clsid(rs_slab_t *sl, uint32_t size)
-{
-    int i;
-    
-    i = RS_SLAB_CLASS_IDX_MIN;
-
-    if(size == 0) {
-        rs_log_err(0, "rs_slab_clsid() faield, size is zero");
-        return RS_ERR;
-    }
-
-    /* if > 1MB use malloc() */
-    if(size > RS_SLAB_CHUNK_SIZE) {
-        rs_log_debug(0, "rs_slab_cliid() overflow clsid");
-        return RS_SLAB_OVERFLOW;
-    }
-
-    while(size > sl->slab_class[i].size) {
-        /* reach the last index of class */
-        if(i++ == sl->class_idx) {
-            rs_log_debug(0, "rs_slab_cliid() overflow clsid");
-            return RS_SLAB_OVERFLOW;
-        }
-    }
-
-    rs_log_debug(0, "rs_slab_cliid() clsid = %d", i);
-
-    return i;
-}
-
-static int rs_grow_slab(rs_slab_t *sl, int id)
-{
-    rs_slab_class_t *c;
+    rs_memslab_class_t *c;
     uint32_t        size;
-    void            **p;
+    char            **p;
 
-    c = &(sl->slab_class[id]);
+    c = &(ms->slab_class[id]);
 
     /* no more slabs */
-    if(c->used_slab_n == c->total_slab_n) {
-        size = (c->total_slab_n == 0) ? 16 : c->total_slab_n * 2; 
+    if(c->used_slab == c->total_slab) {
+        size = (c->total_slab == 0) ? 16 : c->total_slab * 2; 
 
         /* resize slabs, unchange old data */
-        p = realloc(c->slabs, size * sizeof(void *));
+        p = realloc(c->slab, size * sizeof(char *));
 
         if(p == NULL) {
-            rs_log_err(rs_errno, "realloc() in rs_grow_slab failed");
+            rs_log_err(rs_errno, "realloc(%u) failed", size * sizeof(char *));
             return RS_ERR;
         }
 
-        c->total_slab_n = size;
-        c->slabs = p;
+        c->total_slab = size;
+        c->slab = p;
     }
 
     return RS_OK;
 }
 
-static int rs_new_slab(rs_slab_t *sl, int id)
+static int rs_new_memslab(rs_memslab_t *ms, int id)
 {
     uint32_t            len;
-    rs_slab_class_t     *c;
+    rs_memslab_class_t  *c;
     char                *p;
 
-    c = &(sl->slab_class[id]);
+    p = NULL;
+    c = &(ms->slab_class[id]);
     len = c->size * c->num;
 
-    /* test reach limit memory */
-    if(sl->max_size && 
-            sl->used_size + len > sl->max_size && 
-            c->used_slab_n >0) 
-    {
-        rs_log_err(0, "rs_new_slab() failed, memory reach limit");
-        return RS_ERR;
-    }
-
     /* add a new slabs */
-    if(rs_grow_slab(sl, id) != RS_OK) {
+    if(rs_grow_memslab(ms, id) != RS_OK) {
         return RS_ERR;
     }
 
     /* allocate memory to new slab */
-    if((p = rs_slab_allocmem(sl, len)) == NULL) {
+    if((p = rs_alloc_memslab(ms, len)) == NULL) {
         return RS_ERR;
     }
 
     rs_memzero(p, len);
     c->chunk = p;
-    c->last_slab_n = c->num;
+    c->free = c->num;
+    c->slab[c->used_slab++] = p;
 
-    c->slabs[c->used_slab_n++] = p;
-    sl->used_size += len;
-
-    rs_log_debug(0, "used_slab_n = %u, last_slab_n = %u, used_size = %u", 
-            c->used_slab_n, c->num, sl->used_size);
+    rs_log_debug(0, "id %d, used slab num = %u, total slab num = %u", 
+            id,
+            c->used_slab, 
+            c->total_slab);
 
     return RS_OK;
 }
 
-void *rs_alloc_slab_chunk(rs_slab_t *sl, uint32_t size, int id)
+static char *rs_alloc_memslab(rs_memslab_t *ms, uint32_t size)
 {
-    rs_slab_class_t     *c;
-    void                *p;
+    char    *p;
 
-    if(sl == NULL) {
-        rs_log_err(0, "rs_slab_alloc() failed, sl is NULL");
+    p = NULL;
+
+    if(ms->flag == RS_MEMSLAB_PAGEALLOC) {
+        /* no prelocate */
+        if(ms->cur_page++ >= ms->max_page - 1 || size > ms->free_size) 
+        {
+            rs_log_err(0, "rs_slab_allocmem() failed, no more memory");
+            return NULL;
+        }
+
+        p = malloc(size);
+
+        if(p == NULL) {
+            rs_log_err(rs_errno, "malloc(%u) failed", size);
+            return NULL;
+        }
+
+    } else if(ms->flag == RS_MEMSLAB_PREALLOC) {
+        /* prealloc */
+        if(size > ms->free_size) {
+            rs_log_err(0, "rs_slab_allocmem() failed, no more memory");
+            return NULL;
+        }
+
+        p = ms->cur; 
+        ms->cur = ms->cur + size;
+    }
+
+    ms->free_size -= size;
+    ms->used_size += size;
+
+    rs_log_debug(0, "memslab free_size = %u, used_size = %u", 
+            ms->free_size, ms->used_size);
+
+    return p;
+}
+
+int rs_memslab_clsid(rs_memslab_t *ms, uint32_t size)
+{
+    int id;
+    
+    id = 0;
+
+    if(size == 0) {
+        rs_log_err(0, "rs_memslab_clsid() faield, size = 0");
+        return RS_ERR;
+    }
+
+    /* if > 1MB use malloc() */
+    if(size > RS_MEMSLAB_CHUNK_SIZE) {
+        rs_log_debug(0, "rs_memslab_clsid(), size %u overflow %u", 
+                size, RS_MEMSLAB_CHUNK_SIZE); 
+        return RS_SLAB_OVERFLOW;
+    }
+
+    while(size > ms->slab_class[id].size) {
+        /* reach the last index of class */
+        if((uint32_t) id++ == ms->max_class) {
+            rs_log_debug(0, "rs_memslab_clsid(), size %u overflow %u", 
+                    size, RS_MEMSLAB_CHUNK_SIZE); 
+            return RS_SLAB_OVERFLOW;
+        }
+    }
+
+    rs_log_debug(0, "size %u, clsid %d", size, id);
+
+    return id;
+}
+
+rs_memslab_t *rs_init_memslab(uint32_t init_size, uint32_t mem_size, 
+        double factor, int32_t flag)
+{
+    int             i;
+    uint32_t        ps;
+    rs_memslab_t    *ms;
+    char            *p;
+
+    mem_size = rs_align(mem_size, RS_ALIGNMENT); 
+    init_size = rs_align(init_size, RS_ALIGNMENT); 
+    rs_log_debug(0, "memslab align mem_size %u", mem_size);
+
+    if(flag == RS_MEMSLAB_PREALLOC) {
+        /* prealloc memory */
+        p = (char *) malloc(sizeof(rs_memslab_t) + mem_size);
+
+        if(p == NULL) {
+            rs_log_err(rs_errno, "malloc(%u) failed", 
+                    sizeof(rs_memslab_t) + mem_size);
+            return NULL;
+        }
+
+        ms = (rs_memslab_t *) p;
+        ms->start = p + sizeof(rs_memslab_t);
+        ms->cur = ms->start;
+
+    } else if(flag == RS_MEMSLAB_PAGEALLOC) {
+        /* pagealloc memory */
+        ps = (mem_size / RS_MEMSLAB_CHUNK_SIZE) * sizeof(char *);
+        p = (char *) malloc(sizeof(rs_memslab_t) + ps);
+
+        if(p == NULL) {
+            rs_log_err(rs_errno, "malloc(%u) failed", 
+                    sizeof(rs_memslab_t) + ps);
+            return NULL;
+        }
+
+        ms = (rs_memslab_t *) p;
+        ms->start = p + sizeof(rs_memslab_t);
+        rs_memzero(ms->start, ps);
+        ms->cur_page = 0;
+        ms->max_page = mem_size / RS_MEMSLAB_CHUNK_SIZE;
+    
+    } else {
+        rs_log_err(0, "unknown slab flag %d", flag);
         return NULL;
     }
+
+    ms->flag = flag;
+    ms->max_size = mem_size;
+    ms->free_size = mem_size;
+    ms->used_size = 0;
+    rs_memzero(ms->slab_class, sizeof(ms->slab_class));
+
+    for(i = 0; i < RS_MEMSLAB_CLASS_IDX_MAX && 
+            init_size < RS_MEMSLAB_CHUNK_SIZE; i++) 
+    {
+        rs_log_debug(0, "memslab align init_size %u", init_size);
+        ms->slab_class[i].size = init_size;
+        ms->slab_class[i].num = RS_MEMSLAB_CHUNK_SIZE / init_size;
+
+        ms->slab_class[i].chunk = NULL;
+        ms->slab_class[i].free_chunk = NULL;
+        ms->slab_class[i].slab = NULL;
+
+        ms->slab_class[i].used_slab = 0;
+        ms->slab_class[i].total_slab = 0;
+
+        ms->slab_class[i].free = 0;
+        ms->slab_class[i].total_free = 0;
+        ms->slab_class[i].used_free = 0;
+
+        rs_log_debug(0, "slab class id= %d, chunk size = %u, num = %u",
+                i, ms->slab_class[i].size, ms->slab_class[i].num);
+
+        init_size = rs_align((uint32_t) (init_size * factor), RS_ALIGNMENT);
+    }
+
+    ms->max_class = i;
+    ms->slab_class[i].size = RS_MEMSLAB_CHUNK_SIZE;
+    ms->slab_class[i].num = 1;
+
+    return ms;
+}
+
+char *rs_alloc_memslab_chunk(rs_memslab_t *ms, uint32_t size, int id)
+{
+    rs_memslab_class_t  *c;
+    char                *p;
 
     p = NULL;
     c = NULL;
 
     // use malloc()
     if(id == RS_SLAB_OVERFLOW) {
-        p = (void *) malloc(size);
+        p = (char *) malloc(size);
 
         if(p == NULL) {
-            rs_log_err(rs_errno, "malloc() in rs_alloc_slab_chunk failed, size"
-                    " = %u", size);
+            rs_log_err(rs_errno, "malloc(%u) failed", size);
             return NULL;
         }
 
         return p;
     }
 
-    if(id < RS_SLAB_CLASS_IDX_MIN || id > RS_SLAB_CLASS_IDX_MAX) {
-        rs_log_err(0, "rs_alloc_slab_chunk() failed, id = %d overflow", id);
-        return NULL;
-    }
+    c = &(ms->slab_class[id]);
 
-    c = &(sl->slab_class[id]);
-
-    if(!(c->chunk != NULL || c->used_free_slab_n != 0 || 
-            rs_new_slab(sl, id) != RS_ERR)) 
+    if(!(c->chunk != NULL || c->used_free > 0 || rs_new_memslab(ms, id) 
+                == RS_OK))
     {
         return NULL;
-    } else if(c->used_free_slab_n > 0) {
-        /* use free slab */
-        p = c->free_chunks[--c->used_free_slab_n];
-        rs_log_debug(0, "used_free_slab_n = %u", c->used_free_slab_n);
+    } else if(c->used_free > 0) {
+        p = c->free_chunk[--c->used_free];
+        rs_log_debug(0, "used free chunk num %u", c->used_free);
     } else {
-        /* use slab */
         p = c->chunk;
 
-        if(--c->last_slab_n > 0) {
-            c->chunk = (void *) ((char *) c->chunk + c->size);
+        if(--c->free > 0) {
+            c->chunk = c->chunk + c->size;
         } else {
             c->chunk = NULL;
         }
 
-        rs_log_debug(0, "last_slab_n = %u", c->last_slab_n);
+        rs_log_debug(0, "free chunk num = %u", c->free);
     }
 
     return p;
 }
 
-void rs_free_slab_chunk(rs_slab_t *sl, void *data, int id)
+void rs_free_memslab_chunk(rs_memslab_t *ms, char *data, int id)
 {
-    rs_slab_class_t     *c;
-    void                **free_chunks;
-    uint32_t            fs;
+    rs_memslab_class_t  *c;
+    char                **free_chunk;
+    uint32_t            tf;
     
-    if(sl == NULL || data == NULL) {
-        rs_log_err(0, "rs_free_slab_chunk() failed, sl or data is null");
-        return;
-    }
-
     c = NULL;
-    free_chunks = NULL;
+    free_chunk = NULL;
 
     if(id == RS_SLAB_OVERFLOW) {
        free(data); 
        return;
     }
 
-    if(id < RS_SLAB_CLASS_IDX_MIN || id > RS_SLAB_CLASS_IDX_MAX) {
-        rs_log_err(0, "rs_alloc_slab_chunk() failed, id = %d overflow", id);
-        return;
-    }
+    c = &(ms->slab_class[id]);
 
-    c = &(sl->slab_class[id]);
+    if (c->used_free == c->total_free) {
+        tf = (c->total_free == 0) ? 16 : c->total_free * 2;
 
-    if (c->used_free_slab_n == c->free_slab_n) {
-        fs = (c->free_slab_n == 0) ? 16 : c->free_slab_n * 2;
+        free_chunk = realloc(c->free_chunk, tf * sizeof(char *));
 
-        free_chunks = realloc(c->free_chunks, fs * sizeof(void *));
-
-        if(free_chunks == NULL) {
-            rs_log_err(rs_errno, "realloc() in rs_free_slab_chunk failed");
+        if(free_chunk == NULL) {
+            rs_log_err(rs_errno, "realloc(%u) failed", tf * sizeof(char *));
             return;
         }
 
-        c->free_chunks = free_chunks;
-        c->free_slab_n = fs;
+        c->free_chunk = free_chunk;
+        c->total_free = tf;
     }
 
-    c->free_chunks[c->used_free_slab_n++] = data;
+    c->free_chunk[c->used_free++] = data;
 
-    rs_log_debug(0, "used_free_slab_n = %u, free_slab_n = %u", 
-            c->used_free_slab_n, c->free_slab_n);
+    rs_log_debug(0, "used free chunk num = %u", c->used_free);
 }
 
-static void *rs_slab_allocmem(rs_slab_t *sl, uint32_t size)
+void rs_free_memslabs(rs_memslab_t *ms)
 {
-    void    *p;
+    uint32_t    i;
+    char        *p;
 
-    p = NULL;
+    for(i = 0; i <= ms->max_class; i++) {
 
-    /* no prelocate */
-    if(sl->start == NULL) {
-        p = malloc(size);
-
-        if(p == NULL) {
-            rs_log_err(rs_errno, "mallc() in rs_slab_allocmem failed"); 
-            return NULL;
+        if(ms->slab_class[i].slab != NULL) {
+            free(ms->slab_class[i].slab);
         }
 
-    } else {
-        /* memory align */
-        size = rs_align(size, RS_ALIGNMENT);
-
-        if(size > sl->free_size) {
-            rs_log_err(0, "rs_mem_alloc() failed, no more memory");
-            return NULL;
-        }
-
-        p = sl->cur; 
-
-        sl->cur = (void *) ((char *) sl->cur + size);
-
-        sl->free_size -= size;
-
-        rs_log_debug(0, "free_size = %u, size = %u", sl->free_size, size);
-    }
-
-    return p;
-}
-
-void rs_free_slabs(rs_slab_t *sl)
-{
-    int i;
-
-    if(sl == NULL) {
-        rs_log_err(0, "rs_free_slabs() failed, sl is null");
-        return;
-    }
-
-    for(i = RS_SLAB_CLASS_IDX_MIN; i <= sl->class_idx; i++) {
-
-        if(sl->slab_class[i].slabs != NULL) {
-            free(sl->slab_class[i].slabs);
-        }
-
-        if(sl->slab_class[i].free_chunks != NULL) {
-            free(sl->slab_class[i].free_chunks);
+        if(ms->slab_class[i].free_chunk != NULL) {
+            free(ms->slab_class[i].free_chunk);
         }
     }
 
-    free(sl->start);
+    if(ms->flag == RS_MEMSLAB_PREALLOC) {
+        free(ms);
+    } else if(ms->flag == RS_MEMSLAB_PAGEALLOC) {
+        for(i = 0; i < ms->max_page; i++) {
+            p = ms->start + sizeof(char *);
+            if(p != NULL) {
+                free(p);
+            }
+        } 
+    }
 }

@@ -21,7 +21,7 @@ int rs_init_daemon(rs_core_info_t *ci)
         break;
 
     default:
-        rs_close(ci->log_fd);
+        rs_close(rs_log_fd);
         exit(0);
     }
 
