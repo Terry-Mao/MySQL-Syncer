@@ -8,8 +8,8 @@
 #define RS_MEMSLAB_CLASS_IDX_MAX       200
 #define RS_MEMSLAB_CHUNK_SIZE          (1 * 1024 * 1024)
 
-#define RS_MEMSLAB_PAGEALLOC           0
-#define RS_MEMSLAB_PREALLOC            1
+#define RS_POOL_PAGEALLOC           0
+#define RS_POOL_PREALLOC            1
 
 typedef struct {
     uint32_t        size; /* slab chunk size */
@@ -29,40 +29,40 @@ typedef struct {
     char            **slab;
 
     uint32_t        died;
-} rs_memslab_class_t;
+} rs_pool_class_t;
 
 
 typedef struct {
 
-    rs_memslab_class_t slab_class[RS_MEMSLAB_CLASS_IDX_MAX + 1]; /* chunk class */
-    uint32_t            max_class; /* max slab class index */
+    rs_pool_class_t slab_class[RS_MEMSLAB_CLASS_IDX_MAX + 1]; /* chunk class */
+    uint32_t        max_class; /* max slab class index */
 
-    char                *start; /* while prealloc start is start memory ptr */
-    char                *cur; /* while preaaloc cur is current memory ptr */
+    char            *start; /* while prealloc start is start memory ptr */
+    char            *cur; /* while preaaloc cur is current memory ptr */
     
-    uint32_t            max_size; /* max memory size */
-    uint32_t            used_size; /* used memory max size */
-    uint32_t            free_size; /* free memory size*/
+    uint32_t        max_size; /* max memory size */
+    uint32_t        used_size; /* used memory max size */
+    uint32_t        free_size; /* free memory size*/
 
-    uint32_t            cur_page; /* current page */
-    uint32_t            max_page; /**/
+    uint32_t        cur_page; /* current page */
+    uint32_t        max_page; /**/
 
-    int                 flag;
+    int             flag;
 
-} rs_memslab_t;
+} rs_pool_t;
 
 /*
  * DESCRIPTION 
  *   Calc alloc size belong to which class id.
  *
  * PARAMTER 
- *   sl    : struct rs_slab_t
+ *   sl    : struct rs_pool_t
  *   size  : alloc size
  *
  * RETURN VALUE
  *   On success class_id is returned, On error RS_ERR is returned.
  */
-int rs_memslab_clsid(rs_memslab_t *sl, uint32_t size);
+int rs_palloc_id(rs_pool_t *p, uint32_t size);
 
 /*
  * DESCRIPTION 
@@ -75,49 +75,49 @@ int rs_memslab_clsid(rs_memslab_t *sl, uint32_t size);
  *   flag       : prealloc or page assgin
  *
  * RETURN VALUE
- *   On success rs_memslab_t is returned, On error NULL is returned.
+ *   On success rs_pool_t is returned, On error NULL is returned.
  */
-rs_memslab_t *rs_init_memslab(uint32_t init_size, uint32_t mem_size, 
-        double factor, int32_t flag);
+rs_pool_t *rs_create_pool(uint32_t init_size, uint32_t mem_size, double factor, 
+        int32_t flag);
 
 /*
  * DESCRIPTION 
  *   Alloc memory from slab class
  *
  * PARAMTER 
- *   sl    : struct rs_slab_t
+ *   sl    : struct rs_pool_t
  *   size  : memory size
  *   id    : chunk class id
  *
  * RETURN VALUE
- *   On success rs_slab_t is returned, On error NULL is returned.
+ *   On success rs_pool_t is returned, On error NULL is returned.
  */
-char *rs_alloc_memslab_chunk(rs_memslab_t *sl, uint32_t size, int id);
+char *rs_palloc(rs_pool_t *p, uint32_t size, int id);
 
 /*
  * DESCRIPTION 
  *   Free class chunk
  *
  * PARAMTER 
- *   sl    : struct rs_slab_t
+ *   sl    : struct rs_pool_t
  *   data  : free chunk data ptr
  *   id    : chunk class id
  *
  * RETURN VALUE
  *   On success class_id is returned, On error RS_ERR is returned.
  */
-void rs_free_memslab_chunk(rs_memslab_t *sl, char *data, int id);
+void rs_pfree(rs_pool_t *p, char *data, int id);
 
 /*
  * DESCRIPTION 
  *   Free all slabs
  *
  * PARAMTER 
- *   sl    : struct rs_slab_t 
+ *   sl    : struct rs_pool_t 
  *
  * RETURN VALUE
  *   None
  */
-void rs_free_memslabs(rs_memslab_t *sl);
+void rs_destroy_pool(rs_pool_t *p);
 
 #endif
