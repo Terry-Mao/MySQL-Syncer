@@ -234,7 +234,7 @@ rs_pool_t *rs_create_pool(uint32_t init_size, uint32_t mem_size, double factor,
     return p;
 }
 
-char *rs_palloc(rs_pool_t *p, uint32_t size, int id)
+void *rs_palloc(rs_pool_t *p, uint32_t size, int id)
 {
     rs_pool_class_t *c;
     char            *t;
@@ -274,10 +274,10 @@ char *rs_palloc(rs_pool_t *p, uint32_t size, int id)
         rs_log_debug(0, "palloc free chunk num = %u", c->free);
     }
 
-    return t;
+    return (void *) t;
 }
 
-void rs_pfree(rs_pool_t *p, char *data, int id)
+void rs_pfree(rs_pool_t *p, void *data, int id)
 {
     rs_pool_class_t *c;
     char            **free_chunk;

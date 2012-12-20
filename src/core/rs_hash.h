@@ -13,6 +13,7 @@ struct rs_shash_node_s {
     char                *key;
     void                *val;
     rs_shash_node_t     *next, **prev;
+    int32_t             id;
 };
 
 typedef struct {
@@ -22,13 +23,15 @@ typedef struct {
 
 typedef struct {
     rs_shash_head_t *ht;
-    uint32_t        size;
+    uint32_t        num;
+    int32_t         id;
+    rs_pool_t       *pool;
 } rs_shash_t;
 
 
-rs_shash_t *rs_init_shash(uint32_t size);
-int rs_add_shash(char *key, void *val, rs_shash_t *h);
-int rs_get_shash(char *key, rs_shash_t *h, void **val);
-void rs_free_shash(rs_shash_t *h);
+rs_shash_t *rs_shash_init(rs_pool_t *p, uint32_t num);
+int rs_shash_add(rs_shash_t *h, char *key, void *val); 
+int rs_shash_get(rs_shash_t *h, char *key, void **val); 
+void rs_shash_free(rs_shash_t *h);
 
 #endif

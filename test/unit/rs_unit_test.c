@@ -83,34 +83,34 @@ static int rs_clean_suite(void)
 
 static void rs_shash_test(void) 
 {
-    return;
+    rs_pool_t       *p;
     rs_shash_t      *h;  
 
-    h = rs_init_shash(30);
-    CU_ASSERT(h != NULL && h->size == 30);
+    CU_ASSERT((p = rs_create_pool(40, 1024 * 1024 * 10, 1.5, RS_POOL_PREALLOC)) != NULL);
+    CU_ASSERT((h = rs_shash_init(p, 30)) != NULL);
 
 
     int val = 10, val1 = 11, val2 = 12, val3= 13;
-    CU_ASSERT(RS_OK == rs_add_shash("test1", (void *) &val, h));
-    CU_ASSERT(RS_OK == rs_add_shash("test2", (void *) &val1, h));
-    CU_ASSERT(RS_EXISTS == rs_add_shash("test2", (void *) &val1, h));
-    CU_ASSERT(RS_OK == rs_add_shash("test3", (void *) &val2, h));
-    CU_ASSERT(RS_OK == rs_add_shash("test4", (void *) &val3, h));
-
+    CU_ASSERT(RS_OK == rs_shash_add(h, "test1", (void *) &val));
+    CU_ASSERT(RS_OK == rs_shash_add(h, "test2", (void *) &val1));
+    CU_ASSERT(RS_EXISTS == rs_shash_add(h, "test2", (void *) &val1));
+    CU_ASSERT(RS_OK == rs_shash_add(h, "test3", (void *) &val2));
+    CU_ASSERT(RS_OK == rs_shash_add(h, "test4", (void *) &val3));
 
     int *v1, *v2, *v3, *v4;
 
-    CU_ASSERT(RS_OK == rs_get_shash("test1", h, (void *) &v1));
-    CU_ASSERT(RS_OK == rs_get_shash("test2", h, (void *) &v2));
-    CU_ASSERT(RS_OK == rs_get_shash("test3", h, (void *) &v3));
-    CU_ASSERT(RS_OK == rs_get_shash("test4", h, (void *) &v4));
+    CU_ASSERT(RS_OK == rs_shash_get(h, "test1", (void *) &v1));
+    CU_ASSERT(RS_OK == rs_shash_get(h, "test2", (void *) &v2));
+    CU_ASSERT(RS_OK == rs_shash_get(h, "test3", (void *) &v3));
+    CU_ASSERT(RS_OK == rs_shash_get(h, "test4", (void *) &v4));
 
     CU_ASSERT(*v1 == 10);
     CU_ASSERT(*v2 == 11);
     CU_ASSERT(*v3 == 12);
     CU_ASSERT(*v4 == 13);
 
-    rs_free_shash(h);
+    rs_shash_free(h);
+    rs_destroy_pool(p);
 }
 
 static void rs_conf_test(void)
@@ -172,6 +172,7 @@ static void rs_conf_test(void)
 
 static void rs_pool_test(void)
 {
+    return;
     rs_pool_t       *p;
     int             id, i;
     char            *t;

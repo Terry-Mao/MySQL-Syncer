@@ -92,7 +92,7 @@ rs_pool_t *rs_create_pool(uint32_t init_size, uint32_t mem_size, double factor,
  * RETURN VALUE
  *   On success rs_pool_t is returned, On error NULL is returned.
  */
-char *rs_palloc(rs_pool_t *p, uint32_t size, int id);
+void *rs_palloc(rs_pool_t *p, uint32_t size, int id);
 
 /*
  * DESCRIPTION 
@@ -106,7 +106,7 @@ char *rs_palloc(rs_pool_t *p, uint32_t size, int id);
  * RETURN VALUE
  *   On success class_id is returned, On error RS_ERR is returned.
  */
-void rs_pfree(rs_pool_t *p, char *data, int id);
+void rs_pfree(rs_pool_t *p, void *data, int id);
 
 /*
  * DESCRIPTION 
