@@ -5,7 +5,8 @@
 volatile sig_atomic_t rs_quit;
 volatile sig_atomic_t rs_reload;
 
-pid_t rs_pid;
+pid_t   rs_pid;
+char    *rs_pid_path = "./rs.pid";
 
 int rs_init_daemon(rs_core_info_t *ci)
 {
@@ -117,6 +118,10 @@ int rs_create_pidfile(char *name)
     len = 0;
     fd = -1;
 
+    if(name == NULL) {
+        name = rs_pid_path;
+    }
+
     fd = open(name, O_CREAT | O_TRUNC | O_WRONLY, 00644);
 
     if(fd == -1) {
@@ -144,6 +149,10 @@ int rs_create_pidfile(char *name)
 
 void rs_delete_pidfile(char *name)
 {
+    if(name == NULL) {
+        name = rs_pid_path;
+    }
+
     if(unlink(name) == -1) {
         rs_log_err(rs_errno, "unlink(\"%s\")  failed", name);
     }
@@ -184,6 +193,15 @@ int rs_init_gid(char *grp)
     if(setgid(g->gr_gid) == -1) {
         rs_log_err(rs_errno, "setgid() failed");
         return RS_ERR;
+    }
+
+    return RS_OK;
+}
+
+int rs_chdir(char *cwd)
+{
+    if(cwd != NULL) {
+        return chdir(cwd);
     }
 
     return RS_OK;

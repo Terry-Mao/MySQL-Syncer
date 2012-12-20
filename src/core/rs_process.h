@@ -17,4 +17,6 @@ void rs_delete_pidfile(char *name);
 int rs_init_uid(char *user);
 int rs_init_gid(char *grp);
 
+int rs_chdir(char *cwd);
+
 #endif

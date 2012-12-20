@@ -11,51 +11,19 @@ static rs_str_t rs_log_level_list[] = {
     rs_string(RS_LOG_LEVEL_DEBUG_STR)
 };
 
-uint32_t rs_log_level = RS_LOG_LEVEL_DEBUG;
-int rs_log_fd = STDOUT_FILENO;
 
-int rs_log_init(char *name, char *cwd, int flags) 
+char        *rs_log_path = "./rs.log";
+uint32_t    rs_log_level = RS_LOG_LEVEL_DEBUG;
+int         rs_log_fd = STDOUT_FILENO;
+
+
+int rs_log_init(char *name, int flags) 
 {
-    char    path[PATH_MAX + 1], *p;
-    size_t  len;
-
-    if(name == NULL || cwd == NULL) {
-        return RS_ERR;
+    if(name == NULL) {
+        name = rs_log_path;
     }
 
-    if(*name == '/') {
-        len = rs_strlen(name);
-
-        if(len >= PATH_MAX) {
-            rs_log_stderr(0, "path \"%s\" too long", name);
-            return RS_ERR;
-        }
-
-        rs_memcpy(path, name, len + 1);
-    } else {
-
-        len = rs_strlen(cwd);
-
-        if(len >= PATH_MAX) {
-            rs_log_stderr(0, "path \"%s\" too long", cwd);
-            return RS_ERR;
-        }
-
-        rs_memcpy(path, cwd, len);        
-
-        p = path + len;
-        *p++ = '/';
-
-        len = rs_strlen(name);
-        if(len + (p - path) >= PATH_MAX) {
-            rs_log_stderr(0, "path \"%s/%s\" too long", cwd, name);
-            return RS_ERR;
-        }
-
-        rs_memcpy(p, name, len + 1); 
-    }
-
-    return open(path, flags, 00644);
+    return open(name, flags, 00644);
 }
 
 void rs_log_err(rs_err_t err, const char *fmt, ...) 

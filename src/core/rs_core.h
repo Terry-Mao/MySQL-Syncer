@@ -17,7 +17,11 @@ extern void rs_free_slave(void *data);
 
 /* public */
 extern char             *rs_conf_path;
+
+extern char             *rs_pid_path;
 extern pid_t            rs_pid;
+
+extern char             *rs_log_path;
 extern uint32_t         rs_log_level;
 extern int              rs_log_fd;
 

@@ -6,7 +6,7 @@
 #include <rs_core.h>
 
 #define RS_MEMSLAB_CLASS_IDX_MAX       200
-#define RS_MEMSLAB_CHUNK_SIZE          (1 * 1024 * 1024)
+#define RS_MEMSLAB_CHUNK_SIZE          (uint32_t) (getpagesize() - 1)
 
 #define RS_POOL_PAGEALLOC           0
 #define RS_POOL_PREALLOC            1

@@ -8,21 +8,29 @@ rs_core_info_t  *rs_core_info = NULL;
 
 rs_core_info_t *rs_init_core_info(rs_core_info_t *oc) 
 {
-    int             nl, nd, fd;
-    char            *p;
+    int             nl, nd, fd, id;
+    char            *t;
     rs_core_info_t  *ci;  
+    rs_pool_t       *p;
 
-    p = NULL;
+    t = NULL;
     nl = 1;
     nd = 1;
 
 
-    ci = (rs_core_info_t *) malloc(sizeof(rs_core_info_t));
+    p = rs_create_pool(200, 1024 * 1024 * 10, 1.5, RS_POOL_PREALLOC);
+    id = rs_palloc_id(p, sizeof(rs_core_info_t) + sizeof(rs_conf_t));
+
+    ci = (rs_core_info_t *) rs_palloc(p, 
+            sizeof(rs_core_info_t) + sizeof(rs_conf_t), id);
 
     if(ci == NULL) {
-        rs_log_err(rs_errno, "malloc() failed, rs_core_info_t");
         goto free;
     }
+
+    ci->cf = (rs_conf_t *) ((char *) ci + sizeof(rs_core_info_t));
+    ci->pool = p;
+    ci->id = id;
 
     rs_core_info_t_init(ci);
 
@@ -31,16 +39,9 @@ rs_core_info_t *rs_init_core_info(rs_core_info_t *oc)
         goto free;
     }
 
+    /* has old core_info */
     if(oc != NULL) {
 
-#if 0
-        if(!(nl = (rs_strcmp(oc->log_path, ci->log_path) != 0))) {
-            ci->log_fd = oc->log_fd;  
-            rs_log_fd = 
-            oc->log_fd = -1;
-        }
-
-#endif
         nl = rs_strcmp(oc->log_path, ci->log_path) != 0;
         nd = (oc->daemon != ci->daemon);
 
@@ -50,20 +51,19 @@ rs_core_info_t *rs_init_core_info(rs_core_info_t *oc)
     }
 
     /* init working directory */
-    if(getcwd(ci->cwd, PATH_MAX + 1) == NULL) {
-        rs_log_stderr(rs_errno, "getcwd() failed");
+    if(rs_chdir(ci->cwd) != RS_OK) {
+        rs_log_err(rs_errno, "chdir() failed");
         goto free;
     }
 
-
     /* init uid & gid */
     if(ci->user != NULL) {
-        p = rs_strchr(ci->user, ' '); 
+        t = rs_strchr(ci->user, ' '); 
 
-        if(p != NULL) {
-            *p = '\0';
-            p++;
-            if(rs_init_gid(p) != RS_OK) {
+        if(t != NULL) {
+            *t = '\0';
+            t++;
+            if(rs_init_gid(t) != RS_OK) {
                 goto free;
             }
         }
@@ -75,9 +75,7 @@ rs_core_info_t *rs_init_core_info(rs_core_info_t *oc)
 
     /* init log */
     if(nl) {
-        if((fd = rs_log_init(ci->log_path, ci->cwd, 
-                        O_CREAT| O_RDWR| O_APPEND)) == -1) 
-        {
+        if((fd = rs_log_init(ci->log_path, O_CREAT| O_RDWR| O_APPEND)) == -1) {
             rs_log_stderr(rs_errno, "open(\"%s\") failed", ci->log_path);
             goto free;
         }
@@ -106,7 +104,6 @@ rs_core_info_t *rs_init_core_info(rs_core_info_t *oc)
         goto free;
     }
 
-
     return ci;
 
 free :
@@ -118,43 +115,46 @@ free :
 
 static int rs_init_core_conf(rs_core_info_t *ci)
 {
-    rs_conf_t *c;
+    if(rs_add_conf_kv(ci->cf, "cwd", &(ci->cwd), RS_CONF_STR) != RS_OK) {
+        return RS_ERR;    
+    }
 
-    c = &(ci->conf);
+    if(rs_add_conf_kv(ci->cf, "user", &(ci->user), RS_CONF_STR) != RS_OK) {
+        return RS_ERR;    
+    }
 
-    if(
-            (rs_add_conf_kv(c, "user", &(ci->user), RS_CONF_STR) != RS_OK) 
-            ||
-            (rs_add_conf_kv(c, "pid", &(ci->pid_path), RS_CONF_STR) != RS_OK) 
-            ||
-            (rs_add_conf_kv(c, "log", &(ci->log_path), RS_CONF_STR) != RS_OK) 
-            ||
-            (rs_add_conf_kv(c, "log.level", &rs_log_level, 
-                            RS_CONF_UINT32) != RS_OK) 
-            ||
-            (rs_add_conf_kv(c, "daemon", &(ci->daemon), 
-                            RS_CONF_UINT32) != RS_OK)
-      )
+    if(rs_add_conf_kv(ci->cf, "pid", &(ci->pid_path), RS_CONF_STR) != RS_OK) {
+        return RS_ERR;    
+    }
+
+    if(rs_add_conf_kv(ci->cf, "log", &(ci->log_path), RS_CONF_STR) != RS_OK) {
+        return RS_ERR;    
+    }
+
+    if(rs_add_conf_kv(ci->cf, "log.level", &rs_log_level, RS_CONF_UINT32) 
+            != RS_OK) 
     {
-        return RS_ERR;
+        return RS_ERR;    
+    }
+
+    if(rs_add_conf_kv(ci->cf, "daemon", &(ci->daemon), RS_CONF_UINT32) 
+            != RS_OK) 
+    {
+        return RS_ERR;    
     }
 
     /* init core conf */
-    if(rs_init_conf(c, rs_conf_path, RS_CORE_MODULE_NAME) != RS_OK) {
-        return RS_ERR;
-    }
-
-    return RS_OK;
+    return rs_init_conf(ci->cf, rs_conf_path, RS_CORE_MODULE_NAME);
 }
 
 void rs_free_core(rs_core_info_t *ci)
 {
     /* free conf */
-    rs_free_conf(&(ci->conf));
+    rs_free_conf(ci->cf);
 
-    if(ci->conf.kv != NULL) {
-        free(ci->conf.kv);
+    if(ci->cf->kv != NULL) {
+        free(ci->cf->kv);
     }
 
-    free(ci);
+    rs_destroy_pool(ci->pool);
 }

@@ -19,7 +19,7 @@
 #define RS_LOG_LEVEL_DEBUG_STR    "[DEBUG] "
 
 
-int rs_log_init(char *name, char *cwd, int flags);
+int rs_log_init(char *name, int flags);
 
 void rs_log_err(rs_err_t err, const char *fmt, ...);
 void rs_log_debug(rs_err_t err, const char *fmt, ...);

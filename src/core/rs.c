@@ -102,7 +102,7 @@ int main(int argc, char * const *argv)
     rs_free_core(ci);
 
     if(rs_log_fd != STDOUT_FILENO) {
-        rs_close(fd);
+        rs_close(rs_log_fd);
     }
 
     rs_free_strerr();

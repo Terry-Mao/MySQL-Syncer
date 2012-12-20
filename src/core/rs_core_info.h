@@ -16,33 +16,29 @@
 
 typedef struct {
     char            *user;
-    char            cwd[PATH_MAX + 1];
-
+    char            *cwd;
     char            *pid_path;
-
+    char            *log_path;
     uint32_t        daemon;
 
-    char            *log_path;
+    rs_conf_t       *cf;
+    rs_pool_t       *pool;
+    int32_t         id;
 
     sigset_t        sig_set;
     siginfo_t       sig_info;
-
-    rs_conf_t       conf;
-
 } rs_core_info_t;
 
 #define rs_core_info_t_init(ci)                                              \
     (ci)->user = NULL;                                                       \
-    rs_memzero((ci)->cwd, PATH_MAX + 1);                                     \
+    (ci)->cwd = NULL;                                                        \
     (ci)->pid_path = NULL;                                                   \
-    (ci)->daemon = 0;                                                        \
     (ci)->log_path = NULL;                                                   \
-    rs_conf_t_init(&((ci)->conf))
+    (ci)->daemon = 0;
 
 
 extern rs_core_info_t   *rs_core_info;
 
 rs_core_info_t *rs_init_core_info(rs_core_info_t *oc);
 void rs_free_core(rs_core_info_t *ci);
-
 #endif
