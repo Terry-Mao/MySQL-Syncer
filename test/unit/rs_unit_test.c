@@ -88,7 +88,7 @@ static void rs_shash_test(void)
 
     CU_ASSERT((p = rs_create_pool(40, 1024 * 1024 * 10, rs_pagesize, 
                     RS_POOL_CLASS_IDX, 1.5, RS_POOL_PREALLOC)) != NULL);
-    CU_ASSERT((h = rs_create_shash(p, 30)) != NULL);
+    CU_ASSERT((h = rs_create_shash(p, 3)) != NULL);
 
 
     int val = 10, val1 = 11, val2 = 12, val3= 13;

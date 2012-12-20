@@ -64,10 +64,11 @@ int rs_shash_add(rs_shash_t *h, char *key, void *val)
 {
     uint32_t            i;
     int32_t             id;
-    rs_shash_node_t     *n, *p;
+    rs_shash_node_t     *n, *t, *p;
 
     n = NULL;
     p = NULL;
+    t = NULL;
 
     if(key == NULL) {
         rs_log_err(0, "rs_shash_add() failed, key is null");
@@ -77,7 +78,7 @@ int rs_shash_add(rs_shash_t *h, char *key, void *val)
     i = rs_bkd_hash(key) % h->num;
     rs_log_debug(0, "rs_bdk_hash(%s), index = %u", key, i);
     
-    for(n = h->ht[i].first; n != NULL; n = n->next) {
+    for(n = h->ht[i].first; n != NULL; t = n, n = n->next) {
         if(rs_strncmp(key, n->key, rs_strlen(key)) == 0) {
             return RS_EXISTS; 
         }
@@ -96,8 +97,8 @@ int rs_shash_add(rs_shash_t *h, char *key, void *val)
     p->next = NULL;
     p->prev = NULL;
 
-    if(n != NULL)
-        rs_shash_after_node(n, p);
+    if(t != NULL)
+        rs_shash_after_node(t, p);
     else
         h->ht[i].first = p;
 
