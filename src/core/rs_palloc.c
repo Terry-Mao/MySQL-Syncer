@@ -59,7 +59,8 @@ static int rs_palloc_new(rs_pool_t *p, int id)
     c->free = c->num;
     c->slab[c->used_slab++] = t;
 
-    rs_log_debug(0, "id %d, used slab num = %u, total slab num = %u", 
+    rs_log_debug(0, "palloc new slab id %d, used slab num = %u, "
+            "total slab num = %u", 
             id,
             c->used_slab, 
             c->total_slab);
@@ -73,28 +74,22 @@ static char *rs_pmemalloc(rs_pool_t *p, uint32_t size)
 
     t = NULL;
 
+    if(size > p->free_size) 
+    {
+        rs_log_err(0, "rs_pmemalloc() failed, no more memory");
+        return NULL;
+    }
+
     if(p->flag == RS_POOL_PAGEALLOC) {
         /* no prelocate */
-        if(p->cur_page++ >= p->max_page - 1 || size > p->free_size) 
-        {
-            rs_log_err(0, "rs_slab_allocmem() failed, no more memory");
-            return NULL;
-        }
-
         t = malloc(size);
 
         if(t == NULL) {
             rs_log_err(rs_errno, "malloc(%u) failed", size);
             return NULL;
         }
-
     } else if(p->flag == RS_POOL_PREALLOC) {
         /* prealloc */
-        if(size > p->free_size) {
-            rs_log_err(0, "rs_slab_allocmem() failed, no more memory");
-            return NULL;
-        }
-
         t = p->cur; 
         p->cur = p->cur + size;
     }
@@ -102,42 +97,55 @@ static char *rs_pmemalloc(rs_pool_t *p, uint32_t size)
     p->free_size -= size;
     p->used_size += size;
 
-    rs_log_debug(0, "pool free_size = %u, used_size = %u", 
-            p->free_size, p->used_size);
+    rs_log_debug(0, "pmemalloc pool alloc_size = %u, free_size = %u, "
+            "used_size = %u", 
+            size, p->free_size, p->used_size);
 
     return t;
 }
 
 int rs_palloc_id(rs_pool_t *p, uint32_t size)
 {
-    int id;
+    int low, high, mid;
     
-    id = 0;
+    low = 0;
+    high = p->max_class;
+    mid = 0;
 
     if(size == 0) {
-        rs_log_err(0, "rs_memslab_clsid() faield, size = 0");
+        rs_log_err(0, "rs_palloc_id() faield, size must great than zero");
         return RS_ERR;
     }
 
     /* if > 1MB use malloc() */
     if(size > RS_MEMSLAB_CHUNK_SIZE) {
-        rs_log_debug(0, "palloc size %u overflow %u", 
-                size, size - RS_MEMSLAB_CHUNK_SIZE); 
+        rs_log_debug(0, "palloc size %u overflow %u", size, 
+                size - RS_MEMSLAB_CHUNK_SIZE); 
         return RS_SLAB_OVERFLOW;
     }
 
-    while(size > p->slab_class[id].size) {
-        /* reach the last index of class */
-        if((uint32_t) id++ == p->max_class) {
-            rs_log_debug(0, "palloc size %u overflow %u", 
-                    size, size - RS_MEMSLAB_CHUNK_SIZE); 
-            return RS_SLAB_OVERFLOW;
+    while(low <= high) {
+        
+        mid = low + ((high - low) >> 1);
+
+        if(p->slab_class[mid].size > size) {
+            high = mid -1;
+        } else if(p->slab_class[mid].size < size) {
+            low = mid + 1;
+        } else {
+            rs_log_debug(0, "pool class size %u, clsid %d", size, low);
+            return low;
         }
     }
 
-    rs_log_debug(0, "pool class size %u, clsid %d", size, id);
+    if(low > -1 && low <= p->max_class) {
+        rs_log_debug(0, "pool class size %u, clsid %d", size, low);
+        return low;
+    }
 
-    return id;
+    rs_log_debug(0, "palloc size %u overflow %u", size, 
+            size - RS_MEMSLAB_CHUNK_SIZE); 
+    return RS_SLAB_OVERFLOW;
 }
 
 rs_pool_t *rs_create_pool(uint32_t init_size, uint32_t mem_size, double factor, 
@@ -181,8 +189,8 @@ rs_pool_t *rs_create_pool(uint32_t init_size, uint32_t mem_size, double factor,
         p = (rs_pool_t *) t;
         p->start = t + sizeof(rs_pool_t);
         rs_memzero(p->start, ps);
-        p->cur_page = 0;
-        p->max_page = mem_size / RS_MEMSLAB_CHUNK_SIZE;
+        //p->cur_page = 0;
+        //p->max_page = mem_size / RS_MEMSLAB_CHUNK_SIZE;
     
     } else {
         rs_log_err(0, "unknown slab flag %d", flag);
@@ -253,7 +261,7 @@ char *rs_palloc(rs_pool_t *p, uint32_t size, int id)
         return NULL;
     } else if(c->used_free > 0) {
         t = c->free_chunk[--c->used_free];
-        rs_log_debug(0, "used free chunk num %u", c->used_free);
+        rs_log_debug(0, "palloc used free chunk num %u", c->used_free);
     } else {
         t = c->chunk;
 
@@ -263,7 +271,7 @@ char *rs_palloc(rs_pool_t *p, uint32_t size, int id)
             c->chunk = NULL;
         }
 
-        rs_log_debug(0, "free chunk num = %u", c->free);
+        rs_log_debug(0, "palloc free chunk num = %u", c->free);
     }
 
     return t;
@@ -306,12 +314,18 @@ void rs_pfree(rs_pool_t *p, char *data, int id)
 
 void rs_destroy_pool(rs_pool_t *p)
 {
-    uint32_t    i;
-    char        *t;
+    int32_t i, j;
 
     for(i = 0; i <= p->max_class; i++) {
 
         if(p->slab_class[i].slab != NULL) {
+
+            if(p->flag == RS_POOL_PAGEALLOC) { 
+                for(j = 0; j < (int) p->slab_class[i].used_slab; j++) {
+                    free(p->slab_class[i].slab[j]);
+                }
+            }
+
             free(p->slab_class[i].slab);
         }
 
@@ -320,14 +334,5 @@ void rs_destroy_pool(rs_pool_t *p)
         }
     }
 
-    if(p->flag == RS_POOL_PREALLOC) {
-        free(p);
-    } else if(p->flag == RS_POOL_PAGEALLOC) {
-        for(i = 0; i < p->max_page; i++) {
-            t = p->start + sizeof(char *);
-            if(t != NULL) {
-                free(t);
-            }
-        } 
-    }
+    free(p);
 }

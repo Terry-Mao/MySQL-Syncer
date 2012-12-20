@@ -76,6 +76,7 @@ static int rs_init_suite(void)
 
 static int rs_clean_suite(void)
 {
+    rs_free_strerr();
     return 0;
 }
 
@@ -177,28 +178,51 @@ static void rs_pool_test(void)
 
     t = NULL;
 
+    // overflow test
     /* init slab  */
     CU_ASSERT((p = rs_create_pool(100, 1024 * 1024 * 1, 1.5, RS_POOL_PREALLOC)) != NULL);
 
     /* alloc slab */
-    CU_ASSERT((id = rs_palloc_id(p, 100)) >= 0);
+    CU_ASSERT((id = rs_palloc_id(p, 104)) >= 0);
 
-    for(i = 0; i < 10485; i++) {
-        CU_ASSERT((t = rs_palloc(p, 100, id)) != NULL); 
+    for(i = 0; i < 10082; i++) {
+        CU_ASSERT((t = rs_palloc(p, 104, id)) != NULL); 
     }
 
-    CU_ASSERT((t = rs_palloc(p, 100, id)) == NULL); 
+    CU_ASSERT((t = rs_palloc(p, 104, id)) == NULL); 
 
     rs_destroy_pool(p);
-
+ 
+    // new slab test
     /* init slab  */
     CU_ASSERT((p = rs_create_pool(100, 1024 * 1024 * 2, 1.5, RS_POOL_PREALLOC)) != NULL);
 
     /* alloc slab */
-    CU_ASSERT((id = rs_palloc_id(p, 100)) >= 0);
+    CU_ASSERT((id = rs_palloc_id(p, 104)) >= 0);
 
-    for(i = 0; i < 10486; i++) {
-        CU_ASSERT((t = rs_palloc(p, 100, id)) != NULL); 
+    for(i = 0; i < 10083; i++) {
+        CU_ASSERT((t = rs_palloc(p, 104, id)) != NULL); 
+    }
+
+    CU_ASSERT(p->slab_class[id].used_slab == 2);
+    CU_ASSERT(p->slab_class[id].total_slab == 16);
+
+    CU_ASSERT((id = rs_palloc_id(p, 1024*1024*1 + 1)) == RS_SLAB_OVERFLOW);
+    CU_ASSERT((t = rs_palloc(p, 1024*1024*1 + 1, id)) != NULL);
+    rs_pfree(p, t, id);
+
+
+    rs_destroy_pool(p);
+
+    // pagealloc test
+    /* init slab  */
+    CU_ASSERT((p = rs_create_pool(100, 1024 * 1024 * 2, 1.5, RS_POOL_PAGEALLOC)) != NULL);
+
+    /* alloc slab */
+    CU_ASSERT((id = rs_palloc_id(p, 104)) >= 0);
+
+    for(i = 0; i < 10083; i++) {
+        CU_ASSERT((t = rs_palloc(p, 104, id)) != NULL); 
     }
 
     CU_ASSERT(p->slab_class[id].used_slab == 2);

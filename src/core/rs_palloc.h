@@ -35,7 +35,7 @@ typedef struct {
 typedef struct {
 
     rs_pool_class_t slab_class[RS_MEMSLAB_CLASS_IDX_MAX + 1]; /* chunk class */
-    uint32_t        max_class; /* max slab class index */
+    int32_t         max_class; /* max slab class index */
 
     char            *start; /* while prealloc start is start memory ptr */
     char            *cur; /* while preaaloc cur is current memory ptr */
@@ -44,8 +44,8 @@ typedef struct {
     uint32_t        used_size; /* used memory max size */
     uint32_t        free_size; /* free memory size*/
 
-    uint32_t        cur_page; /* current page */
-    uint32_t        max_page; /**/
+    //uint32_t        cur_page; /* current page */
+    //uint32_t        max_page; /**/
 
     int             flag;
 
