@@ -56,12 +56,11 @@ extern volatile sig_atomic_t     rs_reload;
 
 #include <rs_errno.h>
 #include <rs_string.h>
-#include <rs_buf.h>
 #include <rs_io.h>
 #include <rs_log.h>
 #include <rs_palloc.h>
-#include <rs_ring_buffer2.h>
 #include <rs_hash.h>
+#include <rs_buf.h>
 #include <rs_conf.h>
 #include <rs_core_info.h>
 #include <rs_process.h>

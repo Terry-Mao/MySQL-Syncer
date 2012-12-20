@@ -11,12 +11,11 @@ CORE_DEPS = src/core/rs.h \
 			src/core/rs_core.h \
 			src/core/rs_errno.h \
 			src/core/rs_string.h \
-			src/core/rs_buf.h \
 			src/core/rs_io.h \
 			src/core/rs_log.h \
 			src/core/rs_palloc.h \
-			src/core/rs_ring_buffer2.h \
 			src/core/rs_hash.h \
+			src/core/rs_buf.h \
 			src/core/rs_process.h \
 			src/core/rs_conf.h \
 			src/core/rs_core_info.h
@@ -60,12 +59,11 @@ TEST_DEFINE = -D$(CPUBIT)
 objs/rs_master:	objs/src/core/rs_master.o \
 	objs/src/core/rs_errno.o \
 	objs/src/core/rs_string.o \
-	objs/src/core/rs_buf.o \
 	objs/src/core/rs_io.o \
 	objs/src/core/rs_log.o \
 	objs/src/core/rs_palloc.o \
-	objs/src/core/rs_ring_buffer2.o \
 	objs/src/core/rs_hash.o \
+	objs/src/core/rs_buf.o \
 	objs/src/core/rs_process.o \
 	objs/src/core/rs_conf.o \
 	objs/src/core/rs_core_info.o \
@@ -80,12 +78,11 @@ objs/rs_master:	objs/src/core/rs_master.o \
 objs/rs_slave:	objs/src/core/rs_slave.o \
 	objs/src/core/rs_errno.o \
 	objs/src/core/rs_string.o \
-	objs/src/core/rs_buf.o \
 	objs/src/core/rs_io.o \
 	objs/src/core/rs_log.o \
 	objs/src/core/rs_palloc.o \
-	objs/src/core/rs_ring_buffer2.o \
 	objs/src/core/rs_hash.o \
+	objs/src/core/rs_buf.o \
 	objs/src/core/rs_process.o \
 	objs/src/core/rs_conf.o \
 	objs/src/core/rs_core_info.o \
@@ -104,8 +101,8 @@ objs/rs_unit_test:	objs/src/test/rs_unit_test.o \
 	objs/src/core/rs_io.o \
 	objs/src/core/rs_log.o \
 	objs/src/core/rs_palloc.o \
-	objs/src/core/rs_ring_buffer2.o \
 	objs/src/core/rs_hash.o \
+	objs/src/core/rs_buf.o \
 	objs/src/core/rs_process.o \
 	objs/src/core/rs_conf.o \
 	objs/src/core/rs_core_info.o
@@ -115,12 +112,11 @@ master: objs/rs_master
 		objs/src/core/rs_master.o \
 		objs/src/core/rs_errno.o \
 		objs/src/core/rs_string.o \
-		objs/src/core/rs_buf.o \
 		objs/src/core/rs_io.o \
 		objs/src/core/rs_log.o \
 		objs/src/core/rs_palloc.o \
-		objs/src/core/rs_ring_buffer2.o \
 		objs/src/core/rs_hash.o \
+		objs/src/core/rs_buf.o \
 		objs/src/core/rs_process.o \
 		objs/src/core/rs_conf.o \
 		objs/src/core/rs_core_info.o \
@@ -138,12 +134,11 @@ slave: objs/rs_slave
 		objs/src/core/rs_slave.o \
 		objs/src/core/rs_errno.o \
 		objs/src/core/rs_string.o \
-		objs/src/core/rs_buf.o \
 		objs/src/core/rs_io.o \
 		objs/src/core/rs_log.o \
 		objs/src/core/rs_palloc.o \
-		objs/src/core/rs_ring_buffer2.o \
 		objs/src/core/rs_hash.o \
+		objs/src/core/rs_buf.o \
 		objs/src/core/rs_process.o \
 		objs/src/core/rs_conf.o \
 		objs/src/core/rs_core_info.o \
@@ -165,8 +160,8 @@ test: objs/rs_unit_test
 		objs/src/core/rs_io.o \
 		objs/src/core/rs_log.o \
 		objs/src/core/rs_palloc.o \
-		objs/src/core/rs_ring_buffer2.o \
 		objs/src/core/rs_hash.o \
+		objs/src/core/rs_buf.o \
 		objs/src/core/rs_process.o \
 		objs/src/core/rs_conf.o \
 		objs/src/core/rs_core_info.o \
@@ -230,12 +225,6 @@ objs/src/core/rs_palloc.o: $(CORE_DEPS) \
 	$(CC) -c $(CFLAGS) $(CORE_INCS) \
 		-o objs/src/core/rs_palloc.o \
 		src/core/rs_palloc.c
-
-objs/src/core/rs_ring_buffer2.o: $(CORE_DEPS) \
-	src/core/rs_ring_buffer2.c
-	$(CC) -c $(CFLAGS) $(CORE_INCS) \
-		-o objs/src/core/rs_ring_buffer2.o \
-		src/core/rs_ring_buffer2.c
 
 objs/src/core/rs_hash.o: $(CORE_DEPS) \
 	src/core/rs_hash.c

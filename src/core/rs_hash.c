@@ -28,7 +28,7 @@ static inline void rs_shash_after_node(rs_shash_node_t *c, rs_shash_node_t *n)
         n->next->prev = &n->next;
 }
 
-rs_shash_t *rs_shash_init(rs_pool_t *p, uint32_t num)
+rs_shash_t *rs_create_shash(rs_pool_t *p, uint32_t num)
 {
     int32_t     id;
     rs_shash_t  *h;
@@ -127,7 +127,7 @@ int rs_shash_get(rs_shash_t *h, char *key, void **val)
     return RS_KEY_NOT_FOUND;
 }
 
-void rs_shash_free(rs_shash_t *h)
+void rs_destroy_shash(rs_shash_t *h)
 {
     uint32_t        i;  
     rs_shash_node_t *p;    

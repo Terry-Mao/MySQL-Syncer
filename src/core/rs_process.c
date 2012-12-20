@@ -70,7 +70,7 @@ int rs_init_signals(sigset_t *waitset)
     sigaddset(waitset, SIGHUP);     /* RELOAD */
 
     if (sigprocmask(SIG_BLOCK, waitset, NULL) == -1) {
-        rs_log_err(rs_errno, "sigprocmask() failed ... rs_init_signals");
+        rs_log_err(rs_errno, "sigprocmask() failed");
         return RS_ERR;
     }
 
@@ -134,7 +134,6 @@ int rs_create_pidfile(char *name)
     n = rs_write(fd, pid_str, len); 
 
     if(n != len) {
-        rs_log_err(rs_errno, "rs_write() failed");
         return RS_ERR;
     }
 

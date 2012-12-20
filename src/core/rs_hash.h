@@ -29,9 +29,9 @@ typedef struct {
 } rs_shash_t;
 
 
-rs_shash_t *rs_shash_init(rs_pool_t *p, uint32_t num);
+rs_shash_t *rs_create_shash(rs_pool_t *p, uint32_t num);
 int rs_shash_add(rs_shash_t *h, char *key, void *val); 
 int rs_shash_get(rs_shash_t *h, char *key, void **val); 
-void rs_shash_free(rs_shash_t *h);
+void rs_destroy_shash(rs_shash_t *h);
 
 #endif

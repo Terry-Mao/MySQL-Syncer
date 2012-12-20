@@ -9,10 +9,10 @@ static int rs_init_suite(void);
 static int rs_clean_suite(void);
 
 
-static void rs_ring_buffer2_test(void);
 static void rs_pool_test(void);
 static void rs_conf_test(void);
 static void rs_shash_test(void);
+static void rs_buf_test(void);
 
 
 /* static rs_core_info_t  *ci; */
@@ -35,12 +35,12 @@ int main(int argc, char *const *argv)
     /* NOTE - ORDER IS IMPORTANT - MUST TEST fread() AFTER fprintf() */
     if ((NULL == CU_add_test(pSuite, "test of rs_pool_test", 
                     rs_pool_test)) || 
-            (NULL == CU_add_test(pSuite, "test of rs_ring_buffer2_test", 
-                                 rs_ring_buffer2_test)) ||
             (NULL == CU_add_test(pSuite, "test of rs_conf_test",
                                  rs_conf_test)) ||
             (NULL == CU_add_test(pSuite, "test of rs_shash_test", 
-                                 rs_shash_test))
+                                 rs_shash_test)) ||
+            (NULL == CU_add_test(pSuite, "test of rs_buf_test", 
+                                 rs_buf_test))
        )
     {
         CU_cleanup_registry();
@@ -87,7 +87,7 @@ static void rs_shash_test(void)
     rs_shash_t      *h;  
 
     CU_ASSERT((p = rs_create_pool(40, 1024 * 1024 * 10, 1.5, RS_POOL_PREALLOC)) != NULL);
-    CU_ASSERT((h = rs_shash_init(p, 30)) != NULL);
+    CU_ASSERT((h = rs_create_shash(p, 30)) != NULL);
 
 
     int val = 10, val1 = 11, val2 = 12, val3= 13;
@@ -109,7 +109,7 @@ static void rs_shash_test(void)
     CU_ASSERT(*v3 == 12);
     CU_ASSERT(*v4 == 13);
 
-    rs_shash_free(h);
+    rs_destroy_shash(h);
     rs_destroy_pool(p);
 }
 
@@ -168,11 +168,12 @@ static void rs_conf_test(void)
     CU_ASSERT(test == 1);
     CU_ASSERT(rs_strcmp("abc", test1) == 0);
     CU_ASSERT(test2 == 1234);
+
+    rs_free_conf(&conf);
 }
 
 static void rs_pool_test(void)
 {
-    return;
     rs_pool_t       *p;
     int             id, i;
     char            *t;
@@ -237,36 +238,47 @@ static void rs_pool_test(void)
     rs_destroy_pool(p);
 }
 
-static void rs_ring_buffer2_test(void)
+static void rs_buf_test(void)
 {
-    return;
-    int                     i;
-    rs_ring_buffer2_t       rb; 
-    rs_ring_buffer2_data_t  *d;
+    int                 i;
+    rs_buf_t            *b;
+    rs_ringbuf_t        *rb;
+    rs_ringbuf_data_t   *d;
+    rs_pool_t           *p;
 
-    /* init ring buffer2 */
-    CU_ASSERT(rs_init_ring_buffer2(&rb, 10) == RS_OK);
+    b = NULL;
+    rb = NULL;
+    d = NULL;
+    p = NULL;
+
+    CU_ASSERT((b = rs_create_tmpbuf(100)) != NULL);
+    rs_destroy_tmpbuf(b);
+
+    CU_ASSERT((p = rs_create_pool(40, 1024 * 1024 * 10, 1.5, RS_POOL_PREALLOC)) != NULL);
+    CU_ASSERT((rb = rs_create_ringbuf(p, 10)) != NULL);
 
     /* get ring buffer2 empty */
-    CU_ASSERT(rs_get_ring_buffer2(&rb, &d) == RS_EMPTY);
+    CU_ASSERT(rs_ringbuf_get(rb, &d) == RS_EMPTY);
 
     /* set ring buffer2 */
     for(i = 0; i < 10; i++) {
-        CU_ASSERT(rs_set_ring_buffer2(&rb, &d) == RS_OK);
-        rs_set_ring_buffer2_advance(&rb);
+        CU_ASSERT(rs_ringbuf_set(rb, &d) == RS_OK);
+        rs_ringbuf_set_advance(rb);
     }
 
     /* set ring buffer2 full */
-    CU_ASSERT(rs_set_ring_buffer2(&rb, &d) == RS_FULL);
+    CU_ASSERT(rs_ringbuf_set(rb, &d) == RS_FULL);
 
     /* get ring buffer2 */
     for(i = 0; i < 10; i++) {
-        CU_ASSERT(rs_get_ring_buffer2(&rb, &d) == RS_OK);
-        rs_get_ring_buffer2_advance(&rb);
+        CU_ASSERT(rs_ringbuf_get(rb, &d) == RS_OK);
+        rs_ringbuf_get_advance(rb);
     }
 
-    CU_ASSERT(rs_get_ring_buffer2(&rb, &d) == RS_EMPTY);
+    CU_ASSERT(rs_ringbuf_get(rb, &d) == RS_EMPTY);
 
+    rs_destroy_ringbuf(rb);
+    rs_destroy_pool(p);
 }
 
 #if 0
