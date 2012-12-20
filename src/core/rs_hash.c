@@ -31,6 +31,7 @@ static inline void rs_shash_after_node(rs_shash_node_t *c, rs_shash_node_t *n)
 rs_shash_t *rs_create_shash(rs_pool_t *p, uint32_t num)
 {
     int32_t     id;
+    uint32_t    i;
     rs_shash_t  *h;
     char        *t;
 
@@ -43,7 +44,8 @@ rs_shash_t *rs_create_shash(rs_pool_t *p, uint32_t num)
     }
     
     id = rs_palloc_id(p, sizeof(rs_shash_t) + sizeof(rs_shash_head_t) * num);
-    t = (char *) rs_palloc(p, sizeof(rs_shash_t) + sizeof(rs_shash_head_t), id);
+    t = (char *) rs_palloc(p, sizeof(rs_shash_t) + 
+            sizeof(rs_shash_head_t) * num, id);
 
     if(t == NULL) {
         return NULL;
@@ -53,9 +55,11 @@ rs_shash_t *rs_create_shash(rs_pool_t *p, uint32_t num)
     h->num = num;
     h->id = id;
     h->pool = p;
-    h->ht = (rs_shash_head_t *) t + sizeof(rs_shash_t);
+    h->ht = (rs_shash_head_t *) (t + sizeof(rs_shash_t));
 
-    rs_memzero(h->ht, sizeof(rs_shash_head_t) * num);
+    for(i = 0; i < num; i++) {
+        h->ht[i].first = NULL; 
+    }
 
     return h;
 }
@@ -110,11 +114,6 @@ int rs_shash_get(rs_shash_t *h, char *key, void **val)
     uint32_t        i;
     rs_shash_node_t *p;    
 
-    if(key == NULL || val == NULL) {
-        rs_log_err(0, "rs_shash_get() failed, (key|val) is NULL");
-        return RS_ERR;
-    }
-
     i = rs_bkd_hash(key) % h->num;
     rs_log_debug(0, "rs_bdk_hash(%s), index = %u", key, i);
 
@@ -125,13 +124,15 @@ int rs_shash_get(rs_shash_t *h, char *key, void **val)
         }
     }
 
-    return RS_KEY_NOT_FOUND;
+    return RS_NOT_EXISTS;
 }
 
 void rs_destroy_shash(rs_shash_t *h)
 {
     uint32_t        i;  
     rs_shash_node_t *p;    
+
+    p = NULL;
 
     for(i = 0; i < h->num; i++) {
         for(p = h->ht[i].first; p != NULL; p = p->next) {

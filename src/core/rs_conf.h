@@ -26,40 +26,20 @@
 #define RS_CONF_MODULE          '['
 #define RS_CONF_MODULE_END      ']'
 
-#define rs_conf_value(d, t)     { (void *) &d, t }
-#define rs_conf_v_set(v, vp, t)                                              \
-    (v)->data = (void *) &(vp); (v)->type = t
-
-#define rs_null_conf            { NULL, RS_CONF_NULL }
-
-
 typedef struct {
-    void            *data;
-    char            type;
-} rs_conf_v_t;
+    int     id;
+    void    *data;
+    int     data_id;
+    int32_t type;
+    int32_t found;
+} rs_conf_data_t;
 
 
-typedef struct {
-    rs_str_t        k;
-    rs_conf_v_t     v;
-} rs_conf_kv_t;
+typedef rs_shash_t rs_conf_t;
 
-typedef struct {
-
-    rs_conf_kv_t    *kv;
-
-    uint32_t        conf_n;
-    uint32_t        conf_idx;
-} rs_conf_t;
-
-#define rs_conf_t_init(c)                                                    \
-    (c)->kv = NULL;                                                          \
-    (c)->conf_n = 0;                                                         \
-    (c)->conf_idx = 0
-
-
-int rs_init_conf(rs_conf_t *conf, char *path, char *name); 
-int rs_add_conf_kv(rs_conf_t *c, char *key, void *value, char type);
-void rs_free_conf(rs_conf_t *c);
+rs_conf_t *rs_create_conf(rs_pool_t *p, uint32_t num);
+int rs_init_conf(rs_conf_t *conf, char *path, char *name);
+int rs_conf_register(rs_conf_t *c, char *key, void *data, int32_t type);
+void rs_destroy_conf(rs_conf_t *c);
 
 #endif

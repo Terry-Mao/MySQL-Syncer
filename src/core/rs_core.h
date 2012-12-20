@@ -44,7 +44,7 @@ extern volatile sig_atomic_t     rs_reload;
 #define RS_CMD_ERR                  -9
 #define RS_SLAB_OVERFLOW            -10
 #define RS_EXISTS                   -11
-#define RS_KEY_NOT_FOUND            -12
+#define RS_NOT_EXISTS               -12
 
 #define INT32_SIZE            sizeof(int32_t);
 #define INT32_LEN             sizeof("-2147483648") - 1

@@ -116,29 +116,29 @@ free :
 
 static int rs_init_core_conf(rs_core_info_t *ci)
 {
-    if(rs_add_conf_kv(ci->cf, "cwd", &(ci->cwd), RS_CONF_STR) != RS_OK) {
+    if(rs_conf_register(ci->cf, "cwd", &(ci->cwd), RS_CONF_STR) != RS_OK) {
         return RS_ERR;    
     }
 
-    if(rs_add_conf_kv(ci->cf, "user", &(ci->user), RS_CONF_STR) != RS_OK) {
+    if(rs_conf_register(ci->cf, "user", &(ci->user), RS_CONF_STR) != RS_OK) {
         return RS_ERR;    
     }
 
-    if(rs_add_conf_kv(ci->cf, "pid", &(ci->pid_path), RS_CONF_STR) != RS_OK) {
+    if(rs_conf_register(ci->cf, "pid", &(ci->pid_path), RS_CONF_STR) != RS_OK) {
         return RS_ERR;    
     }
 
-    if(rs_add_conf_kv(ci->cf, "log", &(ci->log_path), RS_CONF_STR) != RS_OK) {
+    if(rs_conf_register(ci->cf, "log", &(ci->log_path), RS_CONF_STR) != RS_OK) {
         return RS_ERR;    
     }
 
-    if(rs_add_conf_kv(ci->cf, "log.level", &rs_log_level, RS_CONF_UINT32) 
+    if(rs_conf_register(ci->cf, "log.level", &rs_log_level, RS_CONF_UINT32) 
             != RS_OK) 
     {
         return RS_ERR;    
     }
 
-    if(rs_add_conf_kv(ci->cf, "daemon", &(ci->daemon), RS_CONF_UINT32) 
+    if(rs_conf_register(ci->cf, "daemon", &(ci->daemon), RS_CONF_UINT32) 
             != RS_OK) 
     {
         return RS_ERR;    
@@ -151,11 +151,6 @@ static int rs_init_core_conf(rs_core_info_t *ci)
 void rs_free_core(rs_core_info_t *ci)
 {
     /* free conf */
-    rs_free_conf(ci->cf);
-
-    if(ci->cf->kv != NULL) {
-        free(ci->cf->kv);
-    }
-
+    rs_destroy_conf(ci->cf);
     rs_destroy_pool(ci->pool);
 }

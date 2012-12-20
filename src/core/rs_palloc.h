@@ -28,6 +28,19 @@ typedef struct {
     uint32_t        died;
 } rs_pool_class_t;
 
+#define rs_pool_class_t_init(cls)                                            \
+    (cls)->size = 0;                                                         \
+    (cls)->num = 0;                                                          \
+    (cls)->free_chunk = NULL;                                                \
+    (cls)->chunk = NULL;                                                     \
+    (cls)->free = 0;                                                         \
+    (cls)->used_slab = 0;                                                    \
+    (cls)->total_slab = 0;                                                   \
+    (cls)->total_free = 0;                                                   \
+    (cls)->used_free = 0;                                                    \
+    (cls)->slab = NULL;                                                      \
+    (cls)->died = 0
+
 
 typedef struct {
 

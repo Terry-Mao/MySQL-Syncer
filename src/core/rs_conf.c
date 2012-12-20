@@ -3,12 +3,7 @@
 #include <rs_config.h>
 #include <rs_core.h>
 
-static int rs_get_conf_info(rs_conf_t *c, char *k, char *t, uint32_t *idx);
-static int rs_get_conf_str(char **dst, char *value);
-static int rs_get_conf_uint(uint32_t *dst, char *value);
-static int rs_get_conf_int(int32_t *dst, char *value);
-static int rs_get_conf_double(double *dst, char *value);
-static int rs_set_conf_value(rs_conf_v_t *v, char *src, char type); 
+static int rs_conf_apply(rs_conf_t *c, char *key, char *val); 
 
 char *rs_conf_path = NULL;
 
@@ -25,10 +20,10 @@ char *rs_conf_path = NULL;
 int rs_init_conf(rs_conf_t *conf, char *path, char *name) 
 {
     int         fd, comment, key, value, module, eof, r;
-    uint32_t    i, idx, m_len;
+    uint32_t    i, m_len;
     ssize_t     n;
     char        *s, c, k[RS_MAX_KEY_LEN + 1], v[RS_MAX_VALUE_LEN + 1], 
-                m[RS_MAX_MODULE_LEN + 1], t, buf[RS_CONF_BUFFER_LEN], 
+                m[RS_MAX_MODULE_LEN + 1], buf[RS_CONF_BUFFER_LEN], 
                 *last, *p;
 
     i = 0;
@@ -194,14 +189,8 @@ int rs_init_conf(rs_conf_t *conf, char *path, char *name)
 
                 *p = '\0';
 
-                /* get conf index */
-                if(rs_get_conf_info(conf, k, &t, &idx) != RS_OK) {
-                    rs_log_err(0, "unknow conf key \"%s\"", k);
-                    goto free;
-                }
-
                 /* set value */
-                if(rs_set_conf_value(&(conf->kv[idx].v), v, t) != RS_OK) {
+                if(rs_conf_apply(conf, k, v) != RS_OK) {
                     goto free;
                 }
 
@@ -209,9 +198,6 @@ int rs_init_conf(rs_conf_t *conf, char *path, char *name)
                 key = 1;
                 p = k;
                 i = 0;
-
-                rs_log_debug(0, "get conf key = %s, type = %d, value = %s", 
-                        conf->kv[idx].k.data, conf->kv[idx].v.type, v);
 
                 continue;
             }
@@ -233,166 +219,105 @@ free :
     return r;
 }
 
-int rs_add_conf_kv(rs_conf_t *c, char *key, void *value, char type)
+rs_conf_t *rs_create_conf(rs_pool_t *p, uint32_t num)
 {
-    uint32_t        size, i;
-    size_t          len;
-    rs_conf_kv_t    *kv;
-
-    len = rs_strlen(key);
-
-    for(i = 0; i < c->conf_idx; i++) {
-        if(c->kv[i].k.len == len && rs_strncmp(key, c->kv[i].k.data, len) 
-                == 0) 
-        {
-            rs_log_err(rs_errno, "config file has a dupication key, %s", key);
-            return RS_ERR;
-        }
-    }
-
-    if(c->kv == NULL || c->conf_n == c->conf_idx) {
-        /* resize kv*/    
-        size = (c->kv == NULL) ? RS_CONF_DEFAULT_NUM : c->conf_n * 2;
-        c->kv = realloc(c->kv, size * sizeof(rs_conf_kv_t));
-
-        if(c->kv == NULL) {
-            rs_log_err(rs_errno, "realloc() failed, rs_conf_kv_t");
-            return RS_ERR;
-        }
-        
-        rs_memzero(c->kv + c->conf_n, sizeof(rs_conf_kv_t) * 
-                (size - c->conf_n));
-
-        c->conf_n = size;
-    }
-
-
-
-    kv = &(c->kv[c->conf_idx++]);
-
-    kv->k.data = key;
-    kv->k.len = rs_strlen(key);
-    kv->v.data = value;
-    kv->v.type = type;
-
-    rs_log_debug(0, "key = %s, conf_idx = %u, conf_n = %u", kv->k.data, 
-            c->conf_idx, c->conf_n);
-
-    return RS_OK;
+    return rs_create_shash(p, num);
 }
 
-static int rs_get_conf_info(rs_conf_t *c, char *k, char *t, uint32_t *idx) 
+int rs_conf_register(rs_conf_t *c, char *key, void *data, int32_t type)
 {
-    uint32_t    i, found;
-    size_t      len;
+    int             id, err;
+    rs_conf_data_t  *d;
 
-    found = 0;
-    len = rs_strlen(k);
+    id = rs_palloc_id(c->pool, sizeof(rs_conf_data_t));
+    d = rs_palloc(c->pool, sizeof(rs_conf_data_t), id);
 
-    for(i = 0; i < c->conf_idx; i++) {
-        /*
-           rs_log_debug(0, "key = %s, ken_len = %u, conf_idx = %u, i = %u", 
-           c->kv[i].k.data, c->kv[i].k.len, c->conf_idx, i);
-           */
-
-        if(c->kv[i].k.len == len && rs_strncmp(k, c->kv[i].k.data, len) == 0) 
-        {
-            *idx = i;
-            *t = c->kv[i].v.type;
-            found = 1;
-            break;
-        }
-    }
-
-    if(found) {
-        return RS_OK;
-    }
-
-    return RS_ERR;
-}
-
-static int rs_set_conf_value(rs_conf_v_t *v, char *src, char type) 
-{
-    int     r;
-
-    r = RS_OK;
-
-    switch(type) {
-
-        case RS_CONF_INT32:
-            r = rs_get_conf_int(v->data, src);
-            break;
-
-        case RS_CONF_UINT32:
-            r = rs_get_conf_uint(v->data, src);
-            break;
-
-        case RS_CONF_STR:
-            r = rs_get_conf_str(v->data, src);
-            break;
-
-        case RS_CONF_DOUBLE:
-            r = rs_get_conf_double(v->data, src);
-            break;
-
-        default:
-            r = RS_ERR;
-    }
-
-    return r;
-}
-
-static int rs_get_conf_str(char **dst, char *value) 
-{
-    size_t  len;
-    char    *p;
-
-    len = rs_strlen(value);
-    p = malloc(len + 1);
-
-    if(p == NULL) {
-        rs_log_err(rs_errno, "malloc() failed");
+    if(d == NULL) {
         return RS_ERR;
     }
 
-    rs_memcpy(p, value, len + 1);
-    *dst = p;
+    d->id = id;
+    d->data = data;
+    d->type = type;
+    d->found = 0;
+
+    if((err = rs_shash_add(c, key, d)) != RS_OK) {
+        if(err == RS_EXISTS) {
+            rs_log_err(0, "add a exists conf key \"%s\"", key);
+        }
+
+        return RS_ERR;
+    }
+    
+    rs_log_debug(0, "add conf key %s, type %d", key, type);
 
     return RS_OK;
 }
 
-static int rs_get_conf_uint(uint32_t *dst, char *value) 
+static int rs_conf_apply(rs_conf_t *c, char *key, char *val) 
 {
-    *dst = rs_str_to_uint32(value);
-    return RS_OK;
-}
+    rs_conf_data_t  *d;
+    size_t          len;
+    char            *t;
 
-static int rs_get_conf_double(double *dst, char *value) 
-{
-    *dst = rs_str_to_double(value);
-    return RS_OK;
-}
+    if(rs_shash_get(c, key, (void *) &d) != RS_OK) {
+        rs_log_err(0, "unknown conf key \"%s\"", key);
+        return RS_ERR;
+    }
 
+    switch(d->type) {
+        case RS_CONF_INT32:
+            *((int32_t *) d->data) = rs_str_to_int32(val);
+            break;
 
-static int rs_get_conf_int(int32_t *dst, char *value) 
-{
-    *dst = rs_str_to_int32(value);
-    return RS_OK;
-}
+        case RS_CONF_UINT32:
+            *((uint32_t *) d->data) = rs_str_to_uint32(val);
+            break;
 
-void rs_free_conf(rs_conf_t *c)
-{
-    uint32_t    i;
-    void        *p;
+        case RS_CONF_DOUBLE:
+            *((double *) d->data) = rs_str_to_double(val);
+            break;
 
-    if(c != NULL || c->kv != NULL) {
-        for(i = 0; i < c->conf_idx; i++) {
-            if(c->kv[i].v.type == RS_CONF_STR) {
-                p = (void *) *((void **) c->kv[i].v.data);
-                if(p != NULL) {
-                    free(p);
-                }
+        case RS_CONF_STR:
+            len = rs_strlen(val) + 1;
+            d->data_id = rs_palloc_id(c->pool, len);
+            t = rs_palloc(c->pool, len, d->data_id);
+
+            if(t == NULL) {
+                return RS_ERR;
             }
+
+            rs_memcpy(t, val, len);
+
+            *((char **) d->data) = t;
+            break;
+
+        default:
+            return RS_ERR;
+    }
+
+    d->found = 1;
+
+    return RS_OK;
+}
+
+void rs_destroy_conf(rs_conf_t *c)
+{
+    uint32_t        i;  
+    rs_shash_node_t *p;    
+    rs_conf_data_t  *d;
+
+    for(i = 0; i < c->num; i++) {
+        for(p = c->ht[i].first; p != NULL; p = p->next) {
+            d = (rs_conf_data_t *) p->val;
+
+            if(d->type == RS_CONF_STR && d->found == 1) {
+                rs_pfree(c->pool, d->data, d->data_id);
+            }
+
+            rs_pfree(c->pool, d, d->id);
         }
     }
+
+    rs_destroy_shash(c);
 }

@@ -116,61 +116,30 @@ static void rs_shash_test(void)
 
 static void rs_conf_test(void)
 {
-    return;
-    rs_conf_t   conf;
-    char        *conf_path;
-    uint32_t    test, test2;
-    char        *test1;
+    rs_pool_t   *p;
+    rs_conf_t   *cf;
+    char        *conf_path, *test1;
+    int         test, test16;
 
-    conf_path = "etc/test.cf";
-    test1= NULL;
-    test = 0;
-    test2= 0;
+    conf_path ="etc/test.cf";
 
-    rs_conf_t_init(&conf);
+    CU_ASSERT((p = rs_create_pool(100, rs_pagesize, rs_pagesize, 
+                    RS_POOL_CLASS_IDX, 1.5, RS_POOL_PREALLOC)) != NULL);
 
-    CU_ASSERT(rs_add_conf_kv(&conf, "test", &test, RS_CONF_UINT32) 
-            == RS_OK);
-    CU_ASSERT(rs_add_conf_kv(&conf, "test1", &test1, RS_CONF_STR) == RS_OK);
-    CU_ASSERT(rs_add_conf_kv(&conf, "test2", &test2, RS_CONF_UINT32) 
-            == RS_OK);
-    CU_ASSERT(rs_add_conf_kv(&conf, "test3", &test2, RS_CONF_UINT32) 
-            == RS_OK);
-    CU_ASSERT(rs_add_conf_kv(&conf, "test4", &test2, RS_CONF_UINT32) 
-            == RS_OK);
-    CU_ASSERT(rs_add_conf_kv(&conf, "test5", &test2, RS_CONF_UINT32) 
-            == RS_OK);
-    CU_ASSERT(rs_add_conf_kv(&conf, "test6", &test2, RS_CONF_UINT32) 
-            == RS_OK);
-    CU_ASSERT(rs_add_conf_kv(&conf, "test7", &test2, RS_CONF_UINT32) 
-            == RS_OK);
-    CU_ASSERT(rs_add_conf_kv(&conf, "test8", &test2, RS_CONF_UINT32) 
-            == RS_OK);
-    CU_ASSERT(rs_add_conf_kv(&conf, "test9", &test2, RS_CONF_UINT32) 
-            == RS_OK);
-    CU_ASSERT(rs_add_conf_kv(&conf, "test10", &test2, RS_CONF_UINT32) 
-            == RS_OK);
-    CU_ASSERT(rs_add_conf_kv(&conf, "test11", &test2, RS_CONF_UINT32) 
-            == RS_OK);
-    CU_ASSERT(rs_add_conf_kv(&conf, "test12", &test2, RS_CONF_UINT32) 
-            == RS_OK);
-    CU_ASSERT(rs_add_conf_kv(&conf, "test13", &test2, RS_CONF_UINT32) 
-            == RS_OK);
-    CU_ASSERT(rs_add_conf_kv(&conf, "test14", &test2, RS_CONF_UINT32) 
-            == RS_OK);
-    CU_ASSERT(rs_add_conf_kv(&conf, "test15", &test2, RS_CONF_UINT32) 
-            == RS_OK);
-    CU_ASSERT(rs_add_conf_kv(&conf, "test16", &test2, RS_CONF_UINT32) 
-            == RS_OK);
-    CU_ASSERT(rs_add_conf_kv(&conf, "test16", &test2, RS_CONF_UINT32) 
-            == RS_ERR);
+    CU_ASSERT((cf = rs_create_conf(p, 3)) != NULL);
 
-    CU_ASSERT(rs_init_conf(&conf, conf_path, RS_CORE_MODULE_NAME) == RS_OK);
+    CU_ASSERT(rs_conf_register(cf, "test", &test, RS_CONF_INT32) == RS_OK);
+    CU_ASSERT(rs_conf_register(cf, "test1", &test1, RS_CONF_STR) == RS_OK);
+    CU_ASSERT(rs_conf_register(cf, "test16", &test16, RS_CONF_INT32) == RS_OK);
+
+    CU_ASSERT(rs_init_conf(cf, conf_path, RS_CORE_MODULE_NAME) == RS_OK);
+
     CU_ASSERT(test == 1);
     CU_ASSERT(rs_strcmp("abc", test1) == 0);
-    CU_ASSERT(test2 == 1234);
+    CU_ASSERT(test16 == 1234);
 
-    rs_free_conf(&conf);
+    rs_destroy_conf(cf);
+
 }
 
 static void rs_pool_test(void)

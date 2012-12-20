@@ -151,10 +151,11 @@ int rs_palloc_id(rs_pool_t *p, uint32_t size)
 rs_pool_t *rs_create_pool(uint32_t init_size, uint32_t mem_size, 
         uint32_t chunk_size, uint32_t max_idx, double factor, int32_t flag)
 {
-    int         i;
-    uint32_t    ps;
-    rs_pool_t   *p;
-    char        *t;
+    int             i;
+    uint32_t        ps;
+    rs_pool_t       *p;
+    char            *t;
+    rs_pool_class_t *c;
 
     mem_size = rs_align(mem_size, RS_ALIGNMENT); 
     init_size = rs_align(init_size, RS_ALIGNMENT); 
@@ -190,7 +191,7 @@ rs_pool_t *rs_create_pool(uint32_t init_size, uint32_t mem_size,
     }
 
     p = (rs_pool_t *) t;
-    p->slab_class = (rs_pool_class_t *) t + sizeof(rs_pool_t);
+    p->slab_class = (rs_pool_class_t *) (t + sizeof(rs_pool_t));
     p->start = t + sizeof(rs_pool_t) + sizeof(rs_pool_class_t) * (max_idx + 1);
     p->cur = p->start;
 
@@ -205,19 +206,11 @@ rs_pool_t *rs_create_pool(uint32_t init_size, uint32_t mem_size,
 
     for(i = 0; i < p->max_idx && init_size < p->chunk_size; i++) {
         rs_log_debug(0, "pool align init_size %u", init_size);
-        p->slab_class[i].size = init_size;
-        p->slab_class[i].num = chunk_size / init_size;
-
-        p->slab_class[i].chunk = NULL;
-        p->slab_class[i].free_chunk = NULL;
-        p->slab_class[i].slab = NULL;
-
-        p->slab_class[i].used_slab = 0;
-        p->slab_class[i].total_slab = 0;
-
-        p->slab_class[i].free = 0;
-        p->slab_class[i].total_free = 0;
-        p->slab_class[i].used_free = 0;
+        c = &(p->slab_class[i]);
+        
+        rs_pool_class_t_init(c);
+        c->size = init_size;
+        c->num = chunk_size / init_size;
 
         rs_log_debug(0, "slab class id= %d, chunk size = %u, num = %u",
                 i, p->slab_class[i].size, p->slab_class[i].num);
@@ -226,6 +219,10 @@ rs_pool_t *rs_create_pool(uint32_t init_size, uint32_t mem_size,
     }
 
     p->cur_idx = i;
+
+    c = &(p->slab_class[i]);
+    rs_pool_class_t_init(c);
+
     p->slab_class[i].size = chunk_size;
     p->slab_class[i].num = 1;
 
