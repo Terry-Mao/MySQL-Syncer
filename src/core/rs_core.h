@@ -28,6 +28,10 @@ extern int              rs_log_fd;
 extern volatile sig_atomic_t     rs_quit;
 extern volatile sig_atomic_t     rs_reload;
 
+
+/* os */
+#define rs_pagesize     (getpagesize())
+
 #define RS_OK                       0
 #define RS_ERR                      -1
 #define RS_HAS_BINLOG               -2

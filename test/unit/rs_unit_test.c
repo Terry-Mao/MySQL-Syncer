@@ -86,7 +86,8 @@ static void rs_shash_test(void)
     rs_pool_t       *p;
     rs_shash_t      *h;  
 
-    CU_ASSERT((p = rs_create_pool(40, 1024 * 1024 * 10, 1.5, RS_POOL_PREALLOC)) != NULL);
+    CU_ASSERT((p = rs_create_pool(40, 1024 * 1024 * 10, rs_pagesize, 
+                    RS_POOL_CLASS_IDX, 1.5, RS_POOL_PREALLOC)) != NULL);
     CU_ASSERT((h = rs_create_shash(p, 30)) != NULL);
 
 
@@ -182,12 +183,13 @@ static void rs_pool_test(void)
 
     // overflow test
     /* init slab  */
-    CU_ASSERT((p = rs_create_pool(100, 1024 * 1024 * 1, 1.5, RS_POOL_PREALLOC)) != NULL);
+    CU_ASSERT((p = rs_create_pool(100, rs_pagesize, rs_pagesize, 
+                    RS_POOL_CLASS_IDX, 1.5, RS_POOL_PREALLOC)) != NULL);
 
     /* alloc slab */
     CU_ASSERT((id = rs_palloc_id(p, 104)) >= 0);
 
-    for(i = 0; i < 10082; i++) {
+    for(i = 0; i < 39; i++) {
         CU_ASSERT((t = rs_palloc(p, 104, id)) != NULL); 
     }
 
@@ -197,12 +199,13 @@ static void rs_pool_test(void)
  
     // new slab test
     /* init slab  */
-    CU_ASSERT((p = rs_create_pool(100, 1024 * 1024 * 2, 1.5, RS_POOL_PREALLOC)) != NULL);
+    CU_ASSERT((p = rs_create_pool(100, rs_pagesize * 2, rs_pagesize, 
+                    RS_POOL_CLASS_IDX, 1.5, RS_POOL_PREALLOC)) != NULL);
 
     /* alloc slab */
     CU_ASSERT((id = rs_palloc_id(p, 104)) >= 0);
 
-    for(i = 0; i < 10083; i++) {
+    for(i = 0; i < 40; i++) {
         CU_ASSERT((t = rs_palloc(p, 104, id)) != NULL); 
     }
 
@@ -218,12 +221,13 @@ static void rs_pool_test(void)
 
     // pagealloc test
     /* init slab  */
-    CU_ASSERT((p = rs_create_pool(100, 1024 * 1024 * 2, 1.5, RS_POOL_PAGEALLOC)) != NULL);
+    CU_ASSERT((p = rs_create_pool(100, rs_pagesize * 2, rs_pagesize, 
+                    RS_POOL_CLASS_IDX, 1.5, RS_POOL_PAGEALLOC)) != NULL);
 
     /* alloc slab */
     CU_ASSERT((id = rs_palloc_id(p, 104)) >= 0);
 
-    for(i = 0; i < 10083; i++) {
+    for(i = 0; i < 40; i++) {
         CU_ASSERT((t = rs_palloc(p, 104, id)) != NULL); 
     }
 
@@ -254,7 +258,8 @@ static void rs_buf_test(void)
     CU_ASSERT((b = rs_create_tmpbuf(100)) != NULL);
     rs_destroy_tmpbuf(b);
 
-    CU_ASSERT((p = rs_create_pool(40, 1024 * 1024 * 10, 1.5, RS_POOL_PREALLOC)) != NULL);
+    CU_ASSERT((p = rs_create_pool(40, 1024 * 1024 * 10, rs_pagesize, 
+                    RS_POOL_CLASS_IDX, 1.5, RS_POOL_PREALLOC)) != NULL);
     CU_ASSERT((rb = rs_create_ringbuf(p, 10)) != NULL);
 
     /* get ring buffer2 empty */

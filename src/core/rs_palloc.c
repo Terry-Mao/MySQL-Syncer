@@ -109,7 +109,7 @@ int rs_palloc_id(rs_pool_t *p, uint32_t size)
     int low, high, mid;
     
     low = 0;
-    high = p->max_class;
+    high = p->cur_idx;
     mid = 0;
 
     if(size == 0) {
@@ -118,9 +118,9 @@ int rs_palloc_id(rs_pool_t *p, uint32_t size)
     }
 
     /* if > 1MB use malloc() */
-    if(size > RS_MEMSLAB_CHUNK_SIZE) {
+    if(size > p->chunk_size) {
         rs_log_debug(0, "palloc size %u overflow %u", size, 
-                size - RS_MEMSLAB_CHUNK_SIZE); 
+                size - p->chunk_size); 
         return RS_SLAB_OVERFLOW;
     }
 
@@ -138,18 +138,18 @@ int rs_palloc_id(rs_pool_t *p, uint32_t size)
         }
     }
 
-    if(low > -1 && low <= p->max_class) {
+    if(low > -1 && low <= p->cur_idx) {
         rs_log_debug(0, "pool class size %u, clsid %d", size, low);
         return low;
     }
 
     rs_log_debug(0, "palloc size %u overflow %u", size, 
-            size - RS_MEMSLAB_CHUNK_SIZE); 
+            size - p->chunk_size); 
     return RS_SLAB_OVERFLOW;
 }
 
-rs_pool_t *rs_create_pool(uint32_t init_size, uint32_t mem_size, double factor, 
-        int32_t flag)
+rs_pool_t *rs_create_pool(uint32_t init_size, uint32_t mem_size, 
+        uint32_t chunk_size, uint32_t max_idx, double factor, int32_t flag)
 {
     int         i;
     uint32_t    ps;
@@ -163,7 +163,8 @@ rs_pool_t *rs_create_pool(uint32_t init_size, uint32_t mem_size, double factor,
 
     if(flag == RS_POOL_PREALLOC) {
         /* prealloc memory */
-        t = (char *) malloc(sizeof(rs_pool_t) + mem_size);
+        t = (char *) malloc(sizeof(rs_pool_t) + mem_size + 
+                sizeof(rs_pool_class_t) * (max_idx + 1));
 
         if(t == NULL) {
             rs_log_err(rs_errno, "malloc(%u) failed", 
@@ -171,14 +172,11 @@ rs_pool_t *rs_create_pool(uint32_t init_size, uint32_t mem_size, double factor,
             return NULL;
         }
 
-        p = (rs_pool_t *) t;
-        p->start = t + sizeof(rs_pool_t);
-        p->cur = p->start;
-
     } else if(flag == RS_POOL_PAGEALLOC) {
         /* pagealloc memory */
-        ps = (mem_size / RS_MEMSLAB_CHUNK_SIZE) * sizeof(char *);
-        t = (char *) malloc(sizeof(rs_pool_t) + ps);
+        ps = (mem_size / chunk_size) * sizeof(char *);
+        t = (char *) malloc(sizeof(rs_pool_t) + ps + 
+                sizeof(rs_pool_class_t) * (max_idx + 1));
 
         if(t == NULL) {
             rs_log_err(rs_errno, "malloc(%u) failed", 
@@ -186,29 +184,29 @@ rs_pool_t *rs_create_pool(uint32_t init_size, uint32_t mem_size, double factor,
             return NULL;
         }
 
-        p = (rs_pool_t *) t;
-        p->start = t + sizeof(rs_pool_t);
-        rs_memzero(p->start, ps);
-        //p->cur_page = 0;
-        //p->max_page = mem_size / RS_MEMSLAB_CHUNK_SIZE;
-    
     } else {
         rs_log_err(0, "unknown slab flag %d", flag);
         return NULL;
     }
 
+    p = (rs_pool_t *) t;
+    p->slab_class = (rs_pool_class_t *) t + sizeof(rs_pool_t);
+    p->start = t + sizeof(rs_pool_t) + sizeof(rs_pool_class_t) * (max_idx + 1);
+    p->cur = p->start;
+
+    rs_memzero(p->slab_class, sizeof(p->slab_class));
+
     p->flag = flag;
     p->max_size = mem_size;
     p->free_size = mem_size;
+    p->chunk_size = chunk_size;
+    p->max_idx = max_idx;
     p->used_size = 0;
-    rs_memzero(p->slab_class, sizeof(p->slab_class));
 
-    for(i = 0; i < RS_MEMSLAB_CLASS_IDX_MAX && 
-            init_size < RS_MEMSLAB_CHUNK_SIZE; i++) 
-    {
+    for(i = 0; i < p->max_idx && init_size < p->chunk_size; i++) {
         rs_log_debug(0, "pool align init_size %u", init_size);
         p->slab_class[i].size = init_size;
-        p->slab_class[i].num = RS_MEMSLAB_CHUNK_SIZE / init_size;
+        p->slab_class[i].num = chunk_size / init_size;
 
         p->slab_class[i].chunk = NULL;
         p->slab_class[i].free_chunk = NULL;
@@ -227,8 +225,8 @@ rs_pool_t *rs_create_pool(uint32_t init_size, uint32_t mem_size, double factor,
         init_size = rs_align((uint32_t) (init_size * factor), RS_ALIGNMENT);
     }
 
-    p->max_class = i;
-    p->slab_class[i].size = RS_MEMSLAB_CHUNK_SIZE;
+    p->cur_idx = i;
+    p->slab_class[i].size = chunk_size;
     p->slab_class[i].num = 1;
 
     return p;
@@ -316,7 +314,7 @@ void rs_destroy_pool(rs_pool_t *p)
 {
     int32_t i, j;
 
-    for(i = 0; i <= p->max_class; i++) {
+    for(i = 0; i <= p->cur_idx; i++) {
 
         if(p->slab_class[i].slab != NULL) {
 

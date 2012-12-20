@@ -18,7 +18,8 @@ rs_core_info_t *rs_init_core_info(rs_core_info_t *oc)
     nd = 1;
 
 
-    p = rs_create_pool(200, 1024 * 1024 * 10, 1.5, RS_POOL_PREALLOC);
+    p = rs_create_pool(200, 1024 * 1024 * 10, rs_pagesize, RS_POOL_CLASS_IDX, 
+            1.5, RS_POOL_PREALLOC);
     id = rs_palloc_id(p, sizeof(rs_core_info_t) + sizeof(rs_conf_t));
 
     ci = (rs_core_info_t *) rs_palloc(p, 
