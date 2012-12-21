@@ -94,7 +94,7 @@ void *rs_start_accept_thread(void *data)
     socklen_t               socklen;
     rs_master_info_t        *mi;
     struct                  sockaddr_in cli_addr;
-    rs_reqdump_data_t       *d;
+    rs_reqdump_data_t       *rd;
 
     mi = (rs_master_info_t *) data;
 
@@ -118,42 +118,42 @@ void *rs_start_accept_thread(void *data)
         }
 
         /* register slave */
-        d = rs_get_reqdump_data(mi->req_dump);
+        rd = rs_get_reqdump_data(mi->req_dump);
 
-        if(d == NULL) {
+        if(rd == NULL) {
             rs_close(cli_fd);
             cli_fd = -1;
             continue;
         }
 
         /* init ring buffer */
-        if((d->ringbuf = rs_create_ringbuf(mi->pool, mi->ringbuf_num)) 
+        if((rd->ringbuf = rs_create_ringbuf(mi->pool, mi->ringbuf_num)) 
                 == NULL)
         {
             goto free;
         }
 
         /* init packbuf */
-        if((d->send_buf = rs_create_tmpbuf(mi->sendbuf_size)) == NULL) {
+        if((rd->send_buf = rs_create_tmpbuf(mi->sendbuf_size)) == NULL) {
             goto free; 
         }
 
         /* init iobuf */
-        if((d->io_buf = rs_create_tmpbuf(mi->iobuf_size)) == NULL) {
+        if((rd->io_buf = rs_create_tmpbuf(mi->iobuf_size)) == NULL) {
             goto free;
         }
 
-        d->binlog_func = mi->binlog_func;
-        d->pool = mi->pool;
-        d->cli_fd = cli_fd;
-        d->binlog_idx_file = mi->binlog_idx_file;
-        d->req_dump = mi->req_dump;
-        d->server_id = mi->server_id;
+        rd->binlog_func = mi->binlog_func;
+        rd->pool = mi->pool;
+        rd->cli_fd = cli_fd;
+        rd->binlog_idx_file = mi->binlog_idx_file;
+        rd->req_dump = mi->req_dump;
+        rd->server_id = mi->server_id;
 
         /* create dump thread */
-        if((err = pthread_create(&(d->dump_thread), 
-                        &(d->req_dump->thr_attr), 
-                        rs_start_dump_thread, (void *) d)) != 0) 
+        if((err = pthread_create(&(rd->dump_thread), 
+                        &(rd->req_dump->thr_attr), 
+                        rs_start_dump_thread, (void *) rd)) != 0) 
         {
             rs_log_err(err, "pthread_create() failed");
             goto free;
