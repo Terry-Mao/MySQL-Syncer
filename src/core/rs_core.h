@@ -16,48 +16,46 @@ extern void rs_free_slave(void *data);
 
 
 /* public */
-extern char             *rs_conf_path;
+extern char     *rs_conf_path;
 
-extern char             *rs_pid_path;
-extern pid_t            rs_pid;
+extern char     *rs_pid_path;
+extern pid_t    rs_pid;
 
-extern char             *rs_log_path;
-extern uint32_t         rs_log_level;
-extern int              rs_log_fd;
+extern char     *rs_log_path;
+extern uint32_t rs_log_level;
+extern int      rs_log_fd;
 
-extern volatile sig_atomic_t     rs_quit;
-extern volatile sig_atomic_t     rs_reload;
+extern volatile sig_atomic_t    rs_quit;
+extern volatile sig_atomic_t    rs_reload;
 
 
 /* os */
 #define rs_pagesize     (getpagesize())
 
-#define RS_OK                       0
-#define RS_ERR                      -1
-#define RS_HAS_BINLOG               -2
-#define RS_NO_RECORD                -3
-#define RS_HEARTBEAT                -4
-#define RS_TIMEDOUT                 -5
-#define RS_FULL                     -6
-#define RS_EMPTY                    -7
-#define RS_NO_BINLOG                -8
-#define RS_CMD_ERR                  -9
-#define RS_SLAB_OVERFLOW            -10
-#define RS_EXISTS                   -11
-#define RS_NOT_EXISTS               -12
+/* return code */
+#define RS_OK                   0
+#define RS_ERR                  -1
+#define RS_HAS_BINLOG           -2
+#define RS_NO_RECORD            -3
+#define RS_HEARTBEAT            -4
+#define RS_TIMEDOUT             -5
+#define RS_FULL                 -6
+#define RS_EMPTY                -7
+#define RS_NO_BINLOG            -8
+#define RS_CMD_ERR              -9
+#define RS_SLAB_OVERFLOW        -10
+#define RS_EXISTS               -11
+#define RS_NOT_EXISTS           -12
 
-#define INT32_SIZE            sizeof(int32_t);
-#define INT32_LEN             sizeof("-2147483648") - 1
+#define INT32_SIZE      sizeof(int32_t);
+#define INT32_LEN       sizeof("-2147483648") - 1
+#define UINT64_LEN      sizeof("18446744073709551615") - 1
+#define UINT32_LEN      sizeof("4294967295") - 1
+#define UINT32_SIZE     sizeof(uint32_t);
 
-
-#define UINT64_LEN            sizeof("18446744073709551615") - 1
-
-#define UINT32_LEN            sizeof("4294967295") - 1
-#define UINT32_SIZE           sizeof(uint32_t);
-
-#define SMALLINT_LEN          sizeof("65535") - 1
-#define TINYINT_LEN           sizeof("255") - 1
-#define TIME_LEN              sizeof("2012-12-12 12:12:12") - 1
+#define SMALLINT_LEN    sizeof("65535") - 1
+#define TINYINT_LEN     sizeof("255") - 1
+#define TIME_LEN        sizeof("2012-12-12 12:12:12") - 1
 
 #define rs_min(val1, val2)  ((val1 > val2) ? (val2) : (val1))
 #define rs_max(val1, val2)  ((val1 < val2) ? (val2) : (val1))

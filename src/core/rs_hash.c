@@ -44,8 +44,7 @@ rs_shash_t *rs_create_shash(rs_pool_t *p, uint32_t num)
     }
     
     id = rs_palloc_id(p, sizeof(rs_shash_t) + sizeof(rs_shash_head_t) * num);
-    t = (char *) rs_palloc(p, sizeof(rs_shash_t) + 
-            sizeof(rs_shash_head_t) * num, id);
+    t = rs_palloc(p, sizeof(rs_shash_t) + sizeof(rs_shash_head_t) * num, id);
 
     if(t == NULL) {
         return NULL;

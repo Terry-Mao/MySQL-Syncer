@@ -13,7 +13,7 @@
 #define RS_RING_BUFFER_EMPTY_SLEEP_USEC     (1000 * 10)
 
 
-struct rs_request_dump_s {
+struct rs_reqdump_data_s {
 
     int                 cli_fd;
     int                 notify_fd;
@@ -31,29 +31,28 @@ struct rs_request_dump_s {
     FILE                *binlog_fp;         /* binlog fp */
     FILE                *binlog_idx_fp;     /* binlog idx fp */
 
-    rs_ring_buffer2_t   ring_buf;
+    rs_ringbuf_t        *ringbuf;
     rs_binlog_info_t    binlog_info;
-    rs_slab_t           slab;
+    rs_pool_t           *pool;
 
     pthread_t           io_thread;
     pthread_t           dump_thread;
-    rs_buf_t            send_buf;
-    rs_shash_t          event_handler;
-    
-    rs_buf_t            io_buf;
 
-    rs_request_dump_t       *data;
-    rs_request_dump_info_t  *rdi;
+    rs_buf_t            *send_buf;
+    rs_buf_t            *io_buf;
+
+    rs_shash_t          *binlog_func;
+
+    rs_reqdump_data_t   *data;
+    rs_reqdump_t        *req_dump;
     
     unsigned            open:1;
-    unsigned            io_thread_exit;
-    unsigned            dump_thread_exit;
+    unsigned            io_thread_exit:1;
+    unsigned            dump_thread_exit:1;
 }; 
 
-#define rs_request_dump_t_init(rd)                                           \
-    rs_ring_buffer2_t *rb;                                                   \
+#define rs_reqdump_data_t_init(rd)                                           \
     rs_binlog_info_t *bi;                                                    \
-    rs_buf_t *sb;                                                            \
     (rd)->dump_pos = 0;                                                      \
     (rd)->cli_fd = -1;                                                       \
     (rd)->notify_fd = -1;                                                    \
@@ -67,40 +66,51 @@ struct rs_request_dump_s {
     (rd)->filter_tables = NULL;                                              \
     (rd)->server_id = 0;                                                     \
     (rd)->dump_thread = 0;                                                   \
-    (rd)->rdi = NULL;                                                        \
+    (rd)->req_dump = NULL;                                                   \
     (rd)->io_thread = 0;                                                     \
     (rd)->dump_file = NULL;                                                  \
     (rd)->dump_tmp_file = NULL;                                              \
-    rb = &(rd->ring_buf);                                                    \
+    (rd)->ringbuf = NULL;                                                    \
+    (rd)->io_buf = NULL;                                                     \
+    (rd)->send_buf = NULL;                                                   \
+    (rd)->pool = NULL;                                                       \
+    (rd)->binlog_func = NULL;                                                \
     bi = &(rd->binlog_info);                                                 \
-    sb = &(rd->send_buf);                                                    \
-    rs_ring_buffer2_t_init(rb);                                              \
-    rs_buf_t_init(sb);                                                       \
-    sb = &(rd->io_buf);                                                      \
-    rs_buf_t_init(sb);                                                       \
     rs_binlog_info_t_init(bi)                                               
 
-struct rs_request_dump_info_s {
+struct rs_reqdump_s {
 
-    uint32_t            dump_num;  /* dump threads num */
-    uint32_t            free_dump_num;
-    rs_request_dump_t   *req_dumps;  /* dump threas pointer */
-    rs_request_dump_t   *free_req_dump;
+    uint32_t            num;  /* dump threads num */
+    uint32_t            free_num;
 
-    pthread_mutex_t     req_dump_mutex;
-    pthread_attr_t      thread_attr;
+    rs_reqdump_data_t   *data;  /* dump threas pointer */
+    rs_reqdump_data_t   *free;
+    int32_t             data_id;
+
+    pthread_mutex_t     thr_mutex;
+    pthread_attr_t      thr_attr;
+
+    rs_pool_t           *pool;
 };
+
+#define rs_reqdump_t_init(rd)                                                \
+    (rd)->num = 0;                                                           \
+    (rd)->free_num = 0;                                                      \
+    (rd)->data = NULL;                                                       \
+    (rd)->free = NULL;                                                       \
+    (rd)->pool = NULL
 
 void *rs_start_dump_thread(void *data); 
 void rs_free_dump_thread(void *data);
 void rs_free_io_thread(void *data);
 
 
-int rs_init_request_dump(rs_request_dump_info_t *rdi, uint32_t dump_num); 
-void rs_free_request_dump(rs_request_dump_info_t *rdi, rs_request_dump_t *rd); 
-rs_request_dump_t *rs_get_request_dump(rs_request_dump_info_t *rdi); 
+int rs_init_reqdump(rs_reqdump_t *rd, uint32_t num);
 
-void rs_free_request_dumps(rs_request_dump_info_t *rdi); 
-void rs_destroy_request_dumps(rs_request_dump_info_t *rdi);
+rs_reqdump_data_t *rs_get_reqdump_data(rs_reqdump_t *rd);
+void rs_free_reqdump_data(rs_reqdump_t *rd, rs_reqdump_data_t *d);
+
+void rs_freeall_reqdump_data(rs_reqdump_t *rd);
+void rs_destroy_reqdump(rs_reqdump_t *rd);
 
 #endif

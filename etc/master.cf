@@ -27,24 +27,27 @@ listen.port 1919
 # binlog index path
 binlog.index /var/log/mysql/mysql-bin.index
 
-# slab init size
-slab.initsize 100
+# pool init size
+pool.initsize 100
 
-# slab max memory size (10MB)
-slab.memsize 10485976
+# pool max memory size (10MB)
+pool.memsize 10485976
 
-# slab slab class grow factor
-slab.factor 1.5
+# pool slab class grow factor
+pool.factor 1.5
 
 # ring buffer num
 ringbuf.num 8000
 
-# send buf length
-sendbuf.len 10485760
+# send buf size
+sendbuf.size 10485760
 
-# io buf length (128MB)
-iobuf.len 10485760
-# iobuf.len 1023
+# io buf size (128MB)
+iobuf.size 10485760
+# iobuf.size 1023
 
-# current server_id
+# current mysql server_id
 server.id 1
+
+# max dump thread 
+dump.thread 36

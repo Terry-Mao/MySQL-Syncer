@@ -8,17 +8,42 @@ static int rs_init_master_conf(rs_master_info_t *mi);
 
 rs_master_info_t *rs_init_master_info(rs_master_info_t *om) 
 {
-    int                 nl, nd, err;
+    int                 i, nl, nd, id, err;
     rs_master_info_t    *mi;
+    rs_pool_t           *p;
 
     nl = 1;
     nd = 1;
 
-    mi = (rs_master_info_t *) malloc(sizeof(rs_master_info_t));
+    p = rs_create_pool(200, 1024 * 1024 * 10, rs_pagesize, RS_POOL_CLASS_IDX, 
+            1.5, RS_POOL_PREALLOC);
+
+    id = rs_palloc_id(p, sizeof(rs_master_info_t) + sizeof(rs_reqdump_t));
+    mi = (rs_master_info_t *) rs_palloc(p, sizeof(rs_master_info_t) + 
+            sizeof(rs_reqdump_t), id);
 
     if(mi == NULL) {
-        rs_log_err(rs_errno, "malloc() failed, sizeof(rs_master_into_t)");
         goto free;
+    }
+
+    mi->pool = p;
+    mi->cf = rs_create_conf(p, RS_MASTER_CONF_NUM);
+
+    if(mi->cf == NULL) {
+        goto free;
+    }
+
+    /* register binlog func */
+    if((mi->binlog_func = rs_create_shash(p, RS_BINLOG_EVENT_NUM)) == NULL) {
+       goto free; 
+    }
+
+    for(i = 0; i < RS_BINLOG_EVENT_NUM; i++) {
+        if(rs_shash_add(mi->binlog_func, rs_binlog_funcs[i].ev, 
+                rs_binlog_funcs[i].func) != RS_OK) 
+        {
+            goto free;            
+        }
     }
 
     rs_master_info_t_init(mi);
@@ -26,41 +51,6 @@ rs_master_info_t *rs_init_master_info(rs_master_info_t *om)
     /* init master conf */
     if(rs_init_master_conf(mi) != RS_OK) {
         goto free;
-    }
-
-    /* slab info */
-    if(mi->slab_factor <= 1) {
-        mi->slab_factor = RS_SLAB_GROW_FACTOR; 
-        rs_log_info("slab_facto use default value, %u", mi->slab_factor);
-    }
-
-    if(mi->slab_init_size <= 0) {
-        mi->slab_init_size = RS_SLAB_INIT_SIZE;
-        rs_log_info("slab_init_size use default value, %u", 
-                mi->slab_init_size);
-    }
-
-    if(mi->slab_mem_size <= 5 * 1024 * 1024) {
-        mi->slab_mem_size = RS_SLAB_MEM_SIZE; 
-        rs_log_info("slab_mem_size use default value, %u", mi->slab_mem_size);
-    }
-
-    /* ring buf num */
-    if(mi->ring_buf_num <= 0) {
-        mi->ring_buf_num = RS_RING_BUFFER_NUM;
-        rs_log_info("ring_buf_num use default value, %u", mi->ring_buf_num);
-    }
-
-    /* packet buf length */
-    if(mi->sendbuf_len <= RS_PACKBUF_LEN) {
-        mi->sendbuf_len = RS_PACKBUF_LEN; 
-        rs_log_info("sendbuf_len use default value, %u", mi->sendbuf_len);
-    }
-
-    /* io buf length */
-    if(mi->iobuf_len <= RS_IOBUF_LEN) {
-        mi->iobuf_len = RS_IOBUF_LEN; 
-        rs_log_info("iobuf_len use default value, %u", mi->iobuf_len);
     }
 
     if(om != NULL) {
@@ -93,24 +83,25 @@ rs_master_info_t *rs_init_master_info(rs_master_info_t *om)
 
 
         nd = (rs_strcmp(mi->binlog_idx_file, om->binlog_idx_file) != 0) && 
-            (om->ring_buf_num != mi->ring_buf_num);
+            (om->ringbuf_num != mi->ringbuf_num);
 
         if(!nd) {
             if(nl) {
                 rs_log_info("free dump threads");
                 /* free dump threads */
-                rs_free_request_dumps(om->req_dump_info);
+                rs_freeall_reqdump_data(om->req_dump);
             }
 
             rs_log_info("reuse dump threads");
 
-            mi->req_dump_info = om->req_dump_info;
-            om->req_dump_info = NULL; /* NOTICE: don't refree req_dump_info */
+            mi->req_dump = om->req_dump;
+            om->req_dump = NULL; /* NOTICE: don't refree req_dump_info */
         }
     } /* end om */
 
     if(nl) {
-        rs_log_info("start init dump listen");
+        rs_log_info("start listening on %s:%d", mi->listen_addr, 
+                mi->listen_port);
 
         /* init dump listen */
         if(rs_dump_listen(mi) != RS_OK) {
@@ -119,31 +110,24 @@ rs_master_info_t *rs_init_master_info(rs_master_info_t *om)
     }
 
     if(nd) {
-        rs_log_info("start init dump threads");
-
         /* init dump threads */
-        mi->req_dump_info = (rs_request_dump_info_t *) 
-            malloc(sizeof(rs_request_dump_info_t));
+        rs_log_info("start initing dump threads");
+        mi->req_dump = (rs_reqdump_t *) ((char *) mi + 
+                sizeof(rs_master_info_t));
 
-        if(mi->req_dump_info == NULL) {
-            rs_log_err(rs_errno, "malloc() failed, rs_request_dump_info_t");
-            goto free;
-        }
+        rs_reqdump_t_init(mi->req_dump);
 
-        if(rs_init_request_dump(mi->req_dump_info, RS_DUMP_THREADS_NUM) 
-                != RS_OK) 
-        {
+        if(rs_init_reqdump(mi->req_dump, mi->max_dump_thread) != RS_OK) {
             goto free;
         }
     }
 
-    rs_log_info("start accept thread");
-
     /* start accept thread */
+    rs_log_info("start accepting client");
     if((err = pthread_create(&(mi->accept_thread), NULL, 
                     rs_start_accept_thread, mi)) != 0) 
     {
-        rs_log_err(err, "pthread_create() failed, accept thread");
+        rs_log_err(err, "pthread_create() failed");
         goto free;
     }
 
@@ -158,50 +142,72 @@ free:
 
 static int rs_init_master_conf(rs_master_info_t *mi)
 {
-    rs_conf_t *c;
-
-    c = &(mi->conf);
-
-    if(
-            (rs_add_conf_kv(c, "listen.addr", &(mi->listen_addr), 
-                            RS_CONF_STR) != RS_OK) 
-            ||
-            (rs_add_conf_kv(c, "listen.port", &(mi->listen_port), 
-                            RS_CONF_INT32) != RS_OK) 
-            ||
-            (rs_add_conf_kv(c, "binlog.index", &(mi->binlog_idx_file), 
-                            RS_CONF_STR) != RS_OK) 
-            ||
-            (rs_add_conf_kv(c, "slab.factor", &(mi->slab_factor), 
-                            RS_CONF_DOUBLE) != RS_OK)
-            ||
-            (rs_add_conf_kv(c, "slab.memsize", &(mi->slab_mem_size), 
-                            RS_CONF_UINT32) != RS_OK)
-            ||
-            (rs_add_conf_kv(c, "slab.initsize", &(mi->slab_init_size), 
-                            RS_CONF_UINT32) != RS_OK)
-            ||
-            (rs_add_conf_kv(c, "ringbuf.num", &(mi->ring_buf_num), 
-                            RS_CONF_UINT32) != RS_OK)
-            ||
-            (rs_add_conf_kv(c, "sendbuf.len", &(mi->sendbuf_len), 
-                            RS_CONF_UINT32) != RS_OK)
-            ||
-            (rs_add_conf_kv(c, "server.id", &(mi->server_id), 
-                            RS_CONF_UINT32) != RS_OK)
-            ||
-            (rs_add_conf_kv(c, "iobuf.len", &(mi->iobuf_len), 
-                            RS_CONF_UINT32) != RS_OK)
-        )
-            {
-                rs_log_err(0, "rs_add_conf_kv() failed");
-                return RS_ERR;
-            }
-
-    /* init master conf */
-    if(rs_init_conf(c, rs_conf_path, RS_MASTER_MODULE_NAME) != RS_OK) {
+    if(rs_conf_register(mi->cf, "listen.addr", &(mi->listen_addr), 
+                RS_CONF_STR) != RS_OK)  
+    {
         return RS_ERR;
     }
 
-    return RS_OK;
+    if(rs_conf_register(mi->cf, "listen.port", &(mi->listen_port), 
+                RS_CONF_INT32) != RS_OK)
+    {
+        return RS_ERR;
+    }
+
+    if(rs_conf_register(mi->cf, "binlog.index", &(mi->binlog_idx_file), 
+                RS_CONF_STR) != RS_OK)
+    {
+        return RS_ERR;
+    }
+
+    if(rs_conf_register(mi->cf, "pool.factor", &(mi->pool_factor), 
+                RS_CONF_DOUBLE) != RS_OK)
+    {
+        return RS_ERR;    
+    }
+
+    if(rs_conf_register(mi->cf, "pool.memsize", &(mi->pool_mem_size), 
+                RS_CONF_UINT32) != RS_OK)
+    {
+        return RS_ERR; 
+    }
+
+    if(rs_conf_register(mi->cf, "pool.initsize", &(mi->pool_init_size), 
+                RS_CONF_UINT32) != RS_OK)
+    {
+        return RS_ERR;
+    }
+
+    if(rs_conf_register(mi->cf, "ringbuf.num", &(mi->ringbuf_num), 
+                RS_CONF_UINT32) != RS_OK) 
+    {
+        return RS_ERR;                         
+    }
+            
+    if(rs_conf_register(mi->cf, "sendbuf.size", &(mi->sendbuf_size), 
+                RS_CONF_UINT32) != RS_OK)
+    {
+        return RS_ERR;
+    }
+
+    if(rs_conf_register(mi->cf, "server.id", &(mi->server_id), 
+                RS_CONF_UINT32) != RS_OK)
+    {
+        return RS_ERR;
+    }
+
+    if(rs_conf_register(mi->cf, "iobuf.size", &(mi->iobuf_size), 
+                RS_CONF_UINT32) != RS_OK)
+    {
+        return RS_ERR;
+    }
+
+    if(rs_conf_register(mi->cf, "dump.thread", &(mi->max_dump_thread), 
+                RS_CONF_UINT32) != RS_OK)
+    {
+        return RS_ERR;
+    }
+
+    /* init master conf */
+    return rs_init_conf(mi->cf, rs_conf_path, RS_MASTER_MODULE_NAME);
 }

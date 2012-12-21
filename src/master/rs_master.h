@@ -5,13 +5,10 @@
 #include <rs_config.h>
 #include <rs_core.h>
 
-#define RS_MASTER_MODULE_NAME       "master"
-#define RS_DUMP_THREADS_NUM         36
-
-typedef struct rs_master_info_s         rs_master_info_t;
-typedef struct rs_request_dump_s        rs_request_dump_t;
-typedef struct rs_request_dump_info_s   rs_request_dump_info_t;
-typedef struct rs_binlog_info_s         rs_binlog_info_t;
+typedef struct rs_master_info_s     rs_master_info_t;
+typedef struct rs_reqdump_s         rs_reqdump_t;
+typedef struct rs_reqdump_data_s    rs_reqdump_data_t;
+typedef struct rs_binlog_info_s     rs_binlog_info_t;
 
 extern rs_master_info_t             *rs_master_info;
 

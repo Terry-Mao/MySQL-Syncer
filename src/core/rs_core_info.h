@@ -8,12 +8,6 @@
 #define RS_CORE_MODULE_NAME     "core"
 #define RS_CORE_CONF_NUM        6 
 
-
-#define RS_MAX_KEY_LEN          12
-#define RS_MAX_VALUE_LEN        PATH_MAX
-
-#define RS_MAX_MODULE_LEN       6
-
 typedef struct {
     char            *user;
     char            *cwd;

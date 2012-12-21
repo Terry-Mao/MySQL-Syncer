@@ -33,6 +33,7 @@ void rs_free_master(void *data)
 {
     int                 err;
     rs_master_info_t    *mi;
+    rs_pool_t           *p;
 
     mi = (data == NULL ? rs_master_info : (rs_master_info_t *) data);
 
@@ -40,22 +41,18 @@ void rs_free_master(void *data)
         return;
     }
 
-    rs_log_info("free master");
-
     /* exit accpet thread */
     if(mi->accept_thread != 0) {
 
         if(!mi->accept_thread_exit) {
             if((err = pthread_cancel(mi->accept_thread)) != 0) {
-                rs_log_err(err, "pthread_cancel() failed, accept_thread");
+                rs_log_err(err, "pthread_cancel() failed");
             }
         }
 
-
         if((err = pthread_join(mi->accept_thread, NULL)) != 0) {
-            rs_log_err(err, "pthread_join() failed, accept_thread");
+            rs_log_err(err, "pthread_join() failed");
         }
-
     }
 
     if(mi->svr_fd != -1) {
@@ -63,18 +60,15 @@ void rs_free_master(void *data)
     }
 
     /* close all request_dump*/
-    if(mi->req_dump_info != NULL) {
-        rs_destroy_request_dumps(mi->req_dump_info); 
-        free(mi->req_dump_info);
-    }
+    rs_destroy_reqdump(mi->req_dump); 
 
+    p = mi->pool;
     /* free conf */
-    rs_free_conf(&(mi->conf));
-
-    if(mi->conf.kv != NULL) {
-        free(mi->conf.kv);
-    }
+    rs_destroy_conf(mi->cf);
 
     /* free master info */
-    free(mi);
+    rs_pfree(p, mi, mi->id);
+
+    /* free pool */
+    rs_destroy_pool(p);
 }

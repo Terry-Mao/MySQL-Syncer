@@ -15,51 +15,36 @@ static void *rs_start_io_thread(void *data);
  */
 void *rs_start_dump_thread(void *data) 
 {
-    int                     err, id;
-    uint32_t                pack_len;
-    char                    *cbuf, *p;
-    rs_request_dump_t       *rd;
-    rs_ring_buffer2_data_t  *d;
-    rs_slab_t               *sl;
-    rs_buf_t                *send_buf;
+    int                 err, id;
+    uint32_t            pack_len;
+    char                *cbuf, *p;
+    rs_reqdump_data_t   *d;
+    rs_ringbuf_data_t   *rd;
 
     cbuf = NULL;
     p = NULL;
-    rd = (rs_request_dump_t *) data;
+    d = (rs_reqdump_data_t *) data;
     d = NULL;
-    sl = NULL;
-    send_buf = NULL;
 
     pthread_cleanup_push(rs_free_dump_thread, (void *) rd);
 
-    if(rd == NULL || rd->rdi == NULL) {
-        rs_log_err(rs_errno, "rs_start_dump_thread() failed, data is null");
-        goto free;
-    }
-
-    sl = &(rd->slab);
-    send_buf = &(rd->send_buf);
-
     /* get packet length (litte endian) */
-    if(rs_size_read(rd->cli_fd, &pack_len, RS_SLAVE_CMD_PACK_HEADER_LEN) 
+    if(rs_size_read(d->cli_fd, &pack_len, RS_SLAVE_CMD_PACK_HEADER_LEN) 
             == RS_ERR) 
     {
-        rs_log_err(rs_errno, "rs_size_read() in rs_start_dump_thread failed");
         goto free;
     }
 
     /* alloc cmd buf from mempool */
-    id = rs_slab_clsid(sl, pack_len + 1);
-    cbuf = (char *) rs_alloc_slab_chunk(sl, pack_len + 1, id);
+    id = rs_palloc_id(d->pool, pack_len + 1);
+    cbuf = (char *) rs_palloc(d->pool, pack_len + 1, id);
 
     if(cbuf == NULL) {
-        rs_log_err(0, "rs_start_dump_thread() failed, can't alloc cmd mem");
         goto free;
-    } 
+    }
 
     /* while get a full packet */
-    if(rs_size_read(rd->cli_fd, cbuf, pack_len) == RS_ERR) {
-        rs_log_err(rs_errno, "rs_size_read() in rs_start_dump_thread failed");
+    if(rs_size_read(d->cli_fd, cbuf, pack_len) == RS_ERR) {
         goto free;
     }
 
@@ -73,28 +58,25 @@ void *rs_start_dump_thread(void *data)
     }
 
     /* alloc dump_file and dump_tmp_file from mempool */
-    id = rs_slab_clsid(sl, PATH_MAX + 1);
-    rd->dump_file = (char *) rs_alloc_slab_chunk(sl, PATH_MAX + 1, id);
-
-    if(rd->dump_file == NULL) { 
-        rs_log_err(0, "rs_start_dump_thread() failed, can't alloc cmd mem");
+    id = rs_palloc_id(d->pool, PATH_MAX + 1);
+    if((d->dump_file = (char *) rs_palloc(d->pool, PATH_MAX + 1, id)) == NULL) 
+    {
         goto free;
     }
 
-    rd->dump_tmp_file = (char *) rs_alloc_slab_chunk(sl, PATH_MAX + 1, id);
-
-    if(rd->dump_tmp_file == NULL) {
-        rs_log_err(0, "rs_start_dump_thread() failed, can't alloc cmd mem");
+    if((d->dump_tmp_file = (char *) rs_palloc(d->pool, PATH_MAX + 1, id)) 
+            == NULL) 
+    {
         goto free;
     }
 
-    rs_memcpy(rd->dump_file, cbuf, p - cbuf);
-    rd->dump_num = rs_estr_to_uint32(p - 1);
-    rd->dump_pos = rs_str_to_uint32(p + 1);
+    rs_memcpy(d->dump_file, cbuf, p - cbuf);
+    d->dump_num = rs_estr_to_uint32(p - 1);
+    d->dump_pos = rs_str_to_uint32(p + 1);
 
     /* get filter tables */
     if((p = rs_strchr(p + 1, ',')) != NULL) {
-        rd->filter_tables = p;
+        d->filter_tables = p;
     }
 
     rs_log_info(
@@ -106,24 +88,23 @@ void *rs_start_dump_thread(void *data)
             "filter_tables = %s"
             "\n===================================\n",
             cbuf, 
-            rd->dump_file, 
-            rd->dump_num, 
-            rd->dump_pos, 
-            rd->filter_tables);
-
+            d->dump_file, 
+            d->dump_num, 
+            d->dump_pos, 
+            d->filter_tables);
 
     /* start io thread, read binlog */
-    if((err = pthread_create(&(rd->io_thread), &(rd->rdi->thread_attr)
-                    , rs_start_io_thread, (void *) rd)) != 0) 
+    if((err = pthread_create(&(d->io_thread), &(d->req_dump->thr_attr)
+                    , rs_start_io_thread, (void *) d)) != 0) 
     {
-        rs_log_err(err, "pthread_create() in rs_start_dump_thread failed");
+        rs_log_err(err, "pthread_create() faile");
         goto free;
     }
 
     /* loop get ringbuffer data */
     for( ;; ) {
 
-        err = rs_get_ring_buffer2(&(rd->ring_buf), &d);
+        err = rs_ringbuf_get(d->ringbuf, &rd);
 
         if(err == RS_ERR) {
             goto free;
@@ -132,27 +113,23 @@ void *rs_start_dump_thread(void *data)
         if(err == RS_EMPTY) {
 
             /* send reserved buf, so won't hungry */
-            if(rs_send_temp_buf(rd->cli_fd, send_buf) != RS_OK) {
-                rs_log_err(0, "rs_send_temp_buf() in rs_start_dump_thread "
-                        "failed()");
+            if(rs_send_tmpbuf(d->send_buf, d->cli_fd) != RS_OK) {
                 goto free;
             }
 
             /* spin wait */
-            err = rs_sleep_ring_buffer2(&(rd->ring_buf), &d);
+            err = rs_ringbuf_spin_wait(d->ringbuf, &rd);
 
             if(err != RS_OK) {
                 /* sleep wait, release cpu */
-                err = rs_timed_select(rd->cli_fd, 0, 
+                err = rs_timed_select(d->cli_fd, 0, 
                         RS_RING_BUFFER_EMPTY_SLEEP_USEC);
 
                 if(err == RS_ERR) {
                     goto free;
                 } else if(err == RS_OK) {
                     /* test slave alive */
-                    if(rs_read(rd->cli_fd, (void *) &pack_len, 1) <= 0) {
-                        rs_log_err(rs_errno, "rs_read() in rs_start_dump_thrad "
-                                "failed");
+                    if(rs_read(d->cli_fd, (void *) &pack_len, 1) <= 0) {
                         goto free;
                     }
 
@@ -165,18 +142,17 @@ void *rs_start_dump_thread(void *data)
         }
 
         // if have enough space buffer data
-        if((uint32_t) (send_buf->end - send_buf->last) >= 4 + d->len) {
+        if((uint32_t) (d->send_buf->end - d->send_buf->last) >= 4 + rd->len) {
 
-            send_buf->last = rs_cpymem(send_buf->last, &(d->len), 4);
-            send_buf->last = rs_cpymem(send_buf->last, d->data, d->len);
+            d->send_buf->last = rs_cpymem(d->send_buf->last, &(rd->len), 4);
+            d->send_buf->last = rs_cpymem(d->send_buf->last, rd->data, 
+                    rd->len);
 
-            rs_get_ring_buffer2_advance(&(rd->ring_buf));
+            rs_ringbuf_get_advance(d->ringbuf);
 
         } else {
             /* send buf */
-            if(rs_send_temp_buf(rd->cli_fd, send_buf) != RS_OK) {
-                rs_log_err(0, "rs_send_temp_buf() in rs_start_dump_thread "
-                        "failed()");
+            if(rs_send_tmpbuf(d->send_buf, d->cli_fd) != RS_OK) {
                 goto free;
             }
         }
@@ -191,18 +167,14 @@ free:;
 
 static void *rs_start_io_thread(void *data)
 {
-    rs_request_dump_t   *rd;
+    rs_reqdump_data_t   *d;
 
-    rd = (rs_request_dump_t *) data;
+    d = (rs_reqdump_data_t *) data;
 
-    pthread_cleanup_push(rs_free_io_thread, rd);
-
-    if(rd == NULL) {
-        goto free;
-    }
+    pthread_cleanup_push(rs_free_io_thread, d);
 
     /* open binlog index file */
-    if((rd->binlog_idx_fp = fopen(rd->binlog_idx_file, "r")) == NULL) {
+    if((d->binlog_idx_fp = fopen(d->binlog_idx_file, "r")) == NULL) {
         rs_log_err(rs_errno, "fopen(\"%s\") failed, binlog_idx_file");
         goto free;
     }
@@ -211,31 +183,31 @@ static void *rs_start_io_thread(void *data)
     for( ;; ) {
 
         /* open new binlog */
-        if((rd->binlog_fp = fopen(rd->dump_file, "r")) == NULL) {
+        if((d->binlog_fp = fopen(d->dump_file, "r")) == NULL) {
             rs_log_err(rs_errno, "fopen(\"%s\", \"r\") failed", 
-                    rd->dump_file);
+                    d->dump_file);
             goto free;
         }
 
-        rs_log_info("open a new binlog = %s", rd->dump_file);
+        rs_log_info("open a new binlog = %s", d->dump_file);
 
         /* skip magic num */
-        rd->dump_pos = rd->dump_pos == 0 ? RS_BINLOG_MAGIC_NUM_LEN : 
-            rd->dump_pos;
+        d->dump_pos = d->dump_pos == 0 ? RS_BINLOG_MAGIC_NUM_LEN : 
+            d->dump_pos;
 
-        if(fseek(rd->binlog_fp, rd->dump_pos, SEEK_SET) == -1) {
+        if(fseek(d->binlog_fp, d->dump_pos, SEEK_SET) == -1) {
             rs_log_err(rs_errno, "fseek() failed, seek_set pos = %u", 
-                    rd->dump_pos);
+                    d->dump_pos);
             goto free;
         }
 
         /* read binlog */
-        if(rs_read_binlog(rd) == RS_ERR) {
+        if(rs_read_binlog(d) == RS_ERR) {
             goto free;
         }
 
         /* close old binlog */
-        if(fclose(rd->binlog_fp) != RS_OK) {
+        if(fclose(d->binlog_fp) != RS_OK) {
             rs_log_err(rs_errno, "fclose() failed");
             goto free;
         }
@@ -249,147 +221,137 @@ free:;
 
 void rs_free_io_thread(void *data)
 {
-    rs_request_dump_t           *rd;
+    rs_reqdump_data_t   *d;
 
-    rd = (rs_request_dump_t *) data;
+    d = (rs_reqdump_data_t *) data;
 
-    if(rd != NULL) {
-        rd->io_thread_exit = 1;
-        rs_free_request_dump(rd->rdi, rd);
-    }
+    d->io_thread_exit = 1;
+    rs_free_reqdump_data(d->req_dump, d);
 
     rs_log_debug(0, "io thread stoped");
 }
 
 void rs_free_dump_thread(void *data)
 {
-    rs_request_dump_t           *rd;
+    rs_reqdump_data_t   *d;
 
-    rd = (rs_request_dump_t *) data;
+    d = (rs_reqdump_data_t *) data;
 
-    if(rd != NULL) {
-        rd->dump_thread_exit = 1;
-        rs_free_request_dump(rd->rdi, rd);
-    }
+    d->dump_thread_exit = 1;
+    rs_free_reqdump_data(d->req_dump, d);
 
     rs_log_debug(0, "dump thread stoped");
 }
 
-int rs_init_request_dump(rs_request_dump_info_t *rdi, uint32_t dump_num) 
+int rs_init_reqdump(rs_reqdump_t *rd, uint32_t num)
 {
-    int                 err;
+    int                 err, id;
     uint32_t            i;
-    rs_request_dump_t   *next;
+    rs_reqdump_data_t   *next;
 
-    if(rdi == NULL) {
+    id = rs_palloc_id(rd->pool, sizeof(rs_reqdump_data_t) * num);
+    rd->data = (rs_reqdump_data_t *) rs_palloc(rd->pool, 
+            sizeof(rs_reqdump_data_t) * num, id);
+
+    if(rd->data == NULL) {
         return RS_ERR;
     }
 
-    rdi->req_dumps = (rs_request_dump_t *) 
-        malloc(sizeof(rs_request_dump_t) * dump_num);
-
-    if(rdi->req_dumps == NULL) {
-        rs_log_err(rs_errno, "malloc() failed, rs_request_dump_t * dump_num");
-        return RS_ERR;
-    }
+    rd->data_id = id;
 
     /* init thread mutex */
-    if((err = pthread_mutex_init(&(rdi->req_dump_mutex), NULL)) != 0) {
-        rs_log_err(err, "pthread_mutex_init() failed, req_dump_mutex");
+    if((err = pthread_mutex_init(&(rd->thr_mutex), NULL)) != 0) {
+        rs_log_err(err, "pthread_mutex_init() failed");
         return RS_ERR;
     }
 
     /* init thread attr */
-    if((err = pthread_attr_init(&(rdi->thread_attr))) != 0) {
-        rs_log_err(err, "pthread_attr_init() failed, thread_attr");
+    if((err = pthread_attr_init(&(rd->thr_attr))) != 0) {
+        rs_log_err(err, "pthread_attr_init() failed");
         return RS_ERR;
     }
 
     /* set thread detached */
-    if((err = pthread_attr_setdetachstate(&(rdi->thread_attr), 
+    if((err = pthread_attr_setdetachstate(&(rd->thr_attr), 
                     PTHREAD_CREATE_DETACHED)) != 0) 
     {
-        rs_log_err(err, "pthread_attr_setdetachstate() failed, DETACHED");
+        rs_log_err(err, "pthread_attr_setdetachstate() failed");
         return RS_ERR;
     }
 
-    rdi->dump_num = dump_num;
-    rdi->free_dump_num = dump_num;
+    rd->num = num;
+    rd->free_num = num;
 
-    i = dump_num;
+    i = num;
     next = NULL;
 
     do {
 
         i--;
 
-        rdi->req_dumps[i].data = next;
-        next = &(rdi->req_dumps[i]);
-        rs_request_dump_t_init(next);
+        rd->data[i].data = next;
+        next = &(rd->data[i]);
+        rs_reqdump_data_t_init(next);
 
     } while(i);
 
-    rdi->free_req_dump = next;
+    rd->free = next;
 
     return RS_OK;
 }
 
-rs_request_dump_t *rs_get_request_dump(rs_request_dump_info_t *rdi) 
+rs_reqdump_data_t *rs_get_reqdump_data(rs_reqdump_t *rd) 
 {
     int                 err;
-    rs_request_dump_t   *rd;
-
-    if(rdi == NULL) {
-        return NULL;
-    }
+    rs_reqdump_data_t   *d;
 
     /* mutex_lock */
-    if((err = pthread_mutex_lock(&(rdi->req_dump_mutex))) != 0) {
-        rs_log_err(err, "pthread_mutex_lock() failed, req_dump_mutex");
+    if((err = pthread_mutex_lock(&(rd->thr_mutex))) != 0) {
+        rs_log_err(err, "pthread_mutex_lock() failed");
         return NULL;
     }
 
-    rd = rdi->free_req_dump;
+    d = rd->free;
 
     if(rd == NULL) {
         /* mutex_unlock */
-        if((err = pthread_mutex_unlock(&(rdi->req_dump_mutex))) != 0) {
-            rs_log_err(err, "pthread_mutex_unlock() failed, req_dump_mutex");
+        if((err = pthread_mutex_unlock(&(rd->thr_mutex))) != 0) {
+            rs_log_err(err, "pthread_mutex_unlock() failed");
         }
 
         return NULL;
     }
 
-    rdi->free_req_dump = rd->data;
-    rdi->free_dump_num--;
+    rd->free = d->data;
+    rd->free_num--;
 
     /* mutex_unlock */
-    if((err = pthread_mutex_unlock(&(rdi->req_dump_mutex))) != 0) {
-        rs_log_err(err, "pthread_mutex_unlock() failed, req_dump_mutex");
+    if((err = pthread_mutex_unlock(&(rd->thr_mutex))) != 0) {
+        rs_log_err(err, "pthread_mutex_unlock() failed");
         return NULL;
     }
 
-    rd->open = 1;
-    return rd;
+    d->open = 1;
+    return d;
 }
 
-void rs_free_request_dump(rs_request_dump_info_t *rdi, rs_request_dump_t *rd) 
+void rs_free_reqdump_data(rs_reqdump_t *d, rs_reqdump_data_t *rd) 
 {
     int         err;
 
-    if(rdi == NULL || rd == NULL || !rd->open) {
+    if(!rd->open) {
         return;
     }
 
     /* mutex_lock */
-    if((err = pthread_mutex_lock(&(rdi->req_dump_mutex))) != 0) {
-        rs_log_err(err, "pthread_mutex_lock() failed, req_dump_mutex");
+    if((err = pthread_mutex_lock(&(d->thr_mutex))) != 0) {
+        rs_log_err(err, "pthread_mutex_lock() failed");
         return;
     }
 
     if(!rd->open) {
-        if((err = pthread_mutex_unlock(&(rdi->req_dump_mutex))) != 0) {
-            rs_log_err(err, "pthread_mutex_unlock() failed, req_dump_mutex");
+        if((err = pthread_mutex_unlock(&(d->thr_mutex))) != 0) {
+            rs_log_err(err, "pthread_mutex_unlock() failed");
         }
         return;
     }
@@ -398,34 +360,21 @@ void rs_free_request_dump(rs_request_dump_info_t *rdi, rs_request_dump_t *rd)
 
     /* free request dump */
     if(rd->io_thread != 0) {
-
         if(!rd->io_thread_exit) {
             rs_log_debug(0, "stop io thread");
             if((err = pthread_cancel(rd->io_thread)) != 0) {
-                rs_log_err(err, "pthread_cancel() failed, io_thread");
+                rs_log_err(err, "pthread_cancel() failed");
             }
         }
-
-        /*
-           if((err = pthread_join(rd->io_thread, NULL)) != 0) {
-           rs_log_err(err, "pthread_join() failed, io_thread");
-           }
-           */
     }
 
     if(rd->dump_thread != 0) {
         if(!rd->dump_thread_exit) {
             rs_log_debug(0, "stop dump thread");
             if((err = pthread_cancel(rd->dump_thread)) != 0) {
-                rs_log_err(err, "pthread_cancel() failed, dump_thread");
+                rs_log_err(err, "pthread_cancel() failed");
             }
         }
-
-        /*
-           if((err = pthread_join(rd->dump_thread, NULL)) != 0) {
-           rs_log_err(err, "pthread_join() failed, dump_thread");
-           }
-           */
     }
 
     if(rd->cli_fd != -1) {
@@ -439,76 +388,67 @@ void rs_free_request_dump(rs_request_dump_info_t *rdi, rs_request_dump_t *rd)
     sleep(10);
 
     /* free ring buffer */
-    rs_free_ring_buffer2(&(rd->ring_buf));
-
-    /* free slab */
-    rs_free_slabs(&(rd->slab));
+    rs_destroy_ringbuf(rd->ringbuf);
 
     /* free packbuf */
-    rs_free_temp_buf(&(rd->send_buf));
+    rs_destroy_tmpbuf(rd->send_buf);
 
     /* free iobuf */
-    rs_free_temp_buf(&(rd->io_buf));
+    rs_destroy_tmpbuf(rd->io_buf);
 
     /* close binlog fp */
     if(rd->binlog_fp != NULL) {
         if(fclose(rd->binlog_fp) != 0) {
-            rs_log_err(rs_errno, "fclose() failed, binlog fp");
+            rs_log_err(rs_errno, "fclose() failed");
         }
     }
 
     if(rd->binlog_idx_fp != NULL) {
         if(fclose(rd->binlog_idx_fp) != 0) {
-            rs_log_err(rs_errno, "fclose() failed, binlog file");
+            rs_log_err(rs_errno, "fclose() failed");
         }
     }
 
 
     /* update free thread p */
-    rd->data = rdi->free_req_dump;
-    rdi->free_req_dump = rd;
-    rdi->free_dump_num++;
+    rd->data = d->free;
+    d->free = rd;
+    d->free_num++;
 
-    rs_request_dump_t_init(rd);
+    rs_reqdump_data_t_init(rd);
 
     /* mutex_unlock */
-    if((err = pthread_mutex_unlock(&(rdi->req_dump_mutex))) != 0) {
-        rs_log_err(err, "pthread_mutex_unlock() failed, req_dump_mutex");
+    if((err = pthread_mutex_unlock(&(d->thr_mutex))) != 0) {
+        rs_log_err(err, "pthread_mutex_unlock() failed");
     }
 }
 
-void rs_free_request_dumps(rs_request_dump_info_t *rdi) 
+void rs_freeall_reqdump_data(rs_reqdump_t *d) 
 {
     uint32_t i;
 
-    if(rdi != NULL) {
-        for(i = 0; i < rdi->dump_num; i++) {
-            if(rdi->req_dumps[i].open) {
-                rs_free_request_dump(rdi, &(rdi->req_dumps[i]));
-            }
+    for(i = 0; i < d->num; i++) {
+        if(d->data[i].open) {
+            rs_free_reqdump_data(d, &(d->data[i]));
         }
     }
 }
 
-void rs_destroy_request_dumps(rs_request_dump_info_t *rdi)
+void rs_destroy_reqdump(rs_reqdump_t *d)
 {
     int err;
 
-    if(rdi != NULL) {
+    rs_freeall_reqdump_data(d);
 
-        rs_free_request_dumps(rdi);
+    if((err = pthread_mutex_destroy(&(d->thr_mutex))) != 0) {
+        rs_log_err(err, "pthread_mutex_destroy() failed");
+    }
 
-        if((err = pthread_mutex_destroy(&(rdi->req_dump_mutex))) != 0) {
-            rs_log_err(err, "pthread_mutex_destroy() failed, "
-                    "rdi->req_dump_mutex");
-        }
+    if((err = pthread_attr_destroy(&(d->thr_attr))) != 0) {
+        rs_log_err(err, "pthread_attr_destroy() failed");
+    }
 
-        if((err = pthread_attr_destroy(&(rdi->thread_attr))) != 0) {
-            rs_log_err(err, "pthread_attr_destroy() failed, rdi->thread_attr");
-        }
-
-        if(rdi->req_dumps != NULL) {
-            free(rdi->req_dumps);
-        }
+    if(d->data != NULL) {
+        rs_pfree(d->pool, d->data, d->data_id);
     }
 }

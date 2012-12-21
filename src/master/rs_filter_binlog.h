@@ -12,8 +12,8 @@
 
 #define RS_MYSQL_SKIP_DATA          0
 
-int rs_def_filter_data_handle(rs_request_dump_t *rd);
-int rs_def_create_data_handle(rs_request_dump_t *rd);
+int rs_binlog_filter_data(rs_reqdump_data_t *d);
+int rs_binlog_create_data(rs_reqdump_data_t *d);
 
 
 #endif

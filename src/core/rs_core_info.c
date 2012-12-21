@@ -20,18 +20,21 @@ rs_core_info_t *rs_init_core_info(rs_core_info_t *oc)
 
     p = rs_create_pool(200, 1024 * 1024 * 10, rs_pagesize, RS_POOL_CLASS_IDX, 
             1.5, RS_POOL_PREALLOC);
-    id = rs_palloc_id(p, sizeof(rs_core_info_t) + sizeof(rs_conf_t));
 
-    ci = (rs_core_info_t *) rs_palloc(p, 
-            sizeof(rs_core_info_t) + sizeof(rs_conf_t), id);
+    id = rs_palloc_id(p, sizeof(rs_core_info_t));
+    ci = (rs_core_info_t *) rs_palloc(p, sizeof(rs_core_info_t), id);
 
     if(ci == NULL) {
         goto free;
     }
 
-    ci->cf = (rs_conf_t *) ((char *) ci + sizeof(rs_core_info_t));
     ci->pool = p;
     ci->id = id;
+    ci->cf = rs_create_conf(p, RS_CORE_CONF_NUM);
+
+    if(ci->cf == NULL) {
+        goto free;
+    }
 
     rs_core_info_t_init(ci);
 
@@ -124,11 +127,13 @@ static int rs_init_core_conf(rs_core_info_t *ci)
         return RS_ERR;    
     }
 
-    if(rs_conf_register(ci->cf, "pid", &(ci->pid_path), RS_CONF_STR) != RS_OK) {
+    if(rs_conf_register(ci->cf, "pid", &(ci->pid_path), RS_CONF_STR) != RS_OK) 
+    {
         return RS_ERR;    
     }
 
-    if(rs_conf_register(ci->cf, "log", &(ci->log_path), RS_CONF_STR) != RS_OK) {
+    if(rs_conf_register(ci->cf, "log", &(ci->log_path), RS_CONF_STR) != RS_OK) 
+    {
         return RS_ERR;    
     }
 
@@ -150,7 +155,15 @@ static int rs_init_core_conf(rs_core_info_t *ci)
 
 void rs_free_core(rs_core_info_t *ci)
 {
+    rs_pool_t   *p;
+
     /* free conf */
     rs_destroy_conf(ci->cf);
-    rs_destroy_pool(ci->pool);
+
+    p = ci->pool;
+    /* free core_info */
+    rs_pfree(p, ci, ci->id);
+
+    /* free pool */
+    rs_destroy_pool(p);
 }

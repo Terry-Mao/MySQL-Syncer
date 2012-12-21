@@ -20,27 +20,12 @@ int rs_dump_listen(rs_master_info_t *mi)
     int     err, tries, reuseaddr;
     struct  sockaddr_in svr_addr;
 
-    if(mi == NULL) {
-        return RS_ERR;
-    }
-
     /* init var */
     reuseaddr = 1;
     rs_memzero(&svr_addr, sizeof(svr_addr));
 
     svr_addr.sin_family = AF_INET;
-
-    if(mi->listen_port <= 0) {
-        rs_log_err(0, "listen_port is invalid");
-        goto free;
-    }
- 
     svr_addr.sin_port = htons(mi->listen_port);
-
-    if(mi->listen_addr == NULL) {
-        rs_log_err(0, "listen_addr must not be null");
-        goto free;
-    }
 
     if (inet_pton(AF_INET, mi->listen_addr, &(svr_addr.sin_addr)) != 1) {
         rs_log_err(rs_errno, "inet_pton() failed, %s", mi->listen_addr);
@@ -105,21 +90,15 @@ free :
 
 void *rs_start_accept_thread(void *data) 
 {
-    int                     err, cli_fd, i;
+    int                     err, cli_fd;
     socklen_t               socklen;
     rs_master_info_t        *mi;
     struct                  sockaddr_in cli_addr;
-    rs_request_dump_t       *rd;
-    rs_shash_t              *sh;
+    rs_reqdump_data_t       *d;
 
     mi = (rs_master_info_t *) data;
 
     pthread_cleanup_push(rs_free_accept_thread, mi);
-
-    if(mi == NULL) {
-        rs_log_err(0, "accept thread can not get master info struct");
-        goto free;
-    }
 
     for( ;; ) {
 
@@ -135,72 +114,48 @@ void *rs_start_accept_thread(void *data)
             }
 
             rs_log_err(rs_errno, "accept() failed");
-
             goto free;
         }
 
         /* register slave */
-        rd = rs_get_request_dump(mi->req_dump_info);
+        d = rs_get_reqdump_data(mi->req_dump);
 
-        if(rd == NULL) {
-            rs_log_err(0, "no more free request_dump struct");
+        if(d == NULL) {
             rs_close(cli_fd);
             cli_fd = -1;
             continue;
-        } 
-
-        /* set mysql server_id */
-        rd->server_id = mi->server_id;
-
-        /* init ring buffer */
-        if(rs_init_ring_buffer2(&(rd->ring_buf), RS_RING_BUFFER_NUM) != RS_OK) 
-        {
-            goto free;
         }
 
-        /* init slab */
-        if(rs_init_slab(&(rd->slab), mi->slab_init_size, mi->slab_factor
-                    , mi->slab_mem_size, RS_SLAB_PREALLOC) != RS_OK) 
+        /* init ring buffer */
+        if((d->ringbuf = rs_create_ringbuf(mi->pool, mi->ringbuf_num)) 
+                == NULL)
         {
             goto free;
         }
 
         /* init packbuf */
-        if(rs_create_temp_buf(&(rd->send_buf), mi->sendbuf_len) != RS_OK) {
+        if((d->send_buf = rs_create_tmpbuf(mi->sendbuf_size)) == NULL) {
             goto free; 
         }
 
         /* init iobuf */
-        if(rs_create_temp_buf(&(rd->io_buf), mi->iobuf_len) != RS_OK) {
+        if((d->io_buf = rs_create_tmpbuf(mi->iobuf_size)) == NULL) {
             goto free;
         }
 
-        /* init event_hander hash */
-        if(sh = rs_init_shash(RS_BINLOG_EVENT_NUM) != NULL) {
-            goto free;
-        }
-
-        //rd->event_handler = 
-
-        /* register events */
-        for(i = 0; i < RS_BINLOG_EVENT_NUM; i++) {
-            if(rs_add_shash(rs_binlog_event_map[i].key, 
-                        &(rs_binlog_event_map[i].handler), 
-                        &(rd->event_handler)) != RS_OK) 
-            {
-                goto free; 
-            }
-        }
-
-        rd->cli_fd = cli_fd;
-        rd->binlog_idx_file = mi->binlog_idx_file;
-        rd->rdi = mi->req_dump_info;
+        d->binlog_func = mi->binlog_func;
+        d->pool = mi->pool;
+        d->cli_fd = cli_fd;
+        d->binlog_idx_file = mi->binlog_idx_file;
+        d->req_dump = mi->req_dump;
+        d->server_id = mi->server_id;
 
         /* create dump thread */
-        if((err = pthread_create(&(rd->dump_thread), &(rd->rdi->thread_attr), 
-                        rs_start_dump_thread, (void *) rd)) != 0) 
+        if((err = pthread_create(&(d->dump_thread), 
+                        &(d->req_dump->thr_attr), 
+                        rs_start_dump_thread, (void *) d)) != 0) 
         {
-            rs_log_err(err, "pthread_create() failed, req_dump thread");
+            rs_log_err(err, "pthread_create() failed");
             goto free;
         }
     }
@@ -216,8 +171,5 @@ static void rs_free_accept_thread(void *data)
     rs_master_info_t    *mi;
 
     mi = (rs_master_info_t *) data;
-
-    if(mi != NULL) {
-        mi->accept_thread_exit = 1;
-    }
+    mi->accept_thread_exit = 1;
 }

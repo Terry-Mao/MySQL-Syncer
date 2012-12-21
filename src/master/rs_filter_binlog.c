@@ -4,27 +4,20 @@
 #include <rs_master.h>
 
 
-int rs_def_filter_data_handle(rs_request_dump_t *rd)
+int rs_def_filter_data_handle(rs_reqdump_data_t *rd)
 {
     return RS_OK;
 }
 
-int rs_def_create_data_handle(rs_request_dump_t *rd) 
+int rs_binlog_create_data(rs_reqdump_data_t *rd) 
 {
     int                     i, r, len;
     char                    *p, istr[UINT32_LEN + 1];
     rs_binlog_info_t        *bi;
-    rs_ring_buffer2_data_t  *d;
-    rs_slab_t               *sl;
-
-    if(rd == NULL) {
-        return RS_ERR;
-    }
+    rs_ringbuf_data_t       *rbd;
 
     i = 0;
     bi = &(rd->binlog_info);
-    sl = &(rd->slab);
-
 
     if(bi->mev == 0) {
         if(bi->skip_n++ % RS_SKIP_DATA_FLUSH_NUM != 0) {
@@ -35,7 +28,7 @@ int rs_def_create_data_handle(rs_request_dump_t *rd)
 
     for( ;; ) {
 
-        r = rs_set_ring_buffer2(&(rd->ring_buf), &d);
+        r = rs_ringbuf_set(rd->ringbuf, &rbd);
 
         if(r == RS_FULL) {
             if(i % 60 == 0) {
@@ -55,10 +48,10 @@ int rs_def_create_data_handle(rs_request_dump_t *rd)
 
         if(r == RS_OK) {
 
-            /* free slab chunk */
-            if(d->data != NULL && d->id >= 0 && d->len > 0) {
-                rs_free_slab_chunk(sl, d->data, d->id); 
-                rs_ring_buffer2_data_t_init(d);
+            /* free memory */
+            if(rbd->data != NULL && rbd->id >= 0 && rbd->len > 0) {
+                rs_pfree(rd->pool, rbd->data, rbd->id); 
+                rs_ringbuf_data_t_init(rbd);
             }
 
             /* rs_uint32_to_str(rd->dump_pos, istr); */
@@ -67,19 +60,19 @@ int rs_def_create_data_handle(rs_request_dump_t *rd)
 
             if(bi->mev == 0) {
 
-                d->len = len;
-                d->id = rs_slab_clsid(sl, len);
-                d->data = rs_alloc_slab_chunk(sl, len, d->id);
+                rbd->len = len;
+                rbd->id = rs_palloc_id(rd->pool, len);
+                rbd->data = rs_palloc(rd->pool, len, rbd->id);
 
-                if(d->data == NULL) {
+                if(rbd->data == NULL) {
                     return RS_ERR;
                 }
 
-                len = snprintf(d->data, d->len, "%s,%s,%c", rd->dump_file, 
+                len = snprintf(rbd->data, rbd->len, "%s,%s,%c", rd->dump_file, 
                         istr, bi->mev);
 
                 if(len < 0) {
-                    rs_log_err(rs_errno, "snprint() failed, dump cmd"); 
+                    rs_log_err(rs_errno, "snprint() failed");
                     return RS_ERR;
                 }
 
@@ -92,38 +85,35 @@ int rs_def_create_data_handle(rs_request_dump_t *rd)
                         + rs_strlen(bi->tb) + 3 + rs_strlen(bi->db) + 4 + 
                         bi->cn + 4 + bi->ml;
 
-                    rs_log_debug(0, "CMD LEN = %d", len);
+                    rbd->len = len;
+                    rbd->id = rs_palloc_id(rd->pool, len);
+                    rbd->data = rs_palloc(rd->pool, len, rbd->id);
 
-                    d->len = len;
-                    d->id = rs_slab_clsid(sl, len);
-                    d->data = rs_alloc_slab_chunk(sl, len, d->id);
-
-                    if(d->data == NULL) {
+                    if(rbd->data == NULL) {
                         return RS_ERR;
                     }
 
-                    len = snprintf(d->data, d->len, "%s,%u,%c,%s.%s,", 
+                    len = snprintf(rbd->data, rbd->len, "%s,%u,%c,%s.%s,", 
                             rd->dump_file, rd->dump_pos, bi->mev, bi->db, 
                             bi->tb);
 
-                    rs_log_debug(0, "RBR PREFIX LEN = %d", len);
-
                     if(len < 0) {
-                        rs_log_err(rs_errno, "snprint() failed, dump cmd"); 
+                        rs_log_err(rs_errno, "snprint() failed");
                         return RS_ERR;
                     }
 
-                    p = (char *) d->data + len;
+                    p = (char *) rbd->data + len;
                     p = rs_cpymem(p, &(bi->cn), 4);
                     p = rs_cpymem(p, bi->ct, bi->cn);
                     p = rs_cpymem(p, &(bi->ml), 4);
                     p = rs_cpymem(p, bi->cm, bi->ml);
 
-                    rs_memcpy(p, bi->data, d->len - len - 8 - bi->cn - bi->ml);
+                    rs_memcpy(p, bi->data, rbd->len - len - 8 - bi->cn - 
+                            bi->ml);
                 }
             }
 
-            rs_set_ring_buffer2_advance(&(rd->ring_buf));
+            rs_ringbuf_set_advance(rd->ringbuf);
 
             break;
         }

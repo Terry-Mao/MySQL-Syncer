@@ -194,9 +194,6 @@ rs_pool_t *rs_create_pool(uint32_t init_size, uint32_t mem_size,
     p->slab_class = (rs_pool_class_t *) (t + sizeof(rs_pool_t));
     p->start = t + sizeof(rs_pool_t) + sizeof(rs_pool_class_t) * (max_idx + 1);
     p->cur = p->start;
-
-    rs_memzero(p->slab_class, sizeof(p->slab_class));
-
     p->flag = flag;
     p->max_size = mem_size;
     p->free_size = mem_size;

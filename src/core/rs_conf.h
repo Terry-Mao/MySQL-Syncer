@@ -5,6 +5,10 @@
 #include <rs_config.h>
 #include <rs_core.h>
 
+#define RS_MAX_KEY_LEN          12
+#define RS_MAX_VALUE_LEN        PATH_MAX
+#define RS_MAX_MODULE_LEN       6
+
 #define RS_CONF_BUFFER_LEN      1024
 #define RS_CONF_DEFAULT_NUM     16
 

@@ -3,29 +3,25 @@
 #include <rs_core.h>
 #include <rs_master.h>
 
-int rs_read_binlog(rs_request_dump_t *rd) 
+int rs_read_binlog(rs_reqdump_data_t *rd) 
 {
-    int                 r, err;
-    char                key[3];
-    rs_event_handler    *handler;
-
-    if(rd == NULL) {
-        return RS_ERR;
-    }
+    int             r, err;
+    char            key[3];
+    rs_binlog_func  handler;
 
     for( ;; ) {
 
         /* HEADER */
-        if((r = rs_binlog_header_event(rd)) != RS_OK) {
+        if((r = rs_binlog_header_handler(rd)) != RS_OK) {
             goto free;
         }    
 
         /* get event_key */
         rs_uint32_to_str(rd->binlog_info.t, key);
 
-        err = rs_get_shash(rd->event_handler, key, (void *) &handler);
+        err = rs_shash_get(rd->binlog_func, key, (void *) &handler);
 
-        if(err = RS_KEY_NOT_EXISTS) {
+        if(err == RS_NOT_EXISTS) {
             rs_log_err(0, "unknow binlog evnet");
             return RS_ERR;
         }
@@ -36,7 +32,7 @@ int rs_read_binlog(rs_request_dump_t *rd)
         }
 
         /* FINISH */
-        if((r = rs_binlog_finish_event(rd)) != RS_OK) {
+        if((r = rs_binlog_finish_handler(rd)) != RS_OK) {
             break; 
         }
     }
@@ -44,11 +40,11 @@ int rs_read_binlog(rs_request_dump_t *rd)
 free: 
 
     /* clean old file io buffer */
-    rd->io_buf.pos = rd->io_buf.last;
+    rd->io_buf->pos = rd->io_buf->last;
     return r;
 }
 
-int rs_eof_read_binlog2(rs_request_dump_t *rd, void *buf, size_t size) 
+int rs_eof_read_binlog2(rs_reqdump_data_t *rd, void *buf, size_t size) 
 {
     int         wd1, wd2, err, r;
     size_t      ms, n, ls, tl; 
@@ -56,35 +52,31 @@ int rs_eof_read_binlog2(rs_request_dump_t *rd, void *buf, size_t size)
     struct      inotify_event *e;
     char        eb[1024], *p, *f;
 
-    if(rd == NULL) {
-        return RS_ERR;
-    }
-
     n = 0;
     wd1 = -1;
     wd2 = -2;
     f = buf;
     r = RS_ERR;
-    ms = rs_min((uint32_t) (rd->io_buf.last - rd->io_buf.pos), size);
+    ms = rs_min((uint32_t) (rd->io_buf->last - rd->io_buf->pos), size);
 
     /* use io_buf */
     if(ms > 0) {
-        f = rs_cpymem(f, rd->io_buf.pos, ms);
-        rd->io_buf.pos += ms;
+        f = rs_cpymem(f, rd->io_buf->pos, ms);
+        rd->io_buf->pos += ms;
     }
 
     while(ms < size) {
 
         /* feed io_buf */
-        n = fread(rd->io_buf.start, 1, rd->io_buf.size, rd->binlog_fp);
+        n = fread(rd->io_buf->start, 1, rd->io_buf->size, rd->binlog_fp);
 
         if(n > 0) {
             ls = rs_min(n, size - ms);
 
-            f = rs_cpymem(f, rd->io_buf.start, ls);
+            f = rs_cpymem(f, rd->io_buf->start, ls);
 
-            rd->io_buf.pos = rd->io_buf.start + ls; 
-            rd->io_buf.last = rd->io_buf.start + n;
+            rd->io_buf->pos = rd->io_buf->start + ls; 
+            rd->io_buf->last = rd->io_buf->start + n;
 
             ms += ls;
         } else {
@@ -183,15 +175,11 @@ free:
     return r;
 }
 
-int rs_has_next_binlog(rs_request_dump_t *rd)
+int rs_has_next_binlog(rs_reqdump_data_t *rd)
 {
     uint32_t    n;
     char        *s, *p;
     FILE        *fp;
-
-    if(rd == NULL) {
-        return RS_ERR;
-    }
 
     fp = rd->binlog_idx_fp;
     s = rd->dump_tmp_file;

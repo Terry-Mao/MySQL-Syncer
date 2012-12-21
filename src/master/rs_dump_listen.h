@@ -10,7 +10,7 @@
 #define RS_RETRY_BIND_TIMES     5
 #define RS_RETRY_BIND_SLEEP_MSC 500
 
-int rs_dump_listen(rs_master_info_t *mi); 
-void *rs_start_accept_thread(void *data); 
+int     rs_dump_listen(rs_master_info_t *mi); 
+void    *rs_start_accept_thread(void *data); 
 
 #endif

@@ -165,8 +165,8 @@ struct rs_binlog_info_s {
 #define RS_BINLOG_WRITE_ROWS_TABLE_ID_LEN 6
 #define RS_BINLOG_WRITE_ROWS_RESERVED_LEN 2
 
-int rs_read_binlog(rs_request_dump_t *rd);
-int rs_has_next_binlog(rs_request_dump_t *rd);
-int rs_eof_read_binlog2(rs_request_dump_t *rd, void *buf, size_t size);
+int rs_read_binlog(rs_reqdump_data_t *d);
+int rs_has_next_binlog(rs_reqdump_data_t *d);
+int rs_eof_read_binlog2(rs_reqdump_data_t *d, void *buf, size_t size);
 
 #endif
