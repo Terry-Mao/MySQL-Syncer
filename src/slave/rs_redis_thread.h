@@ -6,6 +6,7 @@
 #include <rs_core.h>
 #include <rs_slave.h>
 
+
 #define RS_REDIS_CMD_COMMIT_NUM             36
 #define RS_RING_BUFFER_EMPTY_SLEEP_USEC     (1000 * 10)
 

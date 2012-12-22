@@ -47,9 +47,9 @@ int rs_send_tmpbuf(rs_buf_t *b, int fd)
     return RS_OK;
 }
 
-int rs_recv_tmpbuf(rs_but_t *b, int fd, void *data, uint32_t size)
+int rs_recv_tmpbuf(rs_buf_t *b, int fd, void *data, uint32_t size)
 {
-    uint32_t    l, s;
+    int32_t     l, s;
     ssize_t     n;
 
     if(size > b->size) {
@@ -58,7 +58,7 @@ int rs_recv_tmpbuf(rs_but_t *b, int fd, void *data, uint32_t size)
 
     l = b->last - b->pos;
 
-    if(l >= size) {
+    if((uint32_t) l >= size) {
         rs_memcpy(data, b->pos, size);
         b->pos += size;
         return RS_OK;

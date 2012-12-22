@@ -5,7 +5,7 @@
 
 static void rs_free_redis_thread(void *data);
 static int rs_redis_dml_data(rs_slave_info_t *si, char *buf, uint32_t len);
-static int rs_flush_slave_info(rs_slave_info_t *si, char *buf, uint32_t len);
+static int rs_flush_slave_info(rs_slave_info_t *si);
 static int rs_redis_batch_commit(rs_slave_info_t *si);
 
 void *rs_start_redis_thread(void *data) 
@@ -23,7 +23,7 @@ void *rs_start_redis_thread(void *data)
 
     for( ;; ) {
 
-        err = rs_get_ring_buffer2(si->ring_buf, &rbd);
+        err = rs_ringbuf_get(si->ringbuf, &rbd);
 
         if(err == RS_ERR) {
             rs_log_err(0, "rs_get_ring_buffer() failed");
@@ -36,7 +36,7 @@ void *rs_start_redis_thread(void *data)
                 goto free;
             }
 
-            err = rs_ringbuf_spin_wait(si->ringbuf);
+            err = rs_ringbuf_spin_wait(si->ringbuf, &rbd);
 
             if(err != RS_OK) {
                 if(rs_flush_slave_info(si) != RS_OK) {
@@ -47,6 +47,7 @@ void *rs_start_redis_thread(void *data)
             }
         }
 
+        si->cur_binlog_save++;
         p = rbd->data;
 
         /* get flush info */
@@ -56,6 +57,8 @@ void *rs_start_redis_thread(void *data)
         }
 
         len = (p - (char *) rbd->data);
+        rs_memcpy(si->dump_info, (char *) rbd->data, len);
+        si->dump_info[len] = '\0';
 
         /* commit to redis */
         if(rs_redis_dml_data(si, p, rbd->len - len) != RS_OK) {
@@ -63,7 +66,7 @@ void *rs_start_redis_thread(void *data)
         }
 
         /* flush slave.info */
-        if(rs_flush_slave_info(si, (char *) rbd->data, len) != RS_OK) {
+        if(rs_flush_slave_info(si) != RS_OK) {
             goto free;
         }
 
@@ -80,7 +83,7 @@ free:;
 static int rs_redis_dml_data(rs_slave_info_t *si, char *buf, uint32_t len) 
 {
     char                *p, t, *e;
-    uint32_t            rl;
+    uint32_t            rl, tl;
     rs_redis_dml_func   handler;
 
     p = buf;
@@ -88,7 +91,7 @@ static int rs_redis_dml_data(rs_slave_info_t *si, char *buf, uint32_t len)
     rl = 0;
     e =  NULL;
 
-    p++; /* NOTICE : pos,mev */
+    p++; /* NOTICE : pos\nmev */
     t = *p++;
 
     if(t == RS_MYSQL_SKIP_DATA) {
@@ -97,10 +100,10 @@ static int rs_redis_dml_data(rs_slave_info_t *si, char *buf, uint32_t len)
             t == RS_DELETE_ROWS_EVENT) 
     {
         p++; /* NOTICE : mev,db.table\0 */
-        tl = rs_strlen(p) + 1;
+        tl = rs_strlen(p);
         rl = len - 4 - tl;
 
-        if(rs_shash_get(si->table_func, p, &handler) != RS_OK) {
+        if(rs_shash_get(si->table_func, p, (void **) &handler) != RS_OK) {
             return RS_ERR;
         }
 
@@ -129,8 +132,9 @@ static int rs_redis_dml_data(rs_slave_info_t *si, char *buf, uint32_t len)
  *
  *  On success, RS_OK is returned. On error, RS_ERR is returned
  */
-static int rs_flush_slave_info(rs_slave_info_t *si, char *buf, uint32_t len) 
+static int rs_flush_slave_info(rs_slave_info_t *si) 
 {
+    int32_t         len;
     struct timeval  tv;
     ssize_t         n;
 
@@ -139,8 +143,8 @@ static int rs_flush_slave_info(rs_slave_info_t *si, char *buf, uint32_t len)
         return RS_ERR;
     }
 
-    if(++si->cur_binlog_save < si->binlog_save == 0 && 
-            tv.tv_sec - si->cur_binlog_savesec < si->binlog_savesec) 
+    if(si->cur_binlog_save < si->binlog_save && 
+            (tv.tv_sec - si->cur_binlog_savesec) < si->binlog_savesec) 
     {
         return RS_OK;
     }
@@ -153,9 +157,11 @@ static int rs_flush_slave_info(rs_slave_info_t *si, char *buf, uint32_t len)
     si->cur_binlog_save = 1;
     si->cur_binlog_savesec = tv.tv_sec;
 
-    rs_log_info("flush slave.info %*.*s", len, len, buf);
+    rs_log_info("flush slave.info %s", si->dump_info);
 
-    n = rs_write(si->info_fd, buf, len);
+    len = rs_strlen(si->dump_info);
+
+    n = rs_write(si->info_fd, si->dump_info, len);
 
     if(n != len) {
         return RS_ERR;

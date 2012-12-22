@@ -11,12 +11,10 @@ int rs_register_tables(rs_slave_info_t *si)
         return RS_ERR;
     }
 
-    if(rs_shash_add(si->table_func, "test.test", (void *) rs_mysql_test_test) 
-            != RS_OK) 
+    if(rs_shash_add(si->table_func, "test.test", rs_dml_test_test) != RS_OK) 
     {
         return RS_ERR;
     }
 
     return RS_OK;
 }
-

@@ -27,7 +27,7 @@ struct rs_buf_s {
 
 rs_buf_t *rs_create_tmpbuf(uint32_t size);
 int rs_send_tmpbuf(rs_buf_t *b, int fd);
-int rs_recv_tmpbuf(rs_but_t *b, int fd, void *data, uint32_t size);
+int rs_recv_tmpbuf(rs_buf_t *b, int fd, void *data, uint32_t size);
 void rs_destroy_tmpbuf(rs_buf_t *b);
 
 

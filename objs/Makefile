@@ -324,20 +324,21 @@ objs/src/slave/rs_binlog_row.o: $(CORE_DEPS) $(SLAVE_DEPS) \
 		-o objs/src/slave/rs_binlog_row.o \
 		src/slave/rs_binlog_row.c $(SLAVE_DEFINE)
 
-objs/src/slave/rs_register_tables.o: $(CORE_DEPS) $(SLAVE_DEPS) \
-	src/slave/rs_register_tables.c
-	$(CC) -c $(CFLAGS) $(CORE_INCS) $(SLAVE_INCS) \
-		-o objs/src/slave/rs_register_tables.o \
-		src/slave/rs_register_tables.c $(SLAVE_DEFINE)
-
 objs/src/slave/rs_redis_thread.o: $(CORE_DEPS) $(SLAVE_DEPS) \
 	src/slave/rs_redis_thread.c
 	$(CC) -c $(CFLAGS) $(CORE_INCS) $(SLAVE_INCS) \
 		-o objs/src/slave/rs_redis_thread.o \
 		src/slave/rs_redis_thread.c $(SLAVE_DEFINE)
 
+objs/src/slave/rs_register_tables.o: $(CORE_DEPS) $(SLAVE_DEPS) \
+	src/slave/rs_register_tables.c
+	$(CC) -c $(CFLAGS) $(CORE_INCS) $(SLAVE_INCS) \
+		-o objs/src/slave/rs_register_tables.o \
+		src/slave/rs_register_tables.c $(SLAVE_DEFINE)
+
 objs/src/slave/rs_mysql_test_test.o: $(CORE_DEPS) $(SLAVE_DEPS) \
 	src/slave/rs_mysql_test_test.c
 	$(CC) -c $(CFLAGS) $(CORE_INCS) $(SLAVE_INCS) \
 		-o objs/src/slave/rs_mysql_test_test.o \
 		src/slave/rs_mysql_test_test.c $(SLAVE_DEFINE)
+

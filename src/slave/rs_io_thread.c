@@ -5,7 +5,7 @@
 
 
 
-static int  rs_create_dump_cmd(rs_slave_info_t *s, char *buf, uint32_t *len);
+static int rs_send_dumpcmd(rs_slave_info_t *si);
 static void rs_free_io_thread(void *data);
 
 
@@ -19,11 +19,9 @@ static void rs_free_io_thread(void *data);
  */
 void *rs_start_io_thread(void *data) 
 {
-    int                     i, r, sock_err;
-    uint32_t                l;
-    int32_t                 pack_len, cp_len;
+    int                     i, r;
+    int32_t                 pack_len;
     ssize_t                 n;
-    char                    cbuf[RS_REGISTER_SLAVE_CMD_LEN];
     struct                  sockaddr_in svr_addr;
     rs_slave_info_t         *si;
     rs_ringbuf_data_t       *rbd;
@@ -43,6 +41,22 @@ void *rs_start_io_thread(void *data)
     if (inet_pton(AF_INET, si->listen_addr, &(svr_addr.sin_addr)) != 1) {
         rs_log_err(rs_errno, "inet_pton(\"%s\") failed", si->listen_addr); 
         goto free;
+    }
+
+    /* slave info */
+    si->info_fd = open(si->slave_info, O_CREAT | O_RDWR, 00666);
+
+    if(si->info_fd == -1) {
+        rs_log_err(rs_errno, "open(\"%s\") failed", si->slave_info);
+        goto free;
+    }
+
+    n = rs_read(si->info_fd, si->dump_info, RS_SLAVE_INFO_STR_LEN);
+
+    if(n <= 0) {
+        goto free;
+    } else if (n > 0) { 
+        si->dump_info[n] = '\0';
     }
 
     for( ;; ) {
@@ -68,7 +82,7 @@ void *rs_start_io_thread(void *data)
             goto retry;
         }
 
-        if(rs_send_dumpcmd(si, cbuf, &l) != RS_OK) {
+        if(rs_send_dumpcmd(si) != RS_OK) {
             goto retry;
         }
 
@@ -130,29 +144,25 @@ free:;
      pthread_exit(NULL);
 }
 
-/*
- *
- *  rs_create_dump_cmd
- *  @s struct rs_slave_infot
- *  @len store the length of command
- *
- *  Create request dump cmd
- *
- *  On success, RS_OK is returned. On error, RS_ERR is returned
- */
-static int rs_create_dump_cmd(rs_slave_info_t *si, char *buf, uint32_t *len) 
+static int rs_send_dumpcmd(rs_slave_info_t *si)
 {
-    int l;
+    int32_t l;
+    ssize_t n;
+    l = 6 + rs_strlen(si->dump_info) + rs_strlen(si->filter_tables);
+    char buf[l];
 
-    l = snprintf(buf, RS_REGISTER_SLAVE_CMD_LEN, "%s,%u,%s,", si->dump_file, 
-            si->dump_pos, si->filter_tables);
+    l = snprintf(buf, l, "%u%s,%s,", l, si->dump_info, si->filter_tables);
 
     if(l < 0) {
-        rs_log_err(rs_errno, "snprintf() failed, dump_cmd"); 
+        rs_log_err(rs_errno, "snprintf() failed");
         return RS_ERR;
     }
 
-    *len = (uint32_t) l;
+    n = rs_write(si->svr_fd, buf, l);
+
+    if(n != l) {
+        return RS_ERR;
+    }
 
     return RS_OK;
 }
@@ -169,66 +179,5 @@ static void rs_free_io_thread(void *data)
             rs_log_info("io thread send SIGQUIT signal");
             kill(rs_pid, SIGQUIT);
         }
-    }
-}
-
-
-rs_log_info("send cmd = %s, dump_file = %s, dump_pos = %u, "
-        "filter_tables = %s", 
-        cbuf, si->dump_file, si->dump_pos, si->filter_tables);
-
-/* send command length */
-n = rs_write(si->svr_fd, &l, 4); 
-
-if(n != 4) {
-    goto retry;
-}
-
-/* send command */
-n = rs_write(si->svr_fd, cbuf, l); 
-
-if(n != (ssize_t) l) {
-    goto retry;
-}
-
-
-/* slave info */
-si->info_fd = open(si->slave_info, O_CREAT | O_RDWR, 00666);
-
-if(si->info_fd == -1) {
-    rs_log_err(rs_errno, "open(\"%s\") failed", si->slave_info);
-    goto free;
-}
-
-/* parse slave.info */
-if(rs_parse_slave_info(si) != RS_OK) {
-    goto free;
-
-    static int rs_parse_slave_info(rs_slave_info_t *si) 
-    {
-        char    *p, buf[RS_SLAVE_INFO_STR_LEN];
-        ssize_t n;
-
-        /* binlog path, binlog pos  */
-        p = buf;
-
-        n = rs_read(si->info_fd, buf, RS_SLAVE_INFO_STR_LEN);
-
-        if(n < 0) {
-            return RS_ERR;
-        } else if (n > 0) { 
-            buf[n] = '\0';
-            p = rs_ncp_str_till(si->dump_file, p, ',', PATH_MAX);
-            si->dump_pos = rs_str_to_uint32(p);
-        } else {
-            /* if a new slave.info file */
-            rs_log_err(0, "slave.info is empty, format must \"file,pos\"");
-            return RS_ERR;
-        }
-
-        rs_log_info("parse slave info file = %s, pos = %u", si->dump_file, 
-                si->dump_pos);
-
-        return RS_OK;
     }
 }

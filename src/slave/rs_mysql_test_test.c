@@ -138,17 +138,17 @@ int rs_before_update_test_test(rs_slave_info_t *si, void *obj)
 }
 
 int rs_update_test_test(rs_slave_info_t *si, void *obj)
-{/*{{{*/
+{
     return rs_insert_test_test(si, obj);
-}/*}}}*/
+}
 
 int rs_delete_test_test(rs_slave_info_t *si, void *obj)
-{/*{{{*/
+{
     return RS_OK;
-}/*}}}*/
+}
 
 
-int rs_dml_test_test(rs_slave_info_t *si, char *e, uint32_t rl, char t) {
+int rs_dml_test_test(rs_slave_info_t *si, char *r, uint32_t rl, char t) {
     /* test.test */
     rs_mysql_test_t test;
 

@@ -9,11 +9,12 @@
 #define RS_SLAVE_MODULE_NAME            "slave"
 #define RS_SLAVE_CONF_NUM               20
 
+#define RS_SLAVE_INFO_STR_LEN           (PATH_MAX + 1 + UINT32_LEN + 1)
+
 #define RS_SLAVE_LISTEN_ADDR            "localhost"
 #define RS_SLAVE_LISTEN_PORT            1919 
 #define RS_SLAVE_REDIS_ADDR             "localhost"
 #define RS_SLAVE_REDIS_PORT             6379
-#define RS_SLAVE_INFO_STR_LEN           (PATH_MAX + 1 + UINT32_LEN)
 #define RS_RING_BUFFER_NUM              50000
 #define RS_SLAVE_POOL_FACTOR            1.5
 #define RS_SLAVE_POOL_INITSIZE          100
@@ -45,11 +46,13 @@ struct rs_slave_info_s {
     int                 info_fd;
     int                 svr_fd;
     uint32_t            cmdn;
+    char                dump_info[RS_SLAVE_INFO_STR_LEN];
 
     redisContext        *c;
     rs_ringbuf_t        *ringbuf;
     rs_buf_t            *recv_buf;
     rs_conf_t           *cf;
+    rs_shash_t          *table_func;
 
     rs_pool_t           *pool;
     int32_t             id;
@@ -83,6 +86,7 @@ struct rs_slave_info_s {
     (si)->ringbuf = NULL;                                                    \
     (si)->cmdn = 0;                                                          \
     (si)->recv_buf = NULL;                                                   \
+    (si)->table_func = NULL;                                                 \
     (si)->io_thread = 0;                                                     \
     (si)->redis_thread = 0;                                                  \
     (si)->io_thread_exit = 0;                                                \

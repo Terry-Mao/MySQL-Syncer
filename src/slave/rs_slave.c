@@ -90,6 +90,10 @@ void rs_free_slave(void *data)
         rs_close(si->info_fd);
     }
 
+    if(si->table_func != NULL) {
+        rs_destroy_shash(si->table_func);
+    }
+
     p = si->pool;
 
     /* free conf */
