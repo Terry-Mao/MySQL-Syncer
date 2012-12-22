@@ -5,13 +5,13 @@
 user terry terry
 
 # pid file
-pid /var/run/rs/rs_master.pid
+pid /tmp/rs_master.pid
 
 # daemon
 daemon 1
 
 # log path
-log /var/log/rs/rs_master.log
+log /tmp/rs_master.log
 
 # log debug level(DEBUG : 2, INFO : 1, ERR : 0)
 log.level 2

@@ -9,11 +9,6 @@
 
 typedef int (*rs_binlog_func)(rs_reqdump_data_t *);
 
-typedef struct {
-    char            *ev;
-    rs_binlog_func  func;
-} rs_binlog_func_t;
-
 int rs_binlog_header_handler(rs_reqdump_data_t *rd);
 int rs_binlog_query_handler(rs_reqdump_data_t *rd);
 int rs_binlog_intvar_handler(rs_reqdump_data_t *rd);
@@ -28,6 +23,6 @@ int rs_binlog_stop_handler(rs_reqdump_data_t *rd);
 
 
 
-extern rs_binlog_func_t rs_binlog_funcs[];
+extern rs_binlog_func rs_binlog_funcs[];
 
 #endif

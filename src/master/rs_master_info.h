@@ -18,8 +18,8 @@
 #define RS_MASTER_RINGBUF_NUM           5000
 
 #define RS_MASTER_POOL_FACTOR           1.5
-#define RS_MASTER_POOL_INIT_SIZE        100
-#define RS_MASTER_POOL_MEM_SIZE         (100 * 1024 * 1024)
+#define RS_MASTER_POOL_INITSIZE         100
+#define RS_MASTER_POOL_MEMSIZE          (100 * 1024 * 1024)
 #define RS_MASTER_SENDBUF_SIZE          (1 * 1024)
 #define RS_MASTER_IOBUF_SIZE            (1 * 1024)
 #define RS_MASTER_SERVER_ID             1
@@ -31,8 +31,8 @@ struct rs_master_info_s {
     uint32_t                server_id;
     uint32_t                max_dump_thread;
     double                  pool_factor;        /* slab grow factor */
-    uint32_t                pool_mem_size;
-    uint32_t                pool_init_size;
+    uint32_t                pool_memsize;
+    uint32_t                pool_initsize;
     uint32_t                ringbuf_num;
     uint32_t                sendbuf_size;
     uint32_t                iobuf_size;
@@ -44,7 +44,6 @@ struct rs_master_info_s {
     rs_conf_t               *cf;
     rs_reqdump_t            *req_dump;
     rs_pool_t               *pool;
-    rs_shash_t              *binlog_func;
     int32_t                 id;
 };
 
@@ -56,13 +55,12 @@ struct rs_master_info_s {
     (mi)->accept_thread = 0;                                                 \
     (mi)->accept_thread_exit = 0;                                            \
     (mi)->pool_factor = RS_MASTER_POOL_FACTOR;                               \
-    (mi)->pool_mem_size = RS_MASTER_POOL_MEM_SIZE;                           \
-    (mi)->pool_init_size = RS_MASTER_POOL_INIT_SIZE;                         \
+    (mi)->pool_memsize = RS_MASTER_POOL_MEMSIZE;                             \
+    (mi)->pool_initsize = RS_MASTER_POOL_INITSIZE;                           \
     (mi)->sendbuf_size = RS_MASTER_SENDBUF_SIZE;                             \
     (mi)->iobuf_size = RS_MASTER_IOBUF_SIZE;                                 \
     (mi)->server_id = RS_MASTER_SERVER_ID;                                   \
     (mi)->max_dump_thread = RS_MASTER_DUMP_THREAD_NUM;                       \
-    (mi)->binlog_func = NULL;                                                \
     (mi)->req_dump = NULL;                                                   \
     (mi)->pool = NULL;                                                       \
     (mi)->cf = NULL

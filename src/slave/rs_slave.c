@@ -33,6 +33,7 @@ void rs_free_slave(void *data)
 {
     int             err;
     rs_slave_info_t *si;
+    rs_pool_t       *p;
 
     si = (data == NULL ? rs_slave_info : (rs_slave_info_t *) data);
 
@@ -40,88 +41,63 @@ void rs_free_slave(void *data)
         return;
     }
 
-    if(si->io_thread != 0) {
+    if(si->io_thread != 0 && !si->io_thread_exit) {
 
-        if(!si->io_thread_exit) {
+        rs_log_info("cancel io thread");
+        if((err = pthread_cancel(si->io_thread)) != 0) {
+            rs_log_err(err, "pthread_cancel() failed");
+        }
 
-            rs_log_info("cancel io thread");
-
-            if((err = pthread_cancel(si->io_thread)) != 0) {
-                rs_log_err(err, "pthread_cancel() failed, io_thread");
-            }
-
-            rs_log_info("join io thread");
-
-            if((err = pthread_join(si->io_thread, NULL)) != 0) {
-                rs_log_err(err, "pthread_join() failed, io_thread");
-            }
+        rs_log_info("join io thread");
+        if((err = pthread_join(si->io_thread, NULL)) != 0) {
+            rs_log_err(err, "pthread_join() failed");
         }
     }
 
-    if(si->redis_thread != 0) {
+    if(si->redis_thread != 0 && !si->redis_thread_exit) {
 
-        if(!si->redis_thread_exit) {
+        rs_log_info("cancel redis thread");
+        if((err = pthread_cancel(si->redis_thread)) != 0) {
+            rs_log_err(err, "pthread_cancel() failed");
+        }
 
-            rs_log_info("cancel redis thread");
-
-            if((err = pthread_cancel(si->redis_thread)) != 0) {
-                rs_log_err(err, "pthread_cancel() failed, redis_thread");
-            }
-
-            rs_log_info("join redis thread");
-
-            if((err = pthread_join(si->redis_thread, NULL)) != 0) {
-                rs_log_err(err, "pthread_join() failed, redis_thread");
-            }
+        rs_log_info("join redis thread");
+        if((err = pthread_join(si->redis_thread, NULL)) != 0) {
+            rs_log_err(err, "pthread_join() failed");
         }
     }
 
     if(si->svr_fd != -1) {
-        rs_log_info("close master fd");
         rs_close(si->svr_fd);
     }
 
     if(si->c != NULL) {
-        rs_log_info("free redis");
         redisFree(si->c); 
     }
 
     /* free ring buffer2 */
-    if(si->ring_buf != NULL) {
-        rs_log_info("free ring buffer");
-        rs_free_ring_buffer2(si->ring_buf);
-        free(si->ring_buf);
-    }
-
-    /* free slab */
-    if(si->slab != NULL) {
-        rs_log_info("free memory slabs");
-        rs_free_slabs(si->slab);
-        free(si->slab);
+    if(si->ringbuf != NULL) {
+        rs_destroy_ringbuf(si->ringbuf);
     }
 
     /* free packbuf */
     if(si->recv_buf != NULL) {
-        rs_log_info("free recv buf");
-        rs_free_temp_buf(si->recv_buf); 
-        free(si->recv_buf);
+        rs_destroy_tmpbuf(si->recv_buf); 
     }
 
     /* close slave info file */
     if(si->info_fd != -1) {
-        rs_log_info("close slave info file fd");
         rs_close(si->info_fd);
     }
 
-    /* free conf */
-    rs_log_info("free slave conf");
-    rs_free_conf(&(si->conf));
+    p = si->pool;
 
-    if(si->conf.kv != NULL) {
-        free(si->conf.kv);
+    /* free conf */
+    if(si->cf != NULL) {
+        rs_destroy_conf(si->cf);
     }
 
-    /* free slave info */
-    rs_log_info("free slave info");
-    free(si);
+    rs_pfree(p, si, si->id);
+
+    rs_destroy_pool(p);
 }

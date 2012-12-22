@@ -16,7 +16,7 @@ static char *rs_binlog_parse_bit(char *p, u_char *cm, uint32_t ml,
 static char *rs_binlog_parse_string(char *p, u_char *cm, uint32_t ml, 
         uint32_t fl, uint32_t *dl);
 
-static rs_binlog_column_meta_t rs_column_meta[256] = {
+static rs_binlog_column_meta_t rs_column_meta[] = {
     { 0, 0, NULL },                             /* 0 : DECIMAL */
     { 0, 1, rs_binlog_parse_def },              /* 1 : TINYINT */
     { 0, 2, rs_binlog_parse_def },              /* 2 : SHORT */

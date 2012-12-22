@@ -3,16 +3,17 @@
 #include <rs_core.h>
 #include <rs_slave.h>
 
-int rs_tables_handle(rs_slave_info_t *si, char *p, uint32_t tl, char *e, 
-        uint32_t rl, char t) 
+int rs_register_tables(rs_slave_info_t *si) 
 {
-    if(rs_strncmp(p, RS_FILTER_TABLE_TEST_TEST, tl) == 0) {
+    si->table_func = rs_create_shash(si->pool, RS_TABLE_FUNC_NUM);
+    
+    if(si->table_func == NULL) {
+        return RS_ERR;
+    }
 
-        if(rs_dml_test_test(si, e, rl, t) != RS_OK) {
-            return RS_ERR;
-        }
-    } else {
-        rs_log_err(0, "unknown row-based binlog filter table");
+    if(rs_shash_add(si->table_func, "test.test", (void *) rs_mysql_test_test) 
+            != RS_OK) 
+    {
         return RS_ERR;
     }
 

@@ -5,9 +5,8 @@
 
 int rs_read_binlog(rs_reqdump_data_t *rd) 
 {
-    int             r, err;
-    char            key[3];
-    rs_binlog_func  handler;
+    int         r;
+    uint32_t    idx;
 
     for( ;; ) {
 
@@ -16,18 +15,15 @@ int rs_read_binlog(rs_reqdump_data_t *rd)
             goto free;
         }    
 
-        /* get event_key */
-        rs_uint32_to_str(rd->binlog_info.t, key);
+        idx = rd->binlog_info.t - '\0';
 
-        err = rs_shash_get(rd->binlog_func, key, (void *) &handler);
-
-        if(err == RS_NOT_EXISTS) {
-            rs_log_err(0, "unknow binlog evnet");
-            return RS_ERR;
+        if(idx == 0 || idx > RS_BINLOG_EVENT_NUM) {
+            rs_log_err(0, "unknown event, %u", idx);
+            goto free;
         }
 
         /* event handler */
-        if((r = handler(rd)) != RS_OK) {
+        if((r = rs_binlog_funcs[idx](rd)) != RS_OK) {
             goto free;
         }
 
@@ -178,36 +174,36 @@ free:
 int rs_has_next_binlog(rs_reqdump_data_t *rd)
 {
     uint32_t    n;
-    char        *s, *p;
+    size_t      len;
+    char        s[PATH_MAX + 1];
     FILE        *fp;
 
     fp = rd->binlog_idx_fp;
-    s = rd->dump_tmp_file;
-    p = s;
 
     fseek(fp, 0, SEEK_SET);
     clearerr(fp);
 
     do {
 
-        if((s = fgets(s, PATH_MAX, fp)) == NULL) {
+        if(fgets(s, PATH_MAX, fp) == NULL) {
             if(feof(fp) != 0) {
                 return RS_NO_BINLOG;
             }
 
             if(ferror(fp) != 0) {
-                rs_log_err(rs_errno, "fgets() failed, binlog_idx_file");
+                rs_log_err(rs_errno, "fgets() failed");
                 return RS_ERR;
             }
         }
 
-        n = rs_estr_to_uint32(s + rs_strlen(s) - 2);  /* skip /n */
+        len = rs_strlen(s);
+        n = rs_estr_to_uint32(s + len - 2);  /* skip \n */
 
     } while(n <= rd->dump_num);
 
-    rs_memcpy(rd->dump_file, p, rs_strlen(p) + 1);
+    rs_memcpy(rd->dump_file, s, len + 1);
 
-    rd->dump_file[rs_strlen(rd->dump_file) - 1] = '\0'; /* skip \n */
+    rd->dump_file[len - 1] = '\0'; /* skip \n */
     rd->dump_num = n;
     rd->dump_pos = 0;
 

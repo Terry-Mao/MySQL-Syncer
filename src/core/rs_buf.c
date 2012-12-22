@@ -47,6 +47,44 @@ int rs_send_tmpbuf(rs_buf_t *b, int fd)
     return RS_OK;
 }
 
+int rs_recv_tmpbuf(rs_but_t *b, int fd, void *data, uint32_t size)
+{
+    uint32_t    l, s;
+    ssize_t     n;
+
+    if(size > b->size) {
+        return RS_ERR;
+    }
+
+    l = b->last - b->pos;
+
+    if(l >= size) {
+        rs_memcpy(data, b->pos, size);
+        b->pos += size;
+        return RS_OK;
+    } else {
+        rs_memcpy(data, b->pos, l);
+        s = size - l;
+        b->pos = b->start;
+        b->last = b->start;
+
+        do {
+            n = rs_read(fd, b->pos, b->size);
+
+            if(n <= 0) {
+                return RS_ERR;
+            }
+
+            b->last += n;
+        } while(b->last - b->pos > s);
+
+        rs_memcpy((char *) data + l, b->pos, s);
+        b->pos += s;
+    }
+
+    return RS_OK;
+}
+
 void rs_destroy_tmpbuf(rs_buf_t *b)
 {
     free(b); 

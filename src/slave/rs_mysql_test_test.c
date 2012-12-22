@@ -152,7 +152,7 @@ int rs_dml_test_test(rs_slave_info_t *si, char *e, uint32_t rl, char t) {
     /* test.test */
     rs_mysql_test_t test;
 
-    return rs_dml_binlog_row(si, e, rl, t,
+    return rs_dml_binlog_row(si, r, rl, t,
                 rs_insert_test_test, 
                 rs_before_update_test_test,
                 rs_update_test_test, 

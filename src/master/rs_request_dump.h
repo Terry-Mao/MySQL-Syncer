@@ -21,7 +21,6 @@ struct rs_reqdump_data_s {
     uint32_t            dump_pos;
     uint32_t            dump_num;
     char                *dump_file;
-    char                *dump_tmp_file;
     char                *binlog_idx_file;
     
     char                *filter_tables;
@@ -40,8 +39,6 @@ struct rs_reqdump_data_s {
 
     rs_buf_t            *send_buf;
     rs_buf_t            *io_buf;
-
-    rs_shash_t          *binlog_func;
 
     rs_reqdump_data_t   *data;
     rs_reqdump_t        *req_dump;
@@ -69,12 +66,10 @@ struct rs_reqdump_data_s {
     (rd)->req_dump = NULL;                                                   \
     (rd)->io_thread = 0;                                                     \
     (rd)->dump_file = NULL;                                                  \
-    (rd)->dump_tmp_file = NULL;                                              \
     (rd)->ringbuf = NULL;                                                    \
     (rd)->io_buf = NULL;                                                     \
     (rd)->send_buf = NULL;                                                   \
     (rd)->pool = NULL;                                                       \
-    (rd)->binlog_func = NULL;                                                \
     bi = &(rd->binlog_info);                                                 \
     rs_binlog_info_t_init(bi)                                               
 
@@ -85,31 +80,22 @@ struct rs_reqdump_s {
 
     rs_reqdump_data_t   *data;  /* dump threas pointer */
     rs_reqdump_data_t   *free;
-    int32_t             data_id;
 
     pthread_mutex_t     thr_mutex;
     pthread_attr_t      thr_attr;
 
     rs_pool_t           *pool;
+    int32_t             id;
 };
-
-#define rs_reqdump_t_init(rd)                                                \
-    (rd)->num = 0;                                                           \
-    (rd)->free_num = 0;                                                      \
-    (rd)->data = NULL;                                                       \
-    (rd)->free = NULL;                                                       \
-    (rd)->pool = NULL
 
 void *rs_start_dump_thread(void *data); 
 void rs_free_dump_thread(void *data);
 void rs_free_io_thread(void *data);
 
 
-int rs_init_reqdump(rs_reqdump_t *rd, uint32_t num);
-
+rs_reqdump_t *rs_create_reqdump(rs_pool_t *p, uint32_t num);
 rs_reqdump_data_t *rs_get_reqdump_data(rs_reqdump_t *rd);
 void rs_free_reqdump_data(rs_reqdump_t *rd, rs_reqdump_data_t *d);
-
 void rs_freeall_reqdump_data(rs_reqdump_t *rd);
 void rs_destroy_reqdump(rs_reqdump_t *rd);
 

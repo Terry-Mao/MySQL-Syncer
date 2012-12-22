@@ -7,10 +7,17 @@
 #include <rs_slave.h>
 
 #define RS_SLAVE_MODULE_NAME            "slave"
+#define RS_SLAVE_CONF_NUM               20
+
+#define RS_SLAVE_LISTEN_ADDR            "localhost"
+#define RS_SLAVE_LISTEN_PORT            1919 
+#define RS_SLAVE_REDIS_ADDR             "localhost"
+#define RS_SLAVE_REDIS_PORT             6379
 #define RS_SLAVE_INFO_STR_LEN           (PATH_MAX + 1 + UINT32_LEN)
 #define RS_RING_BUFFER_NUM              50000
-#define RS_SLAB_GROW_FACTOR             1.5
-#define RS_SLAB_INIT_SIZE               100
+#define RS_SLAVE_POOL_FACTOR            1.5
+#define RS_SLAVE_POOL_INITSIZE          100
+#define RS_SLAVE_POOL_MEMSIZE           (100 * 1024 * 1024)
 #define RS_BINLOG_SAVE                  900
 #define RS_BINLOG_SAVESEC               60
 #define RS_SLAB_MEM_SIZE                (100 * 1024 * 1024)
@@ -19,91 +26,71 @@
 typedef struct rs_slave_info_s rs_slave_info_t;
 
 struct rs_slave_info_s {
-    int                 info_fd;
-    int                 svr_fd;
-    redisContext        *c;
-
     int                 listen_port;
     char                *listen_addr;
-
     int                 redis_port;
     char                *redis_addr;
-
     char                *slave_info;
+    uint32_t            ringbuf_num;
+    double              pool_factor;        /* slab grow factor */
+    uint32_t            pool_memsize;
+    uint32_t            pool_initsize;
+    uint32_t            binlog_save;
+    uint32_t            cur_binlog_save;
+    uint32_t            binlog_savesec;
+    uint64_t            cur_binlog_savesec;
+    char                *filter_tables;
+    uint32_t            recvbuf_size;
 
-    char                dump_file[PATH_MAX + 1];
-    uint32_t            dump_pos;          
+    int                 info_fd;
+    int                 svr_fd;
+    uint32_t            cmdn;
 
-    char                flush_dump_file[PATH_MAX + 1];
-    uint32_t            flush_dump_pos;
+    redisContext        *c;
+    rs_ringbuf_t        *ringbuf;
+    rs_buf_t            *recv_buf;
+    rs_conf_t           *cf;
 
-    rs_ring_buffer2_t   *ring_buf;
-    uint32_t            ring_buf_num;
-
-    rs_slab_t           *slab;
+    rs_pool_t           *pool;
+    int32_t             id;
 
     pthread_t           io_thread;
     pthread_t           redis_thread;
-
-    unsigned            io_thread_exit;
-    unsigned            redis_thread_exit;
-
-    double              slab_factor;        /* slab grow factor */
-    uint32_t            slab_mem_size;
-    uint32_t            slab_init_size;
-
-    uint32_t            binlog_save;
-    uint32_t            cur_binlog_save;
-
-    uint32_t            binlog_savesec;
-    uint64_t            cur_binlog_savesec;
-
-    uint32_t            cmdn;
-
-    uint32_t            recvbuf_len;
-    rs_buf_t            *recv_buf;
-
-    char                *filter_tables;
-
-    rs_conf_t           conf;
+    unsigned            io_thread_exit:1;
+    unsigned            redis_thread_exit:1;
 };
 
 #define rs_slave_info_t_init(si)                                             \
-    (si)->info_fd = -1;                                                      \
-    (si)->svr_fd = -1;                                                       \
-    (si)->c = NULL;                                                          \
-    (si)->listen_port = -1;                                                  \
-    (si)->listen_addr = NULL;                                                \
-    (si)->redis_port = -1;                                                   \
-    (si)->redis_addr = NULL;                                                 \
+    (si)->listen_addr = RS_SLAVE_LISTEN_ADDR;                                \
+    (si)->listen_port = RS_SLAVE_LISTEN_PORT;                                \
+    (si)->redis_addr = RS_SLAVE_REDIS_ADDR;                                  \
+    (si)->redis_port = RS_SLAVE_REDIS_PORT;                                  \
     (si)->slave_info = NULL;                                                 \
-    rs_memzero((si)->dump_file, PATH_MAX + 1);                               \
-    (si)->dump_pos = 0;                                                      \
-    (si)->io_thread = 0;                                                     \
-    (si)->redis_thread = 0;                                                  \
-    (si)->slab_factor = 0;                                                   \
-    (si)->slab_mem_size = 0;                                                 \
-    (si)->slab_init_size = 0;                                                \
+    (si)->pool_factor = RS_SLAVE_POOL_FACTOR;                                \
+    (si)->pool_initsize = RS_SLAVE_POOL_INITSIZE;                            \
+    (si)->pool_memsize = RS_SLAVE_POOL_MEMSIZE;                              \
     (si)->binlog_save = 0;                                                   \
     (si)->cur_binlog_save = 0;                                               \
     (si)->binlog_savesec = 0;                                                \
     (si)->cur_binlog_savesec = 0;                                            \
-    rs_conf_t_init(&((si)->conf));                                           \
-    (si)->slab = NULL;                                                       \
-    (si)->ring_buf = NULL;                                                   \
     (si)->filter_tables = NULL;                                              \
+    (si)->ringbuf_num = 0;                                                   \
+    (si)->recvbuf_size = 0;                                                  \
+    (si)->info_fd = -1;                                                      \
+    (si)->svr_fd = -1;                                                       \
+    (si)->c = NULL;                                                          \
+    (si)->cf = NULL;                                                         \
+    (si)->ringbuf = NULL;                                                    \
     (si)->cmdn = 0;                                                          \
-    (si)->recvbuf_len = 0;                                                   \
     (si)->recv_buf = NULL;                                                   \
-    (si)->ring_buf_num = 0;                                                  \
+    (si)->io_thread = 0;                                                     \
+    (si)->redis_thread = 0;                                                  \
     (si)->io_thread_exit = 0;                                                \
     (si)->redis_thread_exit = 0;                                             \
-    (si)->flush_dump_pos = 0;                                                \
-    rs_memzero((si)->flush_dump_file, PATH_MAX + 1)
+    (si)->pool = NULL 
 
 
 rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os); 
-int rs_flush_slave_info(rs_slave_info_t *si);
 
 extern rs_slave_info_t                  *rs_slave_info; 
 

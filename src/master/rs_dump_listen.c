@@ -121,13 +121,19 @@ void *rs_start_accept_thread(void *data)
         rd = rs_get_reqdump_data(mi->req_dump);
 
         if(rd == NULL) {
-            rs_close(cli_fd);
-            cli_fd = -1;
-            continue;
+            goto free;
+        }
+
+        rd->pool = rs_create_pool(mi->pool_initsize, mi->pool_memsize, 
+                rs_pagesize, RS_POOL_CLASS_IDX, mi->pool_factor, 
+                RS_POOL_PREALLOC);
+
+        if(rd->pool == NULL) {
+            goto free;
         }
 
         /* init ring buffer */
-        if((rd->ringbuf = rs_create_ringbuf(mi->pool, mi->ringbuf_num)) 
+        if((rd->ringbuf = rs_create_ringbuf(rd->pool, mi->ringbuf_num)) 
                 == NULL)
         {
             goto free;
@@ -143,8 +149,6 @@ void *rs_start_accept_thread(void *data)
             goto free;
         }
 
-        rd->binlog_func = mi->binlog_func;
-        rd->pool = mi->pool;
         rd->cli_fd = cli_fd;
         rd->binlog_idx_file = mi->binlog_idx_file;
         rd->req_dump = mi->req_dump;

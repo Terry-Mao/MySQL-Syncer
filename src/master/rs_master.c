@@ -55,16 +55,22 @@ void rs_free_master(void *data)
         }
     }
 
+    /* close listen fd */
     if(mi->svr_fd != -1) {
         rs_close(mi->svr_fd);
     }
 
     /* close all request_dump*/
-    rs_destroy_reqdump(mi->req_dump); 
+    if(mi->req_dump != NULL) {
+        rs_destroy_reqdump(mi->req_dump); 
+    }
 
     p = mi->pool;
+
     /* free conf */
-    rs_destroy_conf(mi->cf);
+    if(mi->cf != NULL) {
+        rs_destroy_conf(mi->cf);
+    }
 
     /* free master info */
     rs_pfree(p, mi, mi->id);

@@ -8,45 +8,39 @@ static int rs_init_master_conf(rs_master_info_t *mi);
 
 rs_master_info_t *rs_init_master_info(rs_master_info_t *om) 
 {
-    int                 i, nl, nd, id, err;
+    int                 nl, nd, id, err;
     rs_master_info_t    *mi;
     rs_pool_t           *p;
 
+    mi = NULL;
+    p = NULL;
     nl = 1;
     nd = 1;
 
     p = rs_create_pool(200, 1024 * 1024 * 10, rs_pagesize, RS_POOL_CLASS_IDX, 
             1.5, RS_POOL_PREALLOC);
 
-    id = rs_palloc_id(p, sizeof(rs_master_info_t) + sizeof(rs_reqdump_t));
-    mi = (rs_master_info_t *) rs_palloc(p, sizeof(rs_master_info_t) + 
-            sizeof(rs_reqdump_t), id);
-
-    if(mi == NULL) {
-        goto free;
+    if(p == NULL) {
+        return NULL;
     }
 
+    id = rs_palloc_id(p, sizeof(rs_master_info_t));
+    mi = (rs_master_info_t *) rs_palloc(p, sizeof(rs_master_info_t), id);
+
+    if(mi == NULL) {
+        rs_destroy_pool(p);
+        return NULL;
+    }
+
+    rs_master_info_t_init(mi);
+
     mi->pool = p;
+    mi->id = id;
     mi->cf = rs_create_conf(p, RS_MASTER_CONF_NUM);
 
     if(mi->cf == NULL) {
         goto free;
     }
-
-    /* register binlog func */
-    if((mi->binlog_func = rs_create_shash(p, RS_BINLOG_EVENT_NUM)) == NULL) {
-       goto free; 
-    }
-
-    for(i = 0; i < RS_BINLOG_EVENT_NUM; i++) {
-        if(rs_shash_add(mi->binlog_func, rs_binlog_funcs[i].ev, 
-                rs_binlog_funcs[i].func) != RS_OK) 
-        {
-            goto free;            
-        }
-    }
-
-    rs_master_info_t_init(mi);
 
     /* init master conf */
     if(rs_init_master_conf(mi) != RS_OK) {
@@ -112,12 +106,9 @@ rs_master_info_t *rs_init_master_info(rs_master_info_t *om)
     if(nd) {
         /* init dump threads */
         rs_log_info("start initing dump threads");
-        mi->req_dump = (rs_reqdump_t *) ((char *) mi + 
-                sizeof(rs_master_info_t));
+        mi->req_dump = rs_create_reqdump(p, mi->max_dump_thread);
 
-        rs_reqdump_t_init(mi->req_dump);
-
-        if(rs_init_reqdump(mi->req_dump, mi->max_dump_thread) != RS_OK) {
+        if(mi->req_dump == NULL) {
             goto free;
         }
     }
@@ -136,7 +127,6 @@ rs_master_info_t *rs_init_master_info(rs_master_info_t *om)
 free:
 
     rs_free_master(mi);
-
     return NULL;
 }
 
@@ -166,13 +156,13 @@ static int rs_init_master_conf(rs_master_info_t *mi)
         return RS_ERR;    
     }
 
-    if(rs_conf_register(mi->cf, "pool.memsize", &(mi->pool_mem_size), 
+    if(rs_conf_register(mi->cf, "pool.memsize", &(mi->pool_memsize), 
                 RS_CONF_UINT32) != RS_OK)
     {
         return RS_ERR; 
     }
 
-    if(rs_conf_register(mi->cf, "pool.initsize", &(mi->pool_init_size), 
+    if(rs_conf_register(mi->cf, "pool.initsize", &(mi->pool_initsize), 
                 RS_CONF_UINT32) != RS_OK)
     {
         return RS_ERR;

@@ -12,7 +12,7 @@ int rs_def_filter_data_handle(rs_reqdump_data_t *rd)
 int rs_binlog_create_data(rs_reqdump_data_t *rd) 
 {
     int                     i, r, len;
-    char                    *p, istr[UINT32_LEN + 1];
+    char                    istr[UINT32_LEN + 1];
     rs_binlog_info_t        *bi;
     rs_ringbuf_data_t       *rbd;
 
@@ -32,7 +32,7 @@ int rs_binlog_create_data(rs_reqdump_data_t *rd)
 
         if(r == RS_FULL) {
             if(i % 60 == 0) {
-                rs_log_info("request dump's ring buffer is full");
+                rs_log_debug(0, "ringbuf is full");
                 i = 0;
             }
 
@@ -49,7 +49,7 @@ int rs_binlog_create_data(rs_reqdump_data_t *rd)
         if(r == RS_OK) {
 
             /* free memory */
-            if(rbd->data != NULL && rbd->id >= 0 && rbd->len > 0) {
+            if(rbd->data != NULL) {
                 rs_pfree(rd->pool, rbd->data, rbd->id); 
                 rs_ringbuf_data_t_init(rbd);
             }
@@ -72,7 +72,7 @@ int rs_binlog_create_data(rs_reqdump_data_t *rd)
                         istr, bi->mev);
 
                 if(len < 0) {
-                    rs_log_err(rs_errno, "snprint() failed");
+                    rs_log_err(rs_errno, "snprintf() failed");
                     return RS_ERR;
                 }
 
@@ -93,28 +93,20 @@ int rs_binlog_create_data(rs_reqdump_data_t *rd)
                         return RS_ERR;
                     }
 
-                    len = snprintf(rbd->data, rbd->len, "%s,%u,%c,%s.%s,", 
+                    len = snprintf(rbd->data, rbd->len, 
+                            "%s,%u\n%c,%s.%s%c%u%s%u%s%s", 
                             rd->dump_file, rd->dump_pos, bi->mev, bi->db, 
-                            bi->tb);
+                            bi->tb, 0, bi->cn, bi->ct, bi->ml, bi->cm, 
+                            (char *) bi->data);
 
                     if(len < 0) {
-                        rs_log_err(rs_errno, "snprint() failed");
+                        rs_log_err(rs_errno, "snprintf() failed");
                         return RS_ERR;
                     }
-
-                    p = (char *) rbd->data + len;
-                    p = rs_cpymem(p, &(bi->cn), 4);
-                    p = rs_cpymem(p, bi->ct, bi->cn);
-                    p = rs_cpymem(p, &(bi->ml), 4);
-                    p = rs_cpymem(p, bi->cm, bi->ml);
-
-                    rs_memcpy(p, bi->data, rbd->len - len - 8 - bi->cn - 
-                            bi->ml);
                 }
             }
 
             rs_ringbuf_set_advance(rd->ringbuf);
-
             break;
         }
 
