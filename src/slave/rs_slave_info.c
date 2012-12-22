@@ -48,7 +48,37 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
         goto free;
     }
 
-    /* TODO copy pool */
+    /* recreate pool */
+    p = rs_create_pool(si->pool_initsize, si->pool_memsize, rs_pagesize, 
+            RS_POOL_CLASS_IDX, si->pool_factor, RS_POOL_PREALLOC);
+
+    if(p == NULL) {
+        goto free; 
+    }
+
+    rs_free_slave(si);
+
+    si = (rs_slave_info_t *) rs_palloc(p, sizeof(rs_slave_info_t), id);
+
+    if(si == NULL) {
+        rs_destroy_pool(p);
+        return NULL;
+    }
+
+    rs_slave_info_t_init(si);
+
+    si->pool = p;
+    si->id = id;
+    si->cf = rs_create_conf(p, RS_SLAVE_CONF_NUM);
+
+    if(si->cf == NULL) {
+        goto free;
+    }
+
+    /* init conf */
+    if(rs_init_slave_conf(si) != RS_OK) {
+        goto free;
+    }
 
     if(nrb) {
         /* init ring buf */

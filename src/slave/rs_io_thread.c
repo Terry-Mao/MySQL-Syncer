@@ -19,15 +19,13 @@ static void rs_free_io_thread(void *data);
  */
 void *rs_start_io_thread(void *data) 
 {
-    int                     i, r;
+    int                     r;
     int32_t                 pack_len;
     ssize_t                 n;
     struct                  sockaddr_in svr_addr;
     rs_slave_info_t         *si;
     rs_ringbuf_data_t       *rbd;
 
-    /* init var */
-    i = 0;
     rs_memzero(&svr_addr, sizeof(svr_addr));
     si = (rs_slave_info_t *) data;
 
@@ -71,14 +69,6 @@ void *rs_start_io_thread(void *data)
         if(connect(si->svr_fd, (const struct sockaddr *) &svr_addr, 
                     sizeof(svr_addr)) == -1) 
         {
-            if(i % 60 == 0) {
-                i = 0;
-                rs_log_err(rs_errno, "connect() failed, addr = %s:%d", 
-                        si->listen_addr, si->listen_port);
-            }
-
-            i += RS_RETRY_CONNECT_SLEEP_SEC;
-
             goto retry;
         }
 
