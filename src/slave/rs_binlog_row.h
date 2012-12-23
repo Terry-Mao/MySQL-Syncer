@@ -39,27 +39,27 @@
 #define RS_MYSQL_TYPE_STRING        254
 #define RS_MYSQL_TYPE_GEOMETRY      255
 
-typedef char *(*rs_binlog_parse_column_pt)(char *p, u_char *cm, uint32_t ml, 
-        uint32_t fl, uint32_t *dl);
+typedef char *(*rs_binlog_parse_func) (char *, u_char *, uint32_t, uint32_t, 
+        uint32_t *);
+typedef void (*rs_binlog_obj_func) (void *);
+typedef int (*rs_binlog_dml_func)(rs_slave_info_t *si, void *obj);
 
 typedef struct {
-    uint32_t                    meta_len;
-    uint32_t                    fixed_len;    
-    rs_binlog_parse_column_pt   parse_column_handle;
+    uint32_t                meta_len;
+    uint32_t                fixed_len;    
+    rs_binlog_parse_func    parse_handle;
 } rs_binlog_column_meta_t;
 
 
 
-typedef int (*rs_dml_binlog_row_pt)(rs_slave_info_t *si, void *obj);
 
-typedef void (*rs_parse_binlog_row_pt)(char *p, uint32_t dl, uint32_t i, 
-        void *obj);
-
-int rs_dml_binlog_row(rs_slave_info_t *si, void *data, 
-        uint32_t len, char type, rs_dml_binlog_row_pt write_handle, 
-        rs_dml_binlog_row_pt before_update_handle,
-        rs_dml_binlog_row_pt update_handle,
-        rs_dml_binlog_row_pt  delete_handle,
-        rs_parse_binlog_row_pt parse_handle, void *obj);
+int rs_dml_binlog_row(rs_slave_info_t *si, void *data, uint32_t len, char type, 
+        rs_binlog_obj_func before_parse_handle,        
+        rs_binlog_obj_func after_parse_handle,        
+        rs_binlog_dml_func write_handle, 
+        rs_binlog_dml_func before_update_handle,
+        rs_binlog_dml_func update_handle,
+        rs_binlog_dml_func delete_handle,
+        int32_t *offset_arr, void *obj);
 
 #endif

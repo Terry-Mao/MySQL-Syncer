@@ -24,6 +24,7 @@
 #include <signal.h>
 #include <pwd.h>
 #include <grp.h>
+#include <stddef.h>
 
 
 #define RS_ALIGNMENT   sizeof(unsigned long)    /* platform word */

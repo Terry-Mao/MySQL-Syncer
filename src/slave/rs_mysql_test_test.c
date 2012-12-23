@@ -17,6 +17,19 @@ typedef struct {
 
 } rs_mysql_test_t;
 
+int32_t rs_mysql_test_pos[] = {
+    offsetof(rs_mysql_test_t, col1),
+    offsetof(rs_mysql_test_t, col2),
+    offsetof(rs_mysql_test_t, col3),
+    offsetof(rs_mysql_test_t, col4),
+    offsetof(rs_mysql_test_t, col5),
+    offsetof(rs_mysql_test_t, col6),
+    offsetof(rs_mysql_test_t, col7),
+    offsetof(rs_mysql_test_t, col8),
+    offsetof(rs_mysql_test_t, col9),
+    offsetof(rs_mysql_test_t, col10)
+};
+
 
 #define rs_mysql_test_t_init(test)                                           \
     (test)->col1 = 0;                                                        \
@@ -31,82 +44,50 @@ typedef struct {
     rs_memzero((test)->col10, 30 * 3 + 1)
 
 
-static void rs_parse_test_test(char *p, uint32_t dl, uint32_t i, void *obj);
+void rs_init_test_test(void *obj);
+void rs_print_test_test(void *obj);
+
 static int rs_insert_test_test(rs_slave_info_t *si, void *obj);
 static int rs_before_update_test_test(rs_slave_info_t *si, void *obj);
 static int rs_update_test_test(rs_slave_info_t *si, void *obj);
 static int rs_delete_test_test(rs_slave_info_t *si, void *obj);
 
 /* test */
-void rs_parse_test_test(char *p, uint32_t dl, uint32_t i, void *obj)
+void rs_init_test_test(void *obj)
 {
     rs_mysql_test_t         *test;
-
     test = (rs_mysql_test_t *) obj;
+    rs_mysql_test_t_init(test);
+}
 
-    switch(i) {
-        /* col1 */
-        case 0:
-            rs_mysql_test_t_init(test);
-            rs_memcpy(&(test->col1), p, dl);
-            break;
-        /* col2 */
-        case 1:
-            rs_memcpy(&(test->col2), p, dl);
-            break;
-        /* col3 */
-        case 2:
-            rs_memcpy(&(test->col3), p, dl);
-            break;
-        case 3:
-            rs_memcpy(&(test->col4), p, dl);
-            break;
-        case 4:
-            rs_memcpy(&(test->col5), p, dl);
-            break;
-        case 5:
-            rs_memcpy(&(test->col6), p, dl);
-            break;
-        case 6:
-            rs_memcpy(test->col7, p, dl);
-            break;
-        case 7:
-            rs_memcpy(test->col8, p, dl);
-            break;
-        case 8:
-            rs_memcpy(test->col9, p, dl);
-            break;
-        case 9:
-            rs_memcpy(test->col10, p, dl);
-            rs_log_debug(0,
-                    "\n========== test ==========\n"
-                    "col1 : %d\n"
-                    "col2 : %d\n"
-                    "col3 : %d\n"
-                    "col4 : %d\n"
-                    "col5 : %ld\n"
-                    "col6 : %u\n"
-                    "col7 : %s\n"
-                    "col8 : %s\n"
-                    "col9 : %s\n"
-                    "col10 : %s\n"
-                    "\n==========================\n",
-                    test->col1,
-                    test->col2,
-                    test->col3,
-                    test->col4,
-                    test->col5,
-                    test->col6,
-                    test->col7,
-                    test->col8,
-                    test->col9,
-                    test->col10
-                    );
-            break;
-
-        default:
-            break;
-    }
+void rs_print_test_test(void *obj)
+{
+    rs_mysql_test_t         *test;
+    test = (rs_mysql_test_t *) obj;
+    rs_log_debug(0,
+            "\n========== test ==========\n"
+            "col1 : %d\n"
+            "col2 : %d\n"
+            "col3 : %d\n"
+            "col4 : %d\n"
+            "col5 : %ld\n"
+            "col6 : %u\n"
+            "col7 : %s\n"
+            "col8 : %s\n"
+            "col9 : %s\n"
+            "col10 : %s\n"
+            "\n==========================\n",
+            test->col1,
+            test->col2,
+            test->col3,
+            test->col4,
+            test->col5,
+            test->col6,
+            test->col7,
+            test->col8,
+            test->col9,
+            test->col10
+                );
 }
 
 int rs_insert_test_test(rs_slave_info_t *si, void *obj)
@@ -153,9 +134,11 @@ int rs_dml_test_test(rs_slave_info_t *si, char *r, uint32_t rl, char t) {
     rs_mysql_test_t test;
 
     return rs_dml_binlog_row(si, r, rl, t,
+                rs_init_test_test,
+                rs_print_test_test,
                 rs_insert_test_test, 
                 rs_before_update_test_test,
                 rs_update_test_test, 
                 rs_delete_test_test, 
-                rs_parse_test_test, &test);
+                rs_mysql_test_pos, &test);
 }

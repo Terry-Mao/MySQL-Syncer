@@ -380,18 +380,20 @@ static char *rs_binlog_parse_string(char *p, u_char *cm, uint32_t ml,
 }
 
 
-int rs_dml_binlog_row(rs_slave_info_t *si, void *data, 
-        uint32_t len, char type, rs_dml_binlog_row_pt write_handle, 
-        rs_dml_binlog_row_pt before_update_handle,
-        rs_dml_binlog_row_pt update_handle,
-        rs_dml_binlog_row_pt  delete_handle,
-        rs_parse_binlog_row_pt parse_handle, void *obj)
+int rs_dml_binlog_row(rs_slave_info_t *si, void *data, uint32_t len, char type, 
+        rs_binlog_obj_func before_parse_handle,        
+        rs_binlog_obj_func after_parse_handle,        
+        rs_binlog_dml_func write_handle, 
+        rs_binlog_dml_func before_update_handle,
+        rs_binlog_dml_func update_handle,
+        rs_binlog_dml_func delete_handle,
+        int32_t *offset_arr, void *obj)
 {
     char                        *p, *ubp;
     u_char                      *ctp, *cmp;
     uint32_t                    i, j, un, nn, before, ml, cn, cl, cmdn, dl, t;
     int                         cmd;
-    rs_dml_binlog_row_pt        handle;
+    rs_binlog_dml_func          handle;
     rs_binlog_column_meta_t     *meta;
 
     p = data;
@@ -405,18 +407,12 @@ int rs_dml_binlog_row(rs_slave_info_t *si, void *data,
     cmp = NULL;
     meta = NULL;
 
-    if(si == NULL || data == NULL || obj == NULL || parse_handle == NULL)
-    {
-        rs_log_err(0, "rs_dml_binlog_row() failed, args can't be null");
-        return RS_ERR;
-    }
-
     /* get column number */
     rs_memcpy(&cn, p, 4);
     p += 4;
 
-    u_char ct[cn];
     /* get column type */
+    u_char ct[cn];
     rs_memcpy(ct, p, cn);
     p += cn;
 
@@ -447,6 +443,10 @@ int rs_dml_binlog_row(rs_slave_info_t *si, void *data,
     if(type == RS_UPDATE_ROWS_EVENT) {
         rs_memcpy(use_bits_after, p, un);
         p += un;
+    }
+
+    if(before_parse_handle != NULL) {
+        before_parse_handle(obj);
     }
 
     /* get column value */
@@ -483,13 +483,13 @@ int rs_dml_binlog_row(rs_slave_info_t *si, void *data,
 
             meta = (rs_binlog_column_meta_t *) &(rs_column_meta[t]);
 
-            if(meta->parse_column_handle == NULL) {
+            if(meta->parse_handle == NULL) {
                 rs_log_err(0, "not support mysql type parse handle, please "
                         "contact the author"); 
                 return RS_ERR;
             }
 
-            p = meta->parse_column_handle(p, cmp, meta->meta_len, 
+            p = meta->parse_handle(p, cmp, meta->meta_len, 
                     meta->fixed_len, (uint32_t *) &dl);
 
             rs_log_debug(0, "column type : %u, data len : %u", t, dl);
@@ -500,7 +500,9 @@ int rs_dml_binlog_row(rs_slave_info_t *si, void *data,
                 /* not null */
                 if(!((null_bits[j / 8] >> (j % 8)) & 0x01)) {
                     /* parse */
-                    parse_handle(p, dl, i, obj);
+                    if(offset_arr[i] > -1) {
+                        rs_memcpy((char *) obj + offset_arr[i], p, dl);
+                    }
                     p += dl;
                 }
 
@@ -513,6 +515,10 @@ int rs_dml_binlog_row(rs_slave_info_t *si, void *data,
             ctp++;
             /* next meta info */
             cmp += meta->meta_len;
+        }
+
+        if(after_parse_handle != NULL) {
+            after_parse_handle(obj);
         }
 
         /* append redis cmd */
@@ -536,12 +542,10 @@ int rs_dml_binlog_row(rs_slave_info_t *si, void *data,
         }
 
         if((cmd = handle(si, obj)) == RS_ERR) {
-            rs_log_err(rs_errno, "handle() failed");
             return RS_ERR;
         }
 
         cmdn += (uint32_t) cmd;
-
     }
 
     si->cmdn += cmdn;
