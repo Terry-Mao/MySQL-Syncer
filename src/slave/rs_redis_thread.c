@@ -25,7 +25,6 @@ void *rs_start_redis_thread(void *data)
         err = rs_ringbuf_get(si->ringbuf, &rbd);
 
         if(err == RS_ERR) {
-            rs_log_err(0, "rs_get_ring_buffer() failed");
             goto free;
         }
 

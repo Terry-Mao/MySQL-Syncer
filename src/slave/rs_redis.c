@@ -8,13 +8,14 @@ int rs_redis_get_replies(rs_slave_info_t *si)
 {
     redisReply  *rp;
 
-    while(si->cmdn--) {
+    while(si->cmdn) {
 
         if(redisGetReply(si->c, (void *) &rp) != REDIS_OK) {
             return RS_ERR;
         }
 
         freeReplyObject(rp);
+        si->cmdn--;
     }
 
     return RS_OK;
