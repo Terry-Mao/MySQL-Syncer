@@ -6,6 +6,9 @@
 #include <rs_core.h>
 #include <rs_slave.h>
 
+
+#define RS_SKIP_COPY_COLUMN_VAL     -1
+
 /* BINLOG EVENT TYPE */
 #define RS_MYSQL_SKIP_DATA          0
 #define RS_XID_EVENT                16

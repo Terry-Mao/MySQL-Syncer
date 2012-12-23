@@ -6,7 +6,6 @@
 static void rs_free_redis_thread(void *data);
 static int rs_redis_dml_data(rs_slave_info_t *si, char *buf, uint32_t len);
 static int rs_flush_slave_info(rs_slave_info_t *si);
-static int rs_redis_batch_commit(rs_slave_info_t *si);
 
 void *rs_start_redis_thread(void *data) 
 {
@@ -32,13 +31,17 @@ void *rs_start_redis_thread(void *data)
 
         if(err == RS_EMPTY) {
             /* commit redis cmd */
-            if(rs_redis_batch_commit(si) != RS_OK) {
+            if(rs_redis_get_replies(si) != RS_OK) {
                 goto free;
             }
+
+            si->cmdn = 0;
 
             err = rs_ringbuf_spin_wait(si->ringbuf, &rbd);
 
             if(err != RS_OK) {
+                usleep(RS_RING_BUFFER_EMPTY_SLEEP_USEC);
+
                 if(rs_flush_slave_info(si) != RS_OK) {
                     goto free;
                 }
@@ -65,13 +68,19 @@ void *rs_start_redis_thread(void *data)
             goto free;
         }
 
+        if(si->cmdn < RS_REDIS_CMD_COMMIT_NUM) {
+            if(rs_redis_get_replies(si) != RS_OK) {
+                goto free;
+            }
+        }
+
         /* flush slave.info */
         if(rs_flush_slave_info(si) != RS_OK) {
             goto free;
         }
 
         rs_ringbuf_get_advance(si->ringbuf);
-    } 
+    }
 
 free:;
 
@@ -82,14 +91,13 @@ free:;
 
 static int rs_redis_dml_data(rs_slave_info_t *si, char *buf, uint32_t len) 
 {
-    char                *p, t, *e;
+    char                *p, t;
     uint32_t            rl, tl;
     rs_redis_dml_func   handler;
 
     p = buf;
     t = 0;
     rl = 0;
-    e =  NULL;
 
     p++; /* NOTICE : pos\nmev */
     t = *p++;
@@ -99,7 +107,7 @@ static int rs_redis_dml_data(rs_slave_info_t *si, char *buf, uint32_t len)
     } else if(t == RS_WRITE_ROWS_EVENT || t == RS_UPDATE_ROWS_EVENT || 
             t == RS_DELETE_ROWS_EVENT) 
     {
-        p++; /* NOTICE : mev,db.table\0 */
+        p++; /* NOTICE : mev,test.test\0 */
         tl = rs_strlen(p);
         rl = len - 4 - tl;
 
@@ -107,12 +115,7 @@ static int rs_redis_dml_data(rs_slave_info_t *si, char *buf, uint32_t len)
             return RS_ERR;
         }
 
-        if(handler(si, e, rl, t) != RS_OK) {
-            return RS_ERR;
-        }
-
-        /* commit redis cmd */
-        if(rs_redis_batch_commit(si) != RS_OK) {
+        if(handler(si, p + tl + 1, rl, t) != RS_OK) {
             return RS_ERR;
         }
 
@@ -174,21 +177,6 @@ static int rs_flush_slave_info(rs_slave_info_t *si)
     }
 
     return RS_OK; 
-}
-
-static int rs_redis_batch_commit(rs_slave_info_t *si)
-{
-    if(si->cmdn < RS_REDIS_CMD_COMMIT_NUM) {
-        return RS_OK;
-    }
-
-    if(rs_redis_get_replies(si, si->cmdn) != RS_OK) {
-        return RS_ERR;
-    }
-
-    si->cmdn = 0;
-
-    return RS_OK;
 }
 
 static void rs_free_redis_thread(void *data)

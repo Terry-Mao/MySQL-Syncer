@@ -11,6 +11,7 @@ rs_slave_info_t     *rs_slave_info = NULL;
 rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os) 
 {
     int                 nr, ni, nrb, err, id;
+    ssize_t             n;
     rs_slave_info_t     *si;
     rs_pool_t           *p;
 
@@ -99,6 +100,22 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
     /* register tables */
     if(rs_register_tables(si) != RS_OK) {
         goto free;
+    }
+
+    /* slave info */
+    si->info_fd = open(si->slave_info, O_CREAT | O_RDWR, 00666);
+
+    if(si->info_fd == -1) {
+        rs_log_err(rs_errno, "open(\"%s\") failed", si->slave_info);
+        goto free;
+    }
+
+    n = rs_read(si->info_fd, si->dump_info, RS_SLAVE_INFO_STR_LEN);
+
+    if(n <= 0) {
+        goto free;
+    } else if (n > 0) { 
+        si->dump_info[n] = '\0';
     }
 
     if(ni) {

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-master_pid=/var/run/rs/rs_master.pid
-slave_pid=/var/run/rs/rs_slave.pid
+master_pid=/tmp/rs_master.pid
+slave_pid=/tmp/rs_slave.pid
 
 cur_path=$(pwd)
 

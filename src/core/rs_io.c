@@ -39,7 +39,6 @@ int rs_size_read(int fd, void *buf, size_t size)
         n = rs_read(fd, pack_buf + cur_size, size - cur_size);
 
         if(n <= 0) {
-            rs_log_err(rs_errno, "rs_read() failed");
             return RS_ERR;
         }
 

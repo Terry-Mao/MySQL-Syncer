@@ -125,7 +125,7 @@ void *rs_start_accept_thread(void *data)
         }
 
         rd->pool = rs_create_pool(mi->pool_initsize, mi->pool_memsize, 
-                rs_pagesize, RS_POOL_CLASS_IDX, mi->pool_factor, 
+                1 * 1024 * 1024, RS_POOL_CLASS_IDX, mi->pool_factor, 
                 RS_POOL_PREALLOC);
 
         if(rd->pool == NULL) {

@@ -35,6 +35,8 @@ void *rs_start_dump_thread(void *data)
         goto free;
     }
 
+    rs_log_debug(0, "get slave cmd packet len : %u", pack_len);
+
     /* alloc cmd buf from mempool */
     id = rs_palloc_id(d->pool, pack_len + 1);
     cbuf = (char *) rs_palloc(d->pool, pack_len + 1, id);
@@ -52,8 +54,7 @@ void *rs_start_dump_thread(void *data)
 
     /* parse command then open and seek file */
     if((p = rs_strchr(cbuf, ',')) == NULL) {
-        rs_log_err(0, "rs_start_dump_thread() failed, cmd = %s invalid format", 
-                cbuf);
+        rs_log_err(0, "slave cmd %s format error, no slave.info", cbuf);
         goto free;
     }
 
@@ -70,16 +71,18 @@ void *rs_start_dump_thread(void *data)
     d->dump_pos = rs_str_to_uint32(p + 1);
 
     /* get filter tables */
-    if((p = rs_strchr(p + 1, ',')) != NULL) {
-        d->filter_tables = p;
+    if((p = rs_strchr(p + 1, ',')) == NULL) {
+        goto free;
     }
+
+    d->filter_tables = p;
 
     rs_log_info(
             "\n========== SLAVE CMD ==============\n"
-            "cmd = %s"
-            "dump_file = %s"
-            "dump_num = %u"
-            "dump_pos = %u" 
+            "cmd = %s\n"
+            "dump_file = %s\n"
+            "dump_num = %u\n"
+            "dump_pos = %u\n" 
             "filter_tables = %s"
             "\n===================================\n",
             cbuf, 
@@ -136,18 +139,13 @@ void *rs_start_dump_thread(void *data)
             }
         }
 
-        // if have enough space buffer data
         len = 4 + rbd->len;
         if((d->send_buf->end - d->send_buf->last) >= len) {
-            len = snprintf(d->send_buf->last, len, "%u%s", rbd->len, 
-                    (char *) rbd->data);
-
-            if(len < 0) {
-                rs_log_err(rs_errno, "snprintf() failed");
-                goto free;
-            }
-
+            // if have enough space buffer data
+            rs_memcpy(d->send_buf->last, &(rbd->len), 4);
+            rs_memcpy(d->send_buf->last + 4, rbd->data, rbd->len);
             d->send_buf->last += len;
+
             rs_ringbuf_get_advance(d->ringbuf);
         } else {
             /* send buf */

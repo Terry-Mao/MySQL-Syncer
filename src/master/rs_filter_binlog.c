@@ -11,13 +11,13 @@ int rs_def_filter_data_handle(rs_reqdump_data_t *rd)
 
 int rs_binlog_create_data(rs_reqdump_data_t *rd) 
 {
-    int                     i, r, len;
-    char                    istr[UINT32_LEN + 1];
+    int                     r, len;
+    char                    istr[UINT32_LEN + 1], *p;
     rs_binlog_info_t        *bi;
     rs_ringbuf_data_t       *rbd;
 
-    i = 0;
     bi = &(rd->binlog_info);
+    p = NULL;
 
     if(bi->mev == 0) {
         if(bi->skip_n++ % RS_SKIP_DATA_FLUSH_NUM != 0) {
@@ -31,13 +31,6 @@ int rs_binlog_create_data(rs_reqdump_data_t *rd)
         r = rs_ringbuf_set(rd->ringbuf, &rbd);
 
         if(r == RS_FULL) {
-            if(i % 60 == 0) {
-                rs_log_debug(0, "ringbuf is full");
-                i = 0;
-            }
-
-            i += RS_RING_BUFFER_FULL_SLEEP_SEC;
-
             sleep(RS_RING_BUFFER_FULL_SLEEP_SEC);
             continue;
         }
@@ -68,7 +61,7 @@ int rs_binlog_create_data(rs_reqdump_data_t *rd)
                     return RS_ERR;
                 }
 
-                len = snprintf(rbd->data, rbd->len, "%s,%s,%c", rd->dump_file, 
+                len = snprintf(rbd->data, rbd->len, "%s,%s\n%c", rd->dump_file, 
                         istr, bi->mev);
 
                 if(len < 0) {
@@ -94,15 +87,23 @@ int rs_binlog_create_data(rs_reqdump_data_t *rd)
                     }
 
                     len = snprintf(rbd->data, rbd->len, 
-                            "%s,%u\n%c,%s.%s%c%u%s%u%s%s", 
+                            "%s,%u\n%c,%s.%s%c", 
                             rd->dump_file, rd->dump_pos, bi->mev, bi->db, 
-                            bi->tb, 0, bi->cn, bi->ct, bi->ml, bi->cm, 
-                            (char *) bi->data);
+                            bi->tb, 0);
 
                     if(len < 0) {
                         rs_log_err(rs_errno, "snprintf() failed");
                         return RS_ERR;
                     }
+
+                    p = (char *) rbd->data + len;
+                    p = rs_cpymem(p, &(bi->cn), 4);
+                    p = rs_cpymem(p, bi->ct, bi->cn);
+                    p = rs_cpymem(p, &(bi->ml), 4);
+                    p = rs_cpymem(p, bi->cm, bi->ml);
+
+                    rs_memcpy(p, bi->data, rbd->len - len - 8 - bi->cn - 
+                            bi->ml);
                 }
             }
 

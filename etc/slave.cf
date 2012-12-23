@@ -5,13 +5,13 @@
 user terry terry
 
 # pid
-pid /var/run/rs/rs_slave.pid
+pid /tmp/rs_slave.pid
 
 # daemon
 daemon 1
 
 # log path
-log /var/log/rs/rs_slave.log
+log /tmp/rs_slave.log
 
 # log debug level(DEBUG : 2, INFO : 1, ERR : 0)
 log.level 2
@@ -24,7 +24,7 @@ listen.addr 127.0.0.1
 listen.port 1919
 
 # slave.info path
-slave.info /home/terry/Documents/MySQL-Syncer/etc/slave.info
+slave.info /tmp/slave.info
 
 # redis addr
 redis.addr 127.0.0.1
@@ -33,13 +33,13 @@ redis.addr 127.0.0.1
 redis.port 6379
 
 # slab init size
-slab.initsize 100
+pool.initsize 100
 
 # slab max memory size (10MB)
-slab.memsize 10485760
+pool.memsize 10485760
 
 # slab slab class grow factor
-slab.factor 1.5
+pool.factor 1.5
 
 # ring buffer num
 ringbuf.num 10000
@@ -54,4 +54,4 @@ binlog.savesec 30
 filter.tables test.test
 
 # recv buffer length
-recvbuf.len 10485760
+recvbuf.size 10485760

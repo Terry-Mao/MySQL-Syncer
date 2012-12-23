@@ -99,6 +99,8 @@ struct rs_binlog_info_s {
 
 #define RS_BINLOG_MAGIC_NUM_LEN         4
 
+extern char *rs_binlog_event_name[];
+
 #define RS_BINLOG_EVENT_NUM             27
 
 /* binlog event type */

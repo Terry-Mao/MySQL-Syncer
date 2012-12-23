@@ -83,8 +83,7 @@ int rs_binlog_header_handler(rs_reqdump_data_t *rd)
             "event length           : %u\n"
             "event next position    : %u\n"
             "dump position          : %u\n"
-            "data length            : %u\n"
-            "\n=====================================\n",
+            "data length            : %u\n",
             bi->svrid,
             bi->t,
             bi->el,
@@ -144,11 +143,9 @@ int rs_binlog_query_handler(rs_reqdump_data_t *rd)
     bi->log_format = RS_BINLOG_FORMAT_SQL_STATEMENT;
 
     rs_log_debug(0, 
-            "\n========== query event ==============\n"
-            "database name          : %s\n"
+            "\ndatabase name          : %s\n"
             "query sql              : %s\n"
-            "next position          : %u\n"
-            "\n=====================================\n",
+            "next position          : %u\n",
             bi->db,
             bi->sql,
             bi->np
@@ -200,17 +197,9 @@ int rs_binlog_intvar_handler(rs_reqdump_data_t *rd)
     rs_memcpy(&(bi->ai), p, RS_BINLOG_INTVAR_INSERT_ID_LEN);
 
 #if x86_64
-    rs_log_debug(0, 
-            "\n========== intvar event ==============\n"
-            "increment id           : %lu"
-            "\n=====================================\n",
-            bi->ai);
+    rs_log_debug(0, "\nincrement id           : %lu", bi->ai);
 #elif x86_32
-    rs_log_debug(0, 
-            "\n========== intvar event ==============\n"
-            "increment id           : %llu"
-            "\n=====================================\n",
-            bi->ai);
+    rs_log_debug(0, "\nincrement id           : %llu", bi->ai);
 
 #endif
 
@@ -233,10 +222,8 @@ int rs_binlog_xid_handler(rs_reqdump_data_t *rd)
     }
 
     rs_log_debug(0, 
-            "\n========== xid event ==============\n"
-            "tran                   : %d\n"
-            "tran id                : %lu"
-            "\n=====================================\n",
+            "\ntran                   : %d\n"
+            "tran id                : %lu",
             bi->tran,
             bi->tranid);
 
@@ -310,12 +297,10 @@ int rs_binlog_table_map_handler(rs_reqdump_data_t *rd)
     }
 
     rs_log_debug(0, 
-            "\n========== table map event ==============\n"
-            "database                   : %s\n"
+            "\ndatabase                   : %s\n"
             "table                      : %s\n"
             "column num                 : %u\n"
-            "skip                       : %d"
-            "\n=========================================\n",
+            "skip                       : %d",
             bi->db,
             bi->tb,
             bi->cn,
@@ -349,10 +334,6 @@ int rs_binlog_write_rows_handler(rs_reqdump_data_t *rd)
     bi->data = wr;
     bi->log_format = RS_BINLOG_FORMAT_ROW_BASED;
     bi->mev = RS_WRITE_ROWS_EVENT;
-
-    rs_log_debug(0, 
-            "\n========== write rows event =============\n"
-            );
 
     if((r = rs_binlog_create_data(rd)) != RS_OK) {
         return r;
@@ -391,10 +372,6 @@ int rs_binlog_update_rows_handler(rs_reqdump_data_t *rd)
     bi->log_format = RS_BINLOG_FORMAT_ROW_BASED;
     bi->mev = RS_UPDATE_ROWS_EVENT;
 
-    rs_log_debug(0, 
-            "\n========== update rows event =============\n"
-            );
-
     if((r = rs_binlog_create_data(rd)) != RS_OK) {
         return r;
     }
@@ -431,10 +408,6 @@ int rs_binlog_delete_rows_handler(rs_reqdump_data_t *rd)
     bi->data = wr;
     bi->log_format = RS_BINLOG_FORMAT_ROW_BASED;
     bi->mev = RS_DELETE_ROWS_EVENT;
-
-    rs_log_debug(0, 
-            "\n========== delete rows event =============\n"
-            );
 
     if((r = rs_binlog_create_data(rd)) != RS_OK) {
         return r;

@@ -21,7 +21,6 @@ void *rs_start_io_thread(void *data)
 {
     int                     r;
     int32_t                 pack_len;
-    ssize_t                 n;
     struct                  sockaddr_in svr_addr;
     rs_slave_info_t         *si;
     rs_ringbuf_data_t       *rbd;
@@ -39,22 +38,6 @@ void *rs_start_io_thread(void *data)
     if (inet_pton(AF_INET, si->listen_addr, &(svr_addr.sin_addr)) != 1) {
         rs_log_err(rs_errno, "inet_pton(\"%s\") failed", si->listen_addr); 
         goto free;
-    }
-
-    /* slave info */
-    si->info_fd = open(si->slave_info, O_CREAT | O_RDWR, 00666);
-
-    if(si->info_fd == -1) {
-        rs_log_err(rs_errno, "open(\"%s\") failed", si->slave_info);
-        goto free;
-    }
-
-    n = rs_read(si->info_fd, si->dump_info, RS_SLAVE_INFO_STR_LEN);
-
-    if(n <= 0) {
-        goto free;
-    } else if (n > 0) { 
-        si->dump_info[n] = '\0';
     }
 
     for( ;; ) {
@@ -138,19 +121,20 @@ static int rs_send_dumpcmd(rs_slave_info_t *si)
 {
     int32_t l;
     ssize_t n;
-    l = 6 + rs_strlen(si->dump_info) + rs_strlen(si->filter_tables);
-    char buf[l];
+    l = 2 + rs_strlen(si->dump_info) + rs_strlen(si->filter_tables);
+    char buf[4 + l], *p;
+    
+    p = buf;
 
-    l = snprintf(buf, l, "%u%s,%s,", l, si->dump_info, si->filter_tables);
-
-    if(l < 0) {
+    p = rs_cpymem(buf, &l, 4);
+    if(snprintf(p, l + 1, "%s,%s,", si->dump_info, si->filter_tables) < 0) {
         rs_log_err(rs_errno, "snprintf() failed");
         return RS_ERR;
     }
 
-    n = rs_write(si->svr_fd, buf, l);
+    n = rs_write(si->svr_fd, buf, 4 + l);
 
-    if(n != l) {
+    if(n != 4 + l) {
         return RS_ERR;
     }
 

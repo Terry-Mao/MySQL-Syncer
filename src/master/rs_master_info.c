@@ -17,8 +17,8 @@ rs_master_info_t *rs_init_master_info(rs_master_info_t *om)
     nl = 1;
     nd = 1;
 
-    p = rs_create_pool(200, 1024 * 1024 * 10, rs_pagesize, RS_POOL_CLASS_IDX, 
-            1.5, RS_POOL_PREALLOC);
+    p = rs_create_pool(200, 1024 * 1024 * 10, 1 * 1024 *1024, RS_POOL_CLASS_IDX
+            , 1.5, RS_POOL_PREALLOC);
 
     if(p == NULL) {
         return NULL;
@@ -52,11 +52,10 @@ rs_master_info_t *rs_init_master_info(rs_master_info_t *om)
         /* exit accpet thread */
         if(om->accept_thread != 0) {
             if((err = pthread_cancel(om->accept_thread)) != 0) {
-                rs_log_err(err, "pthread_cancel() failed, accept_thread");
+                rs_log_err(err, "pthread_cancel() failed");
             } else {
                 if((err = pthread_join(om->accept_thread, NULL)) != 0) {
-                    rs_log_err(err, "pthread_join() failed, "
-                            "accept_thread");
+                    rs_log_err(err, "pthread_join() failed");
                 }
             }
         }

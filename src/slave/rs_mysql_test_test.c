@@ -4,44 +4,19 @@
 #include <rs_slave.h>
 
 typedef struct {
-    int32_t col1;
-    int32_t col2;
-    int32_t col3;
-    int32_t col4;
-    int64_t col5;
-    uint32_t col6;
-    char col7[255 * 3 + 1];
-    char col8[256 * 3 + 1];
-    char col9[20 * 3 + 1];
-    char col10[30 * 3 + 1];
-
+    int32_t id;
+    char    col[10 * 3 + 1];
 } rs_mysql_test_t;
 
 int32_t rs_mysql_test_pos[] = {
-    offsetof(rs_mysql_test_t, col1),
-    offsetof(rs_mysql_test_t, col2),
-    offsetof(rs_mysql_test_t, col3),
-    offsetof(rs_mysql_test_t, col4),
-    offsetof(rs_mysql_test_t, col5),
-    offsetof(rs_mysql_test_t, col6),
-    offsetof(rs_mysql_test_t, col7),
-    offsetof(rs_mysql_test_t, col8),
-    offsetof(rs_mysql_test_t, col9),
-    offsetof(rs_mysql_test_t, col10)
+    offsetof(rs_mysql_test_t, id),
+    offsetof(rs_mysql_test_t, col)
 };
 
 
 #define rs_mysql_test_t_init(test)                                           \
-    (test)->col1 = 0;                                                        \
-    (test)->col2 = 0;                                                        \
-    (test)->col3 = 0;                                                        \
-    (test)->col4 = 0;                                                        \
-    (test)->col5 = 0;                                                        \
-    (test)->col6 = 0;                                                        \
-    rs_memzero((test)->col7, 255 * 3 + 1);                                   \
-    rs_memzero((test)->col8, 256 * 3 + 1);                                   \
-    rs_memzero((test)->col9, 20 * 3 + 1);                                    \
-    rs_memzero((test)->col10, 30 * 3 + 1)
+    (test)->id = 0;                                                        \
+    rs_memzero((test)->col, 10 * 3 + 1)
 
 
 void rs_init_test_test(void *obj);
@@ -66,27 +41,11 @@ void rs_print_test_test(void *obj)
     test = (rs_mysql_test_t *) obj;
     rs_log_debug(0,
             "\n========== test ==========\n"
-            "col1 : %d\n"
-            "col2 : %d\n"
-            "col3 : %d\n"
-            "col4 : %d\n"
-            "col5 : %ld\n"
-            "col6 : %u\n"
-            "col7 : %s\n"
-            "col8 : %s\n"
-            "col9 : %s\n"
-            "col10 : %s\n"
+            "id  : %d\n"
+            "col : %s\n"
             "\n==========================\n",
-            test->col1,
-            test->col2,
-            test->col3,
-            test->col4,
-            test->col5,
-            test->col6,
-            test->col7,
-            test->col8,
-            test->col9,
-            test->col10
+            test->id,
+            test->col
                 );
 }
 
@@ -95,15 +54,11 @@ int rs_insert_test_test(rs_slave_info_t *si, void *obj)
     rs_mysql_test_t *test;
     uint32_t            cmdn;
 
-    if(si == NULL || obj == NULL) {
-        return RS_ERR;
-    }  
-
     test = (rs_mysql_test_t *) obj;
     cmdn = 0;
 
-    if(rs_redis_append_command(si, "SET test_%d %d", test->col1, 
-                test->col2) != RS_OK)
+    if(rs_redis_append_command(si, "SET test_%d %s", test->id, 
+                test->col) != RS_OK)
     {
         return RS_ERR;
     }

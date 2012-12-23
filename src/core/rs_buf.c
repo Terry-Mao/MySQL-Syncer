@@ -69,14 +69,14 @@ int rs_recv_tmpbuf(rs_buf_t *b, int fd, void *data, uint32_t size)
         b->last = b->start;
 
         do {
-            n = rs_read(fd, b->pos, b->size);
+            n = rs_read(fd, b->last, b->size);
 
             if(n <= 0) {
                 return RS_ERR;
             }
 
             b->last += n;
-        } while(b->last - b->pos > s);
+        } while((b->last - b->pos) < s);
 
         rs_memcpy((char *) data + l, b->pos, s);
         b->pos += s;
