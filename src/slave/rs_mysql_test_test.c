@@ -32,6 +32,7 @@ void rs_init_test_test(void *obj)
 {
     rs_mysql_test_t         *test;
     test = (rs_mysql_test_t *) obj;
+
     rs_mysql_test_t_init(test);
 }
 
