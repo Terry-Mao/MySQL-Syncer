@@ -17,8 +17,8 @@ rs_master_info_t *rs_init_master_info(rs_master_info_t *om)
     nl = 1;
     nd = 1;
 
-    p = rs_create_pool(200, 1024 * 1024 * 10, 1 * 1024 *1024, RS_POOL_CLASS_IDX
-            , 1.5, RS_POOL_PREALLOC);
+    p = rs_create_pool(200, 1024 * 1024 * 10, 1 * 1024 * 1024, 
+            RS_POOL_CLASS_IDX, 1.5, RS_POOL_PREALLOC);
 
     if(p == NULL) {
         return NULL;
@@ -57,6 +57,7 @@ rs_master_info_t *rs_init_master_info(rs_master_info_t *om)
 
     rs_free_master(mi);
 
+    id = rs_palloc_id(p, sizeof(rs_master_info_t));
     mi = rs_palloc(p, sizeof(rs_master_info_t), id);
 
     if(mi == NULL) {

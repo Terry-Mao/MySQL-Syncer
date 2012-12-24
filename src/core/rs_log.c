@@ -9,12 +9,9 @@ static rs_str_t rs_log_level_list[] = {
     rs_string(RS_LOG_LEVEL_ERR_STR),
     rs_string(RS_LOG_LEVEL_INFO_STR),
     rs_string(RS_LOG_LEVEL_DEBUG_STR),
-#if MASTER
     rs_string(RS_LOG_LEVEL_MASTER_STR),
-#elif SLAVE
     rs_string(RS_LOG_LEVEL_SLAVE_STR),
-#endif
-    rs_string(RS_LOG_LEVEL_CORE_STR),
+    rs_string(RS_LOG_LEVEL_CORE_STR)
 };
 
 
@@ -63,30 +60,30 @@ void rs_log_info(const char *fmt, ...)
     va_end(args);
 }
 
-void rs_log_master(const char *fmt, ...) 
+void rs_log_master(rs_err_t err, const char *fmt, ...) 
 {
     va_list args;
 
     va_start(args, fmt);
-    rs_log_base(0, rs_log_fd, RS_LOG_LEVEL_MASTER, fmt, args);
+    rs_log_base(err, rs_log_fd, RS_LOG_LEVEL_MASTER, fmt, args);
     va_end(args);
 }
 
-void rs_log_slave(const char *fmt, ...) 
+void rs_log_slave(rs_err_t err, const char *fmt, ...) 
 {
     va_list args;
 
     va_start(args, fmt);
-    rs_log_base(0, rs_log_fd, RS_LOG_LEVEL_SLAVE, fmt, args);
+    rs_log_base(err, rs_log_fd, RS_LOG_LEVEL_SLAVE, fmt, args);
     va_end(args);
 }
 
-void rs_log_core(const char *fmt, ...) 
+void rs_log_core(rs_err_t err, const char *fmt, ...) 
 {
     va_list args;
 
     va_start(args, fmt);
-    rs_log_base(0, rs_log_fd, RS_LOG_LEVEL_CORE, fmt, args);
+    rs_log_base(err, rs_log_fd, RS_LOG_LEVEL_CORE, fmt, args);
     va_end(args);
 }
 

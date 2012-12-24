@@ -35,6 +35,10 @@ void rs_free_slave(void *data)
 
     si = (data == NULL ? rs_slave_info : (rs_slave_info_t *) data);
 
+    if(si == NULL) {
+        return;
+    }
+
     if(si->io_thread != 0 && !si->io_thread_exit) {
 
         rs_log_info("cancel io thread");

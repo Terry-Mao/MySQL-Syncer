@@ -11,10 +11,10 @@
 #define RS_LOG_LEVEL_INFO       1    
 #define RS_LOG_LEVEL_DEBUG      2
 #define RS_LOG_LEVEL_MASTER     3
-#define RS_LOG_LEVEL_SLAVE      3
-#define RS_LOG_LEVEL_CORE       4 
+#define RS_LOG_LEVEL_SLAVE      4
+#define RS_LOG_LEVEL_CORE       5 
 
-#define RS_LOG_LEVEL_MAX        4
+#define RS_LOG_LEVEL_MAX        5
 
 #define RS_LOG_LEVEL_ERR_STR    "[ERROR] "
 #define RS_LOG_LEVEL_INFO_STR   "[INFO]  "
@@ -27,10 +27,10 @@ int rs_log_init(char *name, int flags);
 
 void rs_log_err(rs_err_t err, const char *fmt, ...);
 void rs_log_debug(rs_err_t err, const char *fmt, ...);
-void rs_log_info(const char *fmt, ...);
-void rs_log_master(const char *fmt, ...);
-void rs_log_slave(const char *fmt, ...);
-void rs_log_core(const char *fmt, ...);
+void rs_log_master(rs_err_t err, const char *fmt, ...);
+void rs_log_slave(rs_err_t err, const char *fmt, ...);
+void rs_log_core(rs_err_t err, const char *fmt, ...);
 void rs_log_stderr(rs_err_t err, const char *fmt, ...);
+void rs_log_info(const char *fmt, ...);
 
 #endif

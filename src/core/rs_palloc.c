@@ -117,8 +117,7 @@ int rs_palloc_id(rs_pool_t *p, uint32_t size)
 
     /* if > 1MB use malloc() */
     if(size > p->chunk_size) {
-        rs_log_core(0, "palloc size %u overflow %u", size, 
-                size - p->chunk_size); 
+        rs_log_core(0, "palloc size %u overflow %u", size, p->chunk_size); 
         return RS_SLAB_OVERFLOW;
     }
 
@@ -150,10 +149,11 @@ rs_pool_t *rs_create_pool(uint32_t init_size, uint32_t mem_size,
         uint32_t chunk_size, uint32_t max_idx, double factor, int32_t flag)
 {
     int             i;
-    uint32_t        ps;
+    uint32_t        cls_size;
     rs_pool_t       *p;
     rs_pool_class_t *c;
 
+    cls_size = sizeof(rs_pool_class_t) * (max_idx + 1);
     mem_size = rs_align(mem_size, RS_ALIGNMENT); 
     init_size = rs_align(init_size, RS_ALIGNMENT); 
 
@@ -161,34 +161,29 @@ rs_pool_t *rs_create_pool(uint32_t init_size, uint32_t mem_size,
 
     if(flag == RS_POOL_PREALLOC) {
         /* prealloc memory */
-        p = malloc(sizeof(rs_pool_t) + mem_size + 
-                sizeof(rs_pool_class_t) * (max_idx + 1));
+        p = malloc(sizeof(rs_pool_t) + cls_size + mem_size);
 
         if(p == NULL) {
             rs_log_err(rs_errno, "malloc(%u) failed", 
-                    sizeof(rs_pool_t) + mem_size);
+                    sizeof(rs_pool_t) + mem_size + cls_size);
             return NULL;
         }
-
     } else if(flag == RS_POOL_PAGEALLOC) {
         /* pagealloc memory */
-        ps = (mem_size / chunk_size) * sizeof(char *);
-        p = malloc(sizeof(rs_pool_t) + ps + 
-                sizeof(rs_pool_class_t) * (max_idx + 1));
+        p = malloc(sizeof(rs_pool_t) + cls_size);
 
         if(p == NULL) {
-            rs_log_err(rs_errno, "malloc(%u) failed", 
-                    sizeof(rs_pool_t) + ps);
+            rs_log_err(rs_errno, "malloc(%u) failed", sizeof(rs_pool_t) + 
+                    cls_size);
             return NULL;
         }
-
     } else {
         rs_log_err(0, "unknown slab flag %d", flag);
         return NULL;
     }
 
     p->slab_class = (rs_pool_class_t *) ((char *) p + sizeof(rs_pool_t));
-    p->start = (char *) p->slab_class + sizeof(rs_pool_class_t) * (max_idx + 1);
+    p->start = ((char *) p->slab_class) + cls_size;
     p->cur = p->start;
     p->flag = flag;
     p->max_size = mem_size;
