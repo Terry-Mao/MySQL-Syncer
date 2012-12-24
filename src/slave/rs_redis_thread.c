@@ -24,10 +24,6 @@ void *rs_start_redis_thread(void *data)
 
         err = rs_ringbuf_get(si->ringbuf, &rbd);
 
-        if(err == RS_ERR) {
-            goto free;
-        }
-
         if(err == RS_EMPTY) {
             /* commit redis cmd */
             if(rs_redis_get_replies(si) != RS_OK) {

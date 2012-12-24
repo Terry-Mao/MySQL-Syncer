@@ -139,6 +139,7 @@ static void rs_conf_test(void)
     CU_ASSERT(test16 == 1234);
 
     rs_destroy_conf(cf);
+    rs_destroy_pool(p);
 
 }
 

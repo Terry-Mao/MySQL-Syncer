@@ -8,7 +8,7 @@ user terry terry
 pid /tmp/rs_slave.pid
 
 # daemon
-daemon 1
+daemon 0
 
 # log path
 log /tmp/rs_slave.log

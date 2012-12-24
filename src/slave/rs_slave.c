@@ -6,23 +6,21 @@
 
 int rs_init_slave() 
 {
-    rs_slave_info_t     *si;
+    rs_slave_info_t     *si, *os;
 
     /* init slave info */
-    si = rs_init_slave_info(NULL);
+    si = rs_init_slave_info(rs_slave_info);
 
     if(si == NULL) {
         return RS_ERR;
     }
 
-#if 0
     /* free old slave inof */
     os = rs_slave_info;
 
     if(os != NULL) {
         rs_free_slave(os);
     }
-#endif
 
     rs_slave_info = si;
 
@@ -36,10 +34,6 @@ void rs_free_slave(void *data)
     rs_pool_t       *p;
 
     si = (data == NULL ? rs_slave_info : (rs_slave_info_t *) data);
-
-    if(si == NULL) {
-        return;
-    }
 
     if(si->io_thread != 0 && !si->io_thread_exit) {
 
@@ -71,10 +65,6 @@ void rs_free_slave(void *data)
         rs_close(si->svr_fd);
     }
 
-    if(si->c != NULL) {
-        redisFree(si->c); 
-    }
-
     /* free ring buffer2 */
     if(si->ringbuf != NULL) {
         rs_destroy_ringbuf(si->ringbuf);
@@ -88,6 +78,10 @@ void rs_free_slave(void *data)
     /* close slave info file */
     if(si->info_fd != -1) {
         rs_close(si->info_fd);
+    }
+
+    if(si->c != NULL) {
+        redisFree(si->c); 
     }
 
     if(si->table_func != NULL) {

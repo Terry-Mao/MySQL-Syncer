@@ -20,7 +20,7 @@ struct rs_reqdump_data_s {
 
     uint32_t            dump_pos;
     uint32_t            dump_num;
-    char                *dump_file;
+    char                dump_file[PATH_MAX + 1];
     char                *binlog_idx_file;
     
     char                *filter_tables;
@@ -65,7 +65,7 @@ struct rs_reqdump_data_s {
     (rd)->dump_thread = 0;                                                   \
     (rd)->req_dump = NULL;                                                   \
     (rd)->io_thread = 0;                                                     \
-    (rd)->dump_file = NULL;                                                  \
+    rs_memzero((rd)->dump_file, PATH_MAX + 1);                               \
     (rd)->ringbuf = NULL;                                                    \
     (rd)->io_buf = NULL;                                                     \
     (rd)->send_buf = NULL;                                                   \

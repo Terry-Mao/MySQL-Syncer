@@ -58,14 +58,6 @@ void *rs_start_dump_thread(void *data)
         goto free;
     }
 
-    /* alloc dump_file and dump_tmp_file from mempool */
-    id = rs_palloc_id(d->pool, PATH_MAX + 1);
-    if((d->dump_file = (char *) rs_palloc(d->pool, PATH_MAX + 1, id)) 
-            == NULL) 
-    {
-        goto free;
-    }
-
     rs_memcpy(d->dump_file, cbuf, p - cbuf);
     d->dump_num = rs_estr_to_uint32(p - 1);
     d->dump_pos = rs_str_to_uint32(p + 1);
@@ -103,10 +95,6 @@ void *rs_start_dump_thread(void *data)
     for( ;; ) {
 
         err = rs_ringbuf_get(d->ringbuf, &rbd);
-
-        if(err == RS_ERR) {
-            goto free;
-        }
 
         if(err == RS_EMPTY) {
 
@@ -216,16 +204,15 @@ free:;
 rs_reqdump_t *rs_create_reqdump(rs_pool_t *p, uint32_t num)
 {
     int                 err, id;
-    uint32_t            i;
+    uint32_t            i, len;
     rs_reqdump_t        *rd;
     rs_reqdump_data_t   *next;
 
     rd = NULL;
 
-    id = rs_palloc_id(p, sizeof(rs_reqdump_t) + 
-            sizeof(rs_reqdump_data_t) * num);
-    rd = (rs_reqdump_t *) rs_palloc(p, 
-            sizeof(rs_reqdump_t) + sizeof(rs_reqdump_data_t) * num, id);
+    len = sizeof(rs_reqdump_data_t) * num;
+    id = rs_palloc_id(p, sizeof(rs_reqdump_t) + len);
+    rd = rs_palloc(p, sizeof(rs_reqdump_t) + len, id);
 
     if(rd == NULL) {
         return NULL;

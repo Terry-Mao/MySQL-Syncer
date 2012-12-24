@@ -33,25 +33,45 @@ int rs_binlog_create_data(rs_reqdump_data_t *rd)
         if(r == RS_FULL) {
             sleep(RS_RING_BUFFER_FULL_SLEEP_SEC);
             continue;
-        }
-
-        if(r == RS_ERR) {
+        } else if(r == RS_ERR) {
             return RS_ERR;
         }
 
-        if(r == RS_OK) {
+        /* free memory */
+        if(rbd->data != NULL) {
+            rs_pfree(rd->pool, rbd->data, rbd->id); 
+            rs_ringbuf_data_t_init(rbd);
+        }
 
-            /* free memory */
-            if(rbd->data != NULL) {
-                rs_pfree(rd->pool, rbd->data, rbd->id); 
-                rs_ringbuf_data_t_init(rbd);
+        /* rs_uint32_to_str(rd->dump_pos, istr); */
+        len = snprintf(istr, UINT32_LEN + 1, "%u", rd->dump_pos);
+        len += rs_strlen(rd->dump_file) + 1 + 1 + 1; 
+
+        if(bi->mev == 0) {
+
+            rbd->len = len;
+            rbd->id = rs_palloc_id(rd->pool, len);
+            rbd->data = rs_palloc(rd->pool, len, rbd->id);
+
+            if(rbd->data == NULL) {
+                return RS_ERR;
             }
 
-            /* rs_uint32_to_str(rd->dump_pos, istr); */
-            len = snprintf(istr, UINT32_LEN + 1, "%u", rd->dump_pos);
-            len += rs_strlen(rd->dump_file) + 1 + 1 + 1; 
+            len = snprintf(rbd->data, rbd->len, "%s,%s\n%c", rd->dump_file, 
+                    istr, bi->mev);
 
-            if(bi->mev == 0) {
+            if(len < 0) {
+                rs_log_err(rs_errno, "snprintf() failed");
+                return RS_ERR;
+            }
+        } else {
+
+            if(bi->log_format == RS_BINLOG_FORMAT_ROW_BASED) {
+
+                /* RBR */
+                len += bi->el - RS_BINLOG_EVENT_HEADER_LEN 
+                    + rs_strlen(bi->tb) + 3 + rs_strlen(bi->db) + 4 + 
+                    bi->cn + 4 + bi->ml;
 
                 rbd->len = len;
                 rbd->id = rs_palloc_id(rd->pool, len);
@@ -61,55 +81,29 @@ int rs_binlog_create_data(rs_reqdump_data_t *rd)
                     return RS_ERR;
                 }
 
-                len = snprintf(rbd->data, rbd->len, "%s,%s\n%c", rd->dump_file, 
-                        istr, bi->mev);
+                len = snprintf(rbd->data, rbd->len, 
+                        "%s,%u\n%c,%s.%s%c", 
+                        rd->dump_file, rd->dump_pos, bi->mev, bi->db, 
+                        bi->tb, 0);
 
                 if(len < 0) {
                     rs_log_err(rs_errno, "snprintf() failed");
                     return RS_ERR;
                 }
 
-            } else {
+                p = (char *) rbd->data + len;
+                p = rs_cpymem(p, &(bi->cn), 4);
+                p = rs_cpymem(p, bi->ct, bi->cn);
+                p = rs_cpymem(p, &(bi->ml), 4);
+                p = rs_cpymem(p, bi->cm, bi->ml);
 
-                if(bi->log_format == RS_BINLOG_FORMAT_ROW_BASED) {
-
-                    /* RBR */
-                    len += bi->el - RS_BINLOG_EVENT_HEADER_LEN 
-                        + rs_strlen(bi->tb) + 3 + rs_strlen(bi->db) + 4 + 
-                        bi->cn + 4 + bi->ml;
-
-                    rbd->len = len;
-                    rbd->id = rs_palloc_id(rd->pool, len);
-                    rbd->data = rs_palloc(rd->pool, len, rbd->id);
-
-                    if(rbd->data == NULL) {
-                        return RS_ERR;
-                    }
-
-                    len = snprintf(rbd->data, rbd->len, 
-                            "%s,%u\n%c,%s.%s%c", 
-                            rd->dump_file, rd->dump_pos, bi->mev, bi->db, 
-                            bi->tb, 0);
-
-                    if(len < 0) {
-                        rs_log_err(rs_errno, "snprintf() failed");
-                        return RS_ERR;
-                    }
-
-                    p = (char *) rbd->data + len;
-                    p = rs_cpymem(p, &(bi->cn), 4);
-                    p = rs_cpymem(p, bi->ct, bi->cn);
-                    p = rs_cpymem(p, &(bi->ml), 4);
-                    p = rs_cpymem(p, bi->cm, bi->ml);
-
-                    rs_memcpy(p, bi->data, rbd->len - len - 8 - bi->cn - 
-                            bi->ml);
-                }
+                rs_memcpy(p, bi->data, rbd->len - len - 8 - bi->cn - 
+                        bi->ml);
             }
-
-            rs_ringbuf_set_advance(rd->ringbuf);
-            break;
         }
+
+        rs_ringbuf_set_advance(rd->ringbuf);
+        break;
 
     } // EXIT RING BUFFER 
 

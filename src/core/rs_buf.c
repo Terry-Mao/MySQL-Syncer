@@ -104,7 +104,7 @@ rs_ringbuf_t *rs_create_ringbuf(rs_pool_t *p, uint32_t num)
 
     len =  sizeof(rs_ringbuf_data_t) * num;
     id = rs_palloc_id(p, sizeof(rs_ringbuf_t) + len);
-    rb = (rs_ringbuf_t *) rs_palloc(p, sizeof(rs_ringbuf_t) + len, id);
+    rb = rs_palloc(p, sizeof(rs_ringbuf_t) + len, id);
 
     if(rb == NULL) {
         rs_log_err(rs_errno, "malloc(%u) failed", len + sizeof(rs_ringbuf_t));

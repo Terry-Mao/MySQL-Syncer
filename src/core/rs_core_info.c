@@ -17,15 +17,19 @@ rs_core_info_t *rs_init_core_info(rs_core_info_t *oc)
     nl = 1;
     nd = 1;
 
-
     p = rs_create_pool(200, 1024 * 1024 * 10, rs_pagesize, RS_POOL_CLASS_IDX, 
             1.5, RS_POOL_PREALLOC);
 
+    if(p == NULL) {
+        return NULL;
+    }
+
     id = rs_palloc_id(p, sizeof(rs_core_info_t));
-    ci = (rs_core_info_t *) rs_palloc(p, sizeof(rs_core_info_t), id);
+    ci = rs_palloc(p, sizeof(rs_core_info_t), id);
 
     if(ci == NULL) {
-        goto free;
+        rs_destroy_pool(p);
+        return NULL;
     }
 
     ci->pool = p;
@@ -158,9 +162,12 @@ void rs_free_core(rs_core_info_t *ci)
     rs_pool_t   *p;
 
     /* free conf */
-    rs_destroy_conf(ci->cf);
+    if(ci->cf != NULL) {
+        rs_destroy_conf(ci->cf);
+    }
 
     p = ci->pool;
+
     /* free core_info */
     rs_pfree(p, ci, ci->id);
 

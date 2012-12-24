@@ -33,10 +33,8 @@ rs_shash_t *rs_create_shash(rs_pool_t *p, uint32_t num)
     int32_t     id;
     uint32_t    i;
     rs_shash_t  *h;
-    char        *t;
 
     h = NULL;
-    t = NULL; 
 
     if(num == 0) {
         rs_log_err(0, "rs_shash_init() failed, num must great than zero");
@@ -44,17 +42,16 @@ rs_shash_t *rs_create_shash(rs_pool_t *p, uint32_t num)
     }
     
     id = rs_palloc_id(p, sizeof(rs_shash_t) + sizeof(rs_shash_head_t) * num);
-    t = rs_palloc(p, sizeof(rs_shash_t) + sizeof(rs_shash_head_t) * num, id);
+    h = rs_palloc(p, sizeof(rs_shash_t) + sizeof(rs_shash_head_t) * num, id);
 
-    if(t == NULL) {
+    if(h == NULL) {
         return NULL;
     }
 
-    h = (rs_shash_t *) t;
     h->num = num;
     h->id = id;
     h->pool = p;
-    h->ht = (rs_shash_head_t *) (t + sizeof(rs_shash_t));
+    h->ht = (rs_shash_head_t *) ((char *) h + sizeof(rs_shash_t));
 
     for(i = 0; i < num; i++) {
         h->ht[i].first = NULL; 
@@ -83,7 +80,7 @@ int rs_shash_add(rs_shash_t *h, char *key, void *val)
     }
 
     id = rs_palloc_id(h->pool, sizeof(rs_shash_node_t));
-    p = (rs_shash_node_t *) rs_palloc(h->pool, sizeof(rs_shash_node_t), id);
+    p = rs_palloc(h->pool, sizeof(rs_shash_node_t), id);
 
     if(p == NULL) {
         return RS_ERR;
@@ -130,7 +127,7 @@ void rs_destroy_shash(rs_shash_t *h)
 
     for(i = 0; i < h->num; i++) {
         for(p = h->ht[i].first; p != NULL; p = p->next) {
-            rs_pfree(h->pool, (void *) p, p->id);
+            rs_pfree(h->pool, p, p->id);
         }
     }
 

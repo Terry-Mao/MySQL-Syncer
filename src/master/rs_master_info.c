@@ -25,7 +25,7 @@ rs_master_info_t *rs_init_master_info(rs_master_info_t *om)
     }
 
     id = rs_palloc_id(p, sizeof(rs_master_info_t));
-    mi = (rs_master_info_t *) rs_palloc(p, sizeof(rs_master_info_t), id);
+    mi = rs_palloc(p, sizeof(rs_master_info_t), id);
 
     if(mi == NULL) {
         rs_destroy_pool(p);
@@ -43,6 +43,38 @@ rs_master_info_t *rs_init_master_info(rs_master_info_t *om)
     }
 
     /* init master conf */
+    if(rs_init_master_conf(mi) != RS_OK) {
+        goto free;
+    }
+
+    /* recreate pool */
+    p = rs_create_pool(mi->pool_initsize, mi->pool_memsize,  1 * 1024 * 1024, 
+            RS_POOL_CLASS_IDX, mi->pool_factor, RS_POOL_PREALLOC);
+
+    if(p == NULL) {
+        goto free; 
+    }
+
+    rs_free_master(mi);
+
+    mi = rs_palloc(p, sizeof(rs_master_info_t), id);
+
+    if(mi == NULL) {
+        rs_destroy_pool(p);
+        return NULL;
+    }
+
+    rs_master_info_t_init(mi);
+
+    mi->pool = p;
+    mi->id = id;
+    mi->cf = rs_create_conf(p, RS_MASTER_CONF_NUM);
+
+    if(mi->cf == NULL) {
+        goto free;
+    }
+
+    /* init conf */
     if(rs_init_master_conf(mi) != RS_OK) {
         goto free;
     }

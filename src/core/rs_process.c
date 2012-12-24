@@ -22,7 +22,13 @@ int rs_init_daemon(rs_core_info_t *ci)
         break;
 
     default:
-        rs_close(rs_log_fd);
+        rs_free_core(ci);
+
+        if(rs_log_fd != STDOUT_FILENO) {
+            rs_close(rs_log_fd);
+        }
+
+        rs_free_strerr();
         exit(0);
     }
 

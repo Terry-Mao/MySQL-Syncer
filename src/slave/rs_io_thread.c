@@ -67,8 +67,6 @@ void *rs_start_io_thread(void *data)
             if(r == RS_FULL) {
                 sleep(RS_RING_BUFFER_FULL_SLEEP_SEC);
                 continue;
-            } else if(r == RS_ERR) {
-                goto free;
             }
 
             /* free slab chunk */

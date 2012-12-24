@@ -37,10 +37,6 @@ void rs_free_master(void *data)
 
     mi = (data == NULL ? rs_master_info : (rs_master_info_t *) data);
 
-    if(mi == NULL) {
-        return;
-    }
-
     /* exit accpet thread */
     if(mi->accept_thread != 0) {
 

@@ -157,12 +157,6 @@ int rs_binlog_query_handler(rs_reqdump_data_t *rd)
                 RS_TRAN_END_KEYWORD_LEN) == 0) {
         bi->tran = 0;
     } else {
-        // TODO
-        /*
-        if(rs_binlog_filter_data(rd) != RS_OK) {
-            return RS_ERR;
-        }
-        */
     }
 
     return RS_OK;
@@ -179,9 +173,7 @@ int rs_binlog_intvar_handler(rs_reqdump_data_t *rd)
     p = intvar;
 
     /* get intvar event */
-    if((r = rs_eof_read_binlog2(rd, intvar, bi->dl)) 
-            != RS_OK) 
-    {
+    if((r = rs_eof_read_binlog2(rd, intvar, bi->dl)) != RS_OK) {
         return r;
     }
 
@@ -284,17 +276,14 @@ int rs_binlog_table_map_handler(rs_reqdump_data_t *rd)
     p += bi->ml;
 
     /* filter db and tables */
-    if(rd->filter_tables != NULL) {
-
-        if(snprintf(dt, RS_DATABASE_NAME_MAX_LEN + RS_TABLE_NAME_MAX_LEN + 3,
-                    ",%s.%s,", bi->db, bi->tb) < 0)
-        {
-            rs_log_err(rs_errno, "snprintf() failed, ,db.tb,");
-            return RS_ERR;
-        }
-
-        bi->filter = (rs_strstr(rd->filter_tables, dt) == NULL);
+    if(snprintf(dt, RS_DATABASE_NAME_MAX_LEN + RS_TABLE_NAME_MAX_LEN + 3,
+                ",%s.%s,", bi->db, bi->tb) < 0)
+    {
+        rs_log_err(rs_errno, "snprintf() failed");
+        return RS_ERR;
     }
+
+    bi->filter = (rs_strstr(rd->filter_tables, dt) == NULL);
 
     rs_log_master(0, 
             "\ndatabase                   : %s\n"
@@ -350,10 +339,6 @@ int rs_binlog_update_rows_handler(rs_reqdump_data_t *rd)
 
     bi = &(rd->binlog_info);
 
-    if(bi == NULL) {
-        return RS_ERR;
-    }
-
     if(bi->filter) {
 
         if(!bi->tran) {
@@ -386,10 +371,6 @@ int rs_binlog_delete_rows_handler(rs_reqdump_data_t *rd)
     char                    wr[rd->binlog_info.dl];
 
     bi = &(rd->binlog_info);
-
-    if(bi == NULL) {
-        return RS_ERR;
-    }
 
     if(bi->filter) {
 
@@ -435,7 +416,6 @@ int rs_binlog_finish_handler(rs_reqdump_data_t *rd)
     }
 
     bi->sent = 0;
-
 
     if(bi->skip) {
 

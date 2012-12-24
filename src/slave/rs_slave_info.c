@@ -27,7 +27,7 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
     }
 
     id = rs_palloc_id(p, sizeof(rs_slave_info_t));
-    si = (rs_slave_info_t *) rs_palloc(p, sizeof(rs_slave_info_t), id);
+    si = rs_palloc(p, sizeof(rs_slave_info_t), id);
 
     if(si == NULL) {
         rs_destroy_pool(p);
@@ -59,7 +59,7 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
 
     rs_free_slave(si);
 
-    si = (rs_slave_info_t *) rs_palloc(p, sizeof(rs_slave_info_t), id);
+    si = rs_palloc(p, sizeof(rs_slave_info_t), id);
 
     if(si == NULL) {
         rs_destroy_pool(p);
@@ -79,6 +79,10 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
     /* init conf */
     if(rs_init_slave_conf(si) != RS_OK) {
         goto free;
+    }
+
+    if(os != NULL) {
+        // TODO 
     }
 
     if(nrb) {

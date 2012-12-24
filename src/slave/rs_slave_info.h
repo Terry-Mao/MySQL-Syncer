@@ -7,7 +7,7 @@
 #include <rs_slave.h>
 
 #define RS_SLAVE_MODULE_NAME            "slave"
-#define RS_SLAVE_CONF_NUM               20
+#define RS_SLAVE_CONF_NUM               13
 
 #define RS_SLAVE_INFO_STR_LEN           (PATH_MAX + 1 + UINT32_LEN + 1)
 

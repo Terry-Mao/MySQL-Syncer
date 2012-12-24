@@ -10,7 +10,6 @@ static int rs_palloc_new(rs_pool_t *p, int id);
 static int rs_palloc_grow(rs_pool_t *p, int id)
 {
     rs_pool_class_t *c;
-    char            **t;
     uint32_t        size;
 
     c = &(p->slab_class[id]);
@@ -20,15 +19,14 @@ static int rs_palloc_grow(rs_pool_t *p, int id)
         size = (c->total_slab == 0) ? 16 : c->total_slab * 2; 
 
         /* resize slabs, unchange old data */
-        t = realloc(c->slab, size * sizeof(char *));
+        c->slab = realloc(c->slab, size * sizeof(char *));
 
-        if(t == NULL) {
+        if(c->slab == NULL) {
             rs_log_err(rs_errno, "realloc(%u) failed", size * sizeof(char *));
             return RS_ERR;
         }
 
         c->total_slab = size;
-        c->slab = t;
     }
 
     return RS_OK;
@@ -154,7 +152,6 @@ rs_pool_t *rs_create_pool(uint32_t init_size, uint32_t mem_size,
     int             i;
     uint32_t        ps;
     rs_pool_t       *p;
-    char            *t;
     rs_pool_class_t *c;
 
     mem_size = rs_align(mem_size, RS_ALIGNMENT); 
@@ -164,10 +161,10 @@ rs_pool_t *rs_create_pool(uint32_t init_size, uint32_t mem_size,
 
     if(flag == RS_POOL_PREALLOC) {
         /* prealloc memory */
-        t = (char *) malloc(sizeof(rs_pool_t) + mem_size + 
+        p = malloc(sizeof(rs_pool_t) + mem_size + 
                 sizeof(rs_pool_class_t) * (max_idx + 1));
 
-        if(t == NULL) {
+        if(p == NULL) {
             rs_log_err(rs_errno, "malloc(%u) failed", 
                     sizeof(rs_pool_t) + mem_size);
             return NULL;
@@ -176,10 +173,10 @@ rs_pool_t *rs_create_pool(uint32_t init_size, uint32_t mem_size,
     } else if(flag == RS_POOL_PAGEALLOC) {
         /* pagealloc memory */
         ps = (mem_size / chunk_size) * sizeof(char *);
-        t = (char *) malloc(sizeof(rs_pool_t) + ps + 
+        p = malloc(sizeof(rs_pool_t) + ps + 
                 sizeof(rs_pool_class_t) * (max_idx + 1));
 
-        if(t == NULL) {
+        if(p == NULL) {
             rs_log_err(rs_errno, "malloc(%u) failed", 
                     sizeof(rs_pool_t) + ps);
             return NULL;
@@ -190,9 +187,8 @@ rs_pool_t *rs_create_pool(uint32_t init_size, uint32_t mem_size,
         return NULL;
     }
 
-    p = (rs_pool_t *) t;
-    p->slab_class = (rs_pool_class_t *) (t + sizeof(rs_pool_t));
-    p->start = t + sizeof(rs_pool_t) + sizeof(rs_pool_class_t) * (max_idx + 1);
+    p->slab_class = (rs_pool_class_t *) ((char *) p + sizeof(rs_pool_t));
+    p->start = (char *) p->slab_class + sizeof(rs_pool_class_t) * (max_idx + 1);
     p->cur = p->start;
     p->flag = flag;
     p->max_size = mem_size;
