@@ -148,6 +148,7 @@ int rs_ringbuf_get(rs_ringbuf_t *rb, rs_ringbuf_data_t **data)
         return RS_EMPTY;
     }
 
+    rs_mem_barrier();
     d = (rs_ringbuf_data_t *) rb->rp;
 
     *data = d;
@@ -159,6 +160,7 @@ void rs_ringbuf_get_advance(rs_ringbuf_t *rb)
 {
     rb->rp = (rb->rp + sizeof(rs_ringbuf_data_t) == rb->end) ? rb->start : 
         rb->rp + sizeof(rs_ringbuf_data_t);
+    rs_mem_barrier();
     rb->rn++;
 
 #if x86_64
@@ -175,7 +177,7 @@ int rs_ringbuf_set(rs_ringbuf_t *rb, rs_ringbuf_data_t **data)
     if(rb->wn - rb->rn == rb->num) {
         return RS_FULL;
     }
-
+    rs_mem_barrier();
     d = (rs_ringbuf_data_t *) rb->wp;
 
     *data = d;
@@ -187,7 +189,7 @@ void rs_ringbuf_set_advance(rs_ringbuf_t *rb)
 {
     rb->wp = ((rb->wp + sizeof(rs_ringbuf_data_t)) == rb->end ? rb->start : 
             rb->wp + sizeof(rs_ringbuf_data_t));
-
+    rs_mem_barrier();
     rb->wn++;
 #if x86_64
     rs_log_core(0, "ringbuf write : %lu, read : %lu", rb->wn, rb->rn);

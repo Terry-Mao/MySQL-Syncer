@@ -33,6 +33,7 @@ void rs_destroy_tmpbuf(rs_buf_t *b);
 
 #define RS_RING_BUFFER_SPIN     65536 + 1 
 #define rs_cpu_pause()          __asm__ (".byte 0xf3, 0x90")
+#define rs_mem_barrier()        __asm__ __volatile__ ("" ::: "memory")
 
 typedef struct {
 
