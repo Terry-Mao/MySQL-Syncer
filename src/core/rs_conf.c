@@ -48,7 +48,7 @@ int rs_init_conf(rs_conf_t *conf, char *path, char *name)
         return RS_ERR;
     }
 
-    rs_log_debug(0, "conf file = %s, module = %s", path, name);
+    rs_log_info("conf file = %s, module = %s", path, name);
 
     fd = open(path, O_CREAT | O_RDONLY, 00666);
 
@@ -249,7 +249,7 @@ int rs_conf_register(rs_conf_t *c, char *key, void *data, int32_t type)
         return RS_ERR;
     }
     
-    rs_log_debug(0, "add conf key %s, type %d", key, type);
+    rs_log_core(0, "add conf key %s, type %d", key, type);
 
     return RS_OK;
 }

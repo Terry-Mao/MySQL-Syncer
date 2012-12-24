@@ -18,10 +18,12 @@ int main(int argc, char * const *argv)
 
     /* init argv */
     if(rs_get_options(argc, argv) != RS_OK) {
+        rs_free_strerr();
         return 1;
     }
 
     if(rs_show_help == 1) {
+        rs_free_strerr();
         printf( 
                 "Usage: rs_[master|slave] [-?h] [-c filename]\n"
                 "Options:\n"
@@ -32,10 +34,12 @@ int main(int argc, char * const *argv)
 
     /* init core info */
     if((ci = rs_init_core_info(NULL)) == NULL) {
+        rs_free_strerr();
         return 1;
     }
 
     rs_core_info = ci;
+
 #if MASTER
         rs_init_master();
 #elif SLAVE
@@ -51,7 +55,12 @@ int main(int argc, char * const *argv)
             }
 
             rs_log_err(rs_errno, "sigwaitinfo() failed");
-            return 1;
+#if MASTER
+            rs_free_master(NULL);
+#elif SLAVE
+            rs_free_slave(NULL);
+#endif
+            break;        
         }
 
         rs_sig_handle(ci->sig_info.si_signo);

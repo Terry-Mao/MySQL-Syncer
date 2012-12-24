@@ -76,7 +76,7 @@ int rs_binlog_header_handler(rs_reqdump_data_t *rd)
 
     bi->dl = bi->el - RS_BINLOG_EVENT_HEADER_LEN;
 
-    rs_log_debug(0, 
+    rs_log_master(0, 
             "\n========== event header =============\n"
             "server id              : %u\n"
             "event type             : %d\n"
@@ -142,7 +142,7 @@ int rs_binlog_query_handler(rs_reqdump_data_t *rd)
     bi->sql[bi->sl] = '\0';
     bi->log_format = RS_BINLOG_FORMAT_SQL_STATEMENT;
 
-    rs_log_debug(0, 
+    rs_log_master(0, 
             "\ndatabase name          : %s\n"
             "query sql              : %s\n"
             "next position          : %u\n",
@@ -197,9 +197,9 @@ int rs_binlog_intvar_handler(rs_reqdump_data_t *rd)
     rs_memcpy(&(bi->ai), p, RS_BINLOG_INTVAR_INSERT_ID_LEN);
 
 #if x86_64
-    rs_log_debug(0, "\nincrement id           : %lu", bi->ai);
+    rs_log_master(0, "\nincrement id           : %lu", bi->ai);
 #elif x86_32
-    rs_log_debug(0, "\nincrement id           : %llu", bi->ai);
+    rs_log_master(0, "\nincrement id           : %llu", bi->ai);
 
 #endif
 
@@ -221,7 +221,7 @@ int rs_binlog_xid_handler(rs_reqdump_data_t *rd)
         return r;
     }
 
-    rs_log_debug(0, 
+    rs_log_master(0, 
             "\ntran                   : %d\n"
             "tran id                : %lu",
             bi->tran,
@@ -296,7 +296,7 @@ int rs_binlog_table_map_handler(rs_reqdump_data_t *rd)
         bi->filter = (rs_strstr(rd->filter_tables, dt) == NULL);
     }
 
-    rs_log_debug(0, 
+    rs_log_master(0, 
             "\ndatabase                   : %s\n"
             "table                      : %s\n"
             "column num                 : %u\n"
@@ -424,7 +424,7 @@ int rs_binlog_finish_handler(rs_reqdump_data_t *rd)
 
     if((!bi->tran && !bi->sent && !bi->filter) || bi->flush) {
 
-        rs_log_debug(0, "send dump file = %s, send dump pos = %u, tran = %d, "
+        rs_log_master(0, "send dump file = %s, send dump pos = %u, tran = %d, "
                 "sent = %d, flush = %d", rd->dump_file, 
                 rd->dump_pos, bi->tran, bi->sent, bi->flush);
 
@@ -444,7 +444,6 @@ int rs_binlog_finish_handler(rs_reqdump_data_t *rd)
         } else {
             rd->io_buf->pos = rd->io_buf->last; 
 
-            rs_log_debug(0, "fseek");
             if(fseek(rd->binlog_fp, rd->dump_pos, SEEK_SET) == -1) {
                 rs_log_err(rs_errno, "fseek() failed, seek_set pos = %u", 
                         rd->dump_pos);

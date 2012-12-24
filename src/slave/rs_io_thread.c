@@ -83,7 +83,7 @@ void *rs_start_io_thread(void *data)
                 goto retry;
             }
 
-            rs_log_debug(0, "get cmd packet length = %u", pack_len);
+            rs_log_slave(0, "get cmd packet length = %u", pack_len);
 
             /* alloc memory */
             rbd->len = pack_len;

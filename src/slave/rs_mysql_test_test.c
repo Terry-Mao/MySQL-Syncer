@@ -15,7 +15,7 @@ int32_t rs_mysql_test_pos[] = {
 
 
 #define rs_mysql_test_t_init(test)                                           \
-    (test)->id = 0;                                                        \
+    (test)->id = 0;                                                          \
     rs_memzero((test)->col, 10 * 3 + 1)
 
 

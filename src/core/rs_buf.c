@@ -28,9 +28,7 @@ int rs_send_tmpbuf(rs_buf_t *b, int fd)
     uint32_t    size;
     ssize_t     n;
 
-    while((size = b->last - b->pos) > 0) {
-
-        rs_log_debug(0, "rs_send_tmpbuf send size : %u", size);
+    while((size = (b->last - b->pos)) > 0) {
 
         n = rs_write(fd, b->pos, size);
 
@@ -41,6 +39,7 @@ int rs_send_tmpbuf(rs_buf_t *b, int fd)
         b->pos += n;
     }
 
+    rs_log_core(0, "tmpbuf send size : %u", size);
     b->pos = b->start;
     b->last = b->start;
 
@@ -53,6 +52,7 @@ int rs_recv_tmpbuf(rs_buf_t *b, int fd, void *data, uint32_t size)
     ssize_t     n;
 
     if(size > b->size) {
+        rs_log_err(0, "tmpbuf recv size %u, buf size %u", size, b->size);
         return RS_ERR;
     }
 
@@ -63,8 +63,8 @@ int rs_recv_tmpbuf(rs_buf_t *b, int fd, void *data, uint32_t size)
         b->pos += size;
         return RS_OK;
     } else {
-        rs_memcpy(data, b->pos, l);
         s = size - l;
+        rs_memcpy(data, b->pos, l);
         b->pos = b->start;
         b->last = b->start;
 
@@ -82,6 +82,7 @@ int rs_recv_tmpbuf(rs_buf_t *b, int fd, void *data, uint32_t size)
         b->pos += s;
     }
 
+    rs_log_core(0, "tmpbuf recv size : %u", size);
     return RS_OK;
 }
 
@@ -154,9 +155,9 @@ void rs_ringbuf_get_advance(rs_ringbuf_t *rb)
     rb->rn++;
 
 #if x86_64
-    rs_log_info("ringbuf write : %lu, read : %lu", rb->wn, rb->rn);
+    rs_log_core(0, "ringbuf write : %lu, read : %lu", rb->wn, rb->rn);
 #elif x86_32
-    rs_log_info("ringbuf write : %llu, read : %llu", rb->wn, rb->rn);
+    rs_log_core(0, "ringbuf write : %llu, read : %llu", rb->wn, rb->rn);
 #endif
 }
 
@@ -182,9 +183,9 @@ void rs_ringbuf_set_advance(rs_ringbuf_t *rb)
 
     rb->wn++;
 #if x86_64
-    rs_log_info("ringbuf write : %lu, read : %lu", rb->wn, rb->rn);
+    rs_log_core(0, "ringbuf write : %lu, read : %lu", rb->wn, rb->rn);
 #elif x86_32
-    rs_log_info("ringbuf write : %llu, read : %llu", rb->wn, rb->rn);
+    rs_log_core(0, "ringbuf write : %llu, read : %llu", rb->wn, rb->rn);
 #endif
 }
 

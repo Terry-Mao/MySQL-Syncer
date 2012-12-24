@@ -53,7 +53,7 @@ int rs_read_binlog(rs_reqdump_data_t *rd)
             goto free;
         }
 
-        rs_log_debug(0, "\n========== %s ==============", 
+        rs_log_master(0, "\n========== %s ==============", 
                 rs_binlog_event_name[idx]);
 
         /* event handler */
@@ -241,7 +241,7 @@ int rs_has_next_binlog(rs_reqdump_data_t *rd)
     rd->dump_num = n;
     rd->dump_pos = 0;
 
-    rs_log_debug(0, "rs_has_next_binlog(), binlog = %s, binlog_num : %u, "
+    rs_log_master(0, "rs_has_next_binlog(), binlog = %s, binlog_num : %u, "
             "binlog_pos = %u",
             rd->dump_file, rd->dump_num, rd->dump_pos);
 

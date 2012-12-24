@@ -35,7 +35,7 @@ void *rs_start_dump_thread(void *data)
         goto free;
     }
 
-    rs_log_debug(0, "get slave cmd packet len : %u", pack_len);
+    rs_log_master(0, "get slave cmd packet len : %u", pack_len);
 
     /* alloc cmd buf from mempool */
     id = rs_palloc_id(d->pool, pack_len + 1);
@@ -432,7 +432,7 @@ void rs_free_io_thread(void *data)
     rd->io_thread_exit = 1;
     rs_free_reqdump_data(rd->req_dump, rd);
 
-    rs_log_debug(0, "io thread stoped");
+    rs_log_info("io thread stoped");
 }
 
 void rs_free_dump_thread(void *data)
@@ -444,5 +444,5 @@ void rs_free_dump_thread(void *data)
     rd->dump_thread_exit = 1;
     rs_free_reqdump_data(rd->req_dump, rd);
 
-    rs_log_debug(0, "dump thread stoped");
+    rs_log_info("dump thread stoped");
 }

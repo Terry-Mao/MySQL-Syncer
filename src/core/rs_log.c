@@ -8,7 +8,13 @@ static void rs_get_time(char *buf);
 static rs_str_t rs_log_level_list[] = {
     rs_string(RS_LOG_LEVEL_ERR_STR),
     rs_string(RS_LOG_LEVEL_INFO_STR),
-    rs_string(RS_LOG_LEVEL_DEBUG_STR)
+    rs_string(RS_LOG_LEVEL_DEBUG_STR),
+#if MASTER
+    rs_string(RS_LOG_LEVEL_MASTER_STR),
+#elif SLAVE
+    rs_string(RS_LOG_LEVEL_SLAVE_STR),
+#endif
+    rs_string(RS_LOG_LEVEL_CORE_STR),
 };
 
 
@@ -16,6 +22,9 @@ char        *rs_log_path = "./rs.log";
 uint32_t    rs_log_level = RS_LOG_LEVEL_DEBUG;
 int         rs_log_fd = STDOUT_FILENO;
 
+
+static void rs_log_base(rs_err_t err, int fd, uint32_t level, const char *fmt, 
+        va_list args);
 
 int rs_log_init(char *name, int flags) 
 {
@@ -31,7 +40,7 @@ void rs_log_err(rs_err_t err, const char *fmt, ...)
     va_list args;
 
     va_start(args, fmt);
-    rs_log_core(err, rs_log_fd, RS_LOG_LEVEL_ERR, fmt, args);
+    rs_log_base(err, rs_log_fd, RS_LOG_LEVEL_ERR, fmt, args);
     va_end(args);
 }
 
@@ -40,7 +49,7 @@ void rs_log_debug(rs_err_t err, const char *fmt, ...)
     va_list args;
 
     va_start(args, fmt);
-    rs_log_core(err, rs_log_fd, RS_LOG_LEVEL_DEBUG, fmt, args);
+    rs_log_base(err, rs_log_fd, RS_LOG_LEVEL_DEBUG, fmt, args);
     va_end(args);
 
 }
@@ -50,21 +59,49 @@ void rs_log_info(const char *fmt, ...)
     va_list args;
 
     va_start(args, fmt);
-    rs_log_core(0, rs_log_fd, RS_LOG_LEVEL_INFO, fmt, args);
+    rs_log_base(0, rs_log_fd, RS_LOG_LEVEL_INFO, fmt, args);
     va_end(args);
 }
+
+void rs_log_master(const char *fmt, ...) 
+{
+    va_list args;
+
+    va_start(args, fmt);
+    rs_log_base(0, rs_log_fd, RS_LOG_LEVEL_MASTER, fmt, args);
+    va_end(args);
+}
+
+void rs_log_slave(const char *fmt, ...) 
+{
+    va_list args;
+
+    va_start(args, fmt);
+    rs_log_base(0, rs_log_fd, RS_LOG_LEVEL_SLAVE, fmt, args);
+    va_end(args);
+}
+
+void rs_log_core(const char *fmt, ...) 
+{
+    va_list args;
+
+    va_start(args, fmt);
+    rs_log_base(0, rs_log_fd, RS_LOG_LEVEL_CORE, fmt, args);
+    va_end(args);
+}
+
 
 void rs_log_stderr(rs_err_t err, const char *fmt, ...) 
 {
     va_list args;
 
     va_start(args, fmt);
-    rs_log_core(err, STDERR_FILENO, RS_LOG_LEVEL_ERR, fmt, args);
+    rs_log_base(err, STDERR_FILENO, RS_LOG_LEVEL_ERR, fmt, args);
     va_end(args);
 
 }
 
-void rs_log_core(rs_err_t err, int fd, uint32_t level, const char *fmt, 
+static void rs_log_base(rs_err_t err, int fd, uint32_t level, const char *fmt, 
         va_list args) 
 {
     if(rs_log_level < level) {

@@ -53,8 +53,6 @@ int rs_dump_listen(rs_master_info_t *mi)
                     sizeof(svr_addr)) == -1) 
         {
             err = errno;
-
-            rs_close(mi->svr_fd);
             mi->svr_fd = -1;
 
             if(err != EADDRINUSE) {

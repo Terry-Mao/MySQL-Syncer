@@ -128,7 +128,7 @@ int rs_add_io_watch(int fd, char *path, uint32_t mask)
 int rs_close(int fd) 
 {
     if(close(fd) != 0) {
-        rs_log_err(rs_errno, "close(%d) failed", fd);
+        rs_log_err(rs_errno, "close() failed");
         return RS_ERR;    
     }
 

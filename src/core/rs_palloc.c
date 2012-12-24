@@ -59,7 +59,7 @@ static int rs_palloc_new(rs_pool_t *p, int id)
     c->free = c->num;
     c->slab[c->used_slab++] = t;
 
-    rs_log_debug(0, "palloc new slab id %d, used slab num = %u, "
+    rs_log_core(0, "palloc new slab id %d, used slab num = %u, "
             "total slab num = %u", 
             id,
             c->used_slab, 
@@ -97,7 +97,7 @@ static char *rs_pmemalloc(rs_pool_t *p, uint32_t size)
     p->free_size -= size;
     p->used_size += size;
 
-    rs_log_debug(0, "pmemalloc pool alloc_size = %u, free_size = %u, "
+    rs_log_core(0, "pmemalloc pool alloc_size = %u, free_size = %u, "
             "used_size = %u", 
             size, p->free_size, p->used_size);
 
@@ -119,7 +119,7 @@ int rs_palloc_id(rs_pool_t *p, uint32_t size)
 
     /* if > 1MB use malloc() */
     if(size > p->chunk_size) {
-        rs_log_debug(0, "palloc size %u overflow %u", size, 
+        rs_log_core(0, "palloc size %u overflow %u", size, 
                 size - p->chunk_size); 
         return RS_SLAB_OVERFLOW;
     }
@@ -133,17 +133,17 @@ int rs_palloc_id(rs_pool_t *p, uint32_t size)
         } else if(p->slab_class[mid].size < size) {
             low = mid + 1;
         } else {
-            rs_log_debug(0, "pool class size %u, clsid %d", size, low);
+            rs_log_core(0, "pool class size %u, clsid %d", size, low);
             return low;
         }
     }
 
     if(low > -1 && low <= p->cur_idx) {
-        rs_log_debug(0, "pool class size %u, clsid %d", size, low);
+        rs_log_core(0, "pool class size %u, clsid %d", size, low);
         return low;
     }
 
-    rs_log_debug(0, "palloc size %u overflow %u", size, 
+    rs_log_core(0, "palloc size %u overflow %u", size, 
             size - p->chunk_size); 
     return RS_SLAB_OVERFLOW;
 }
@@ -160,7 +160,7 @@ rs_pool_t *rs_create_pool(uint32_t init_size, uint32_t mem_size,
     mem_size = rs_align(mem_size, RS_ALIGNMENT); 
     init_size = rs_align(init_size, RS_ALIGNMENT); 
 
-    rs_log_debug(0, "pool align mem_size %u", mem_size);
+    rs_log_core(0, "pool align mem_size %u", mem_size);
 
     if(flag == RS_POOL_PREALLOC) {
         /* prealloc memory */
@@ -202,14 +202,14 @@ rs_pool_t *rs_create_pool(uint32_t init_size, uint32_t mem_size,
     p->used_size = 0;
 
     for(i = 0; i < p->max_idx && init_size < p->chunk_size; i++) {
-        rs_log_debug(0, "pool align init_size %u", init_size);
+        rs_log_core(0, "pool align init_size %u", init_size);
         c = &(p->slab_class[i]);
         
         rs_pool_class_t_init(c);
         c->size = init_size;
         c->num = chunk_size / init_size;
 
-        rs_log_debug(0, "slab class id= %d, chunk size = %u, num = %u",
+        rs_log_core(0, "slab class id= %d, chunk size = %u, num = %u",
                 i, p->slab_class[i].size, p->slab_class[i].num);
 
         init_size = rs_align((uint32_t) (init_size * factor), RS_ALIGNMENT);
@@ -253,7 +253,7 @@ void *rs_palloc(rs_pool_t *p, uint32_t size, int id)
         return NULL;
     } else if(c->used_free > 0) {
         t = c->free_chunk[--c->used_free];
-        rs_log_debug(0, "palloc used free chunk num %u", c->used_free);
+        rs_log_core(0, "palloc used free chunk num %u", c->used_free);
     } else {
         t = c->chunk;
 
@@ -263,7 +263,7 @@ void *rs_palloc(rs_pool_t *p, uint32_t size, int id)
             c->chunk = NULL;
         }
 
-        rs_log_debug(0, "palloc free chunk num = %u", c->free);
+        rs_log_core(0, "palloc free chunk num = %u", c->free);
     }
 
     return (void *) t;
@@ -301,7 +301,7 @@ void rs_pfree(rs_pool_t *p, void *data, int id)
 
     c->free_chunk[c->used_free++] = data;
 
-    rs_log_debug(0, "used free chunk num = %u", c->used_free);
+    rs_log_core(0, "used free chunk num = %u", c->used_free);
 }
 
 void rs_destroy_pool(rs_pool_t *p)
