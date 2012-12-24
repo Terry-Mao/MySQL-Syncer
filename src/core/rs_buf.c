@@ -67,6 +67,7 @@ int rs_recv_tmpbuf(rs_buf_t *b, int fd, void *data, uint32_t size)
     if((uint32_t) l >= size) {
         rs_memcpy(data, b->pos, size);
         b->pos += size;
+        rs_log_core(0, "tmpbuf recv size : %u", size);
         return RS_OK;
     } else {
         s = size - l;
