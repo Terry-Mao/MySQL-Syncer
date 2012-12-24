@@ -28,7 +28,13 @@ int rs_send_tmpbuf(rs_buf_t *b, int fd)
     uint32_t    size;
     ssize_t     n;
 
-    while((size = (b->last - b->pos)) > 0) {
+    if((size = (b->last - b->pos)) == 0) {
+        return RS_OK;
+    }
+
+    rs_log_core(0, "tmpbuf send size : %u", size);
+
+    while(size > 0) {
 
         n = rs_write(fd, b->pos, size);
 
@@ -37,9 +43,9 @@ int rs_send_tmpbuf(rs_buf_t *b, int fd)
         }
 
         b->pos += n;
+        size = (b->last - b->pos);
     }
 
-    rs_log_core(0, "tmpbuf send size : %u", size);
     b->pos = b->start;
     b->last = b->start;
 
