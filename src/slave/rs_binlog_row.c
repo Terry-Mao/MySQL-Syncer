@@ -445,10 +445,6 @@ int rs_dml_binlog_row(rs_slave_info_t *si, void *data, uint32_t len, char type,
         p += un;
     }
 
-    if(before_parse_handle != NULL) {
-        before_parse_handle(obj);
-    }
-
     /* get column value */
     while(p < (char *) data + len) {
 
@@ -469,6 +465,9 @@ int rs_dml_binlog_row(rs_slave_info_t *si, void *data, uint32_t len, char type,
             ubp = use_bits_after;
         }
 
+        if(before_parse_handle != NULL) {
+            before_parse_handle(obj);
+        }
 
         /* parse every column */
         for(i = 0; i < cn; i++) {
