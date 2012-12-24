@@ -8,7 +8,7 @@ user terry terry
 pid /tmp/rs_master.pid
 
 # daemon
-daemon 0
+daemon 1
 
 # log path
 log /tmp/rs_master.log
@@ -31,7 +31,7 @@ binlog.index /var/log/mysql/mysql-bin.index
 pool.initsize 100
 
 # pool max memory size (10MB)
-pool.memsize 10485976
+pool.memsize 1024000
 
 # pool slab class grow factor
 pool.factor 1.5
@@ -40,11 +40,11 @@ pool.factor 1.5
 ringbuf.num 8000
 
 # send buf size
-sendbuf.size 10485760
+sendbuf.size 1024000
 
 # io buf size (128MB)
-iobuf.size 10485760
-# iobuf.size 1023
+#iobuf.size 10485760
+ iobuf.size 1024000
 
 # current mysql server_id
 server.id 1

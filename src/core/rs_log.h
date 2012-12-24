@@ -19,9 +19,9 @@
 #define RS_LOG_LEVEL_ERR_STR    "[ERROR] "
 #define RS_LOG_LEVEL_INFO_STR   "[INFO]  "
 #define RS_LOG_LEVEL_DEBUG_STR  "[DEBUG] "
-#define RS_LOG_LEVEL_MASTER_STR "[MASTER]" 
-#define RS_LOG_LEVEL_SLAVE_STR  "[SLAVE]" 
-#define RS_LOG_LEVEL_CORE_STR   "[CORE]"
+#define RS_LOG_LEVEL_MASTER_STR "[MASTER] " 
+#define RS_LOG_LEVEL_SLAVE_STR  "[SLAVE] " 
+#define RS_LOG_LEVEL_CORE_STR   "[CORE] "
 
 int rs_log_init(char *name, int flags);
 

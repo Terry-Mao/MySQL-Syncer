@@ -6,9 +6,17 @@
 #include <rs_core.h>
 #include <rs_slave.h>
 
-#define RS_TABLE_FUNC_NUM   1
 
 typedef int (*rs_redis_dml_func) (rs_slave_info_t *, char *, uint32_t, char);
+
+typedef struct {
+    char                *key;
+    rs_redis_dml_func   handle;
+
+} rs_dml_table_func;
+
+
+extern rs_dml_table_func rs_dml_table_funcs[];
 
 int rs_register_tables(rs_slave_info_t *si);
 
