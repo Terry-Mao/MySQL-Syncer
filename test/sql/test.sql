@@ -2,8 +2,8 @@ CREATE DATABASE IF NOT EXISTS test;
 
 USE test;
 
-CREATE TABLE t1 (
-    ID int unsigned NOT NULL AUTO_INCREMENT PRIMARY KEY, 
-    Msg varchar(70) CHARSET utf8 NULL
+CREATE TABLE test (
+    id int NOT NULL AUTO_INCREMENT PRIMARY KEY, 
+    col varchar(10) CHARSET utf8 NULL
 ) ENGINE = InnoDB;
 
