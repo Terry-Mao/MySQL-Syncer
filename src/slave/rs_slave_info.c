@@ -234,6 +234,6 @@ static int rs_init_slave_conf(rs_slave_info_t *si)
         return RS_ERR;
     }
 
-    /* init master conf */
+    /* init slave conf */
     return rs_init_conf(si->cf, rs_conf_path, RS_SLAVE_MODULE_NAME);
 }

@@ -14,7 +14,7 @@ daemon 1
 log /tmp/rs_master.log
 
 # log debug level(CORE : 5 SLAVE : 4 MASTER : 3 DEBUG : 2 INFO : 1 ERR : 0)
-log.level 5
+log.level 4
 
 [master]
 
@@ -31,7 +31,7 @@ binlog.index /var/log/mysql/mysql-bin.index
 pool.initsize 100
 
 # pool max memory size (10MB)
-pool.memsize 1024000
+pool.memsize 10485760
 
 # pool slab class grow factor
 pool.factor 1.5
@@ -43,8 +43,8 @@ ringbuf.num 8000
 sendbuf.size 1024000
 
 # io buf size (128MB)
-#iobuf.size 10485760
- iobuf.size 1024000
+iobuf.size 10485760
+#iobuf.size 1024000
 
 # current mysql server_id
 server.id 1

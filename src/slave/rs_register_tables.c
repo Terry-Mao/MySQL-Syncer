@@ -15,7 +15,8 @@ int rs_register_tables(rs_slave_info_t *si)
 
     i = 0;
 
-    for(f = rs_dml_table_funcs[i]; f.key != NULL && f.handle != NULL; i++);
+    for(f = rs_dml_table_funcs[i]; f.key != NULL && f.handle != NULL; 
+            f = rs_dml_table_funcs[++i]);
 
     si->table_func = rs_create_shash(si->pool, i * 2);
     
@@ -25,7 +26,9 @@ int rs_register_tables(rs_slave_info_t *si)
 
     i = 0;
 
-    for(f = rs_dml_table_funcs[i]; f.key != NULL && f.handle != NULL; i++) {
+    for(f = rs_dml_table_funcs[i]; f.key != NULL && f.handle != NULL; 
+            f = rs_dml_table_funcs[++i]) 
+    {
         rs_shash_add(si->table_func, f.key, f.handle);
     }
 
