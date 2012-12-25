@@ -110,7 +110,8 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
     si->info_fd = open(si->slave_info, O_CREAT | O_RDWR, 00666);
 
     if(si->info_fd == -1) {
-        rs_log_err(rs_errno, "open(\"%s\") failed", si->slave_info);
+        rs_log_error(RS_LOG_ERR, rs_errno, "open(\"%s\") failed", 
+                si->slave_info);
         goto free;
     }
 
@@ -123,25 +124,21 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
     }
 
     if(ni) {
-        rs_log_info("start io thread");
-
         /* init io thread */
         if((err = pthread_create(&(si->io_thread), NULL, 
                         rs_start_io_thread, (void *) si)) != 0) 
         {
-            rs_log_err(err, "pthread_create() failed");
+            rs_log_error(RS_LOG_ERR, err, "pthread_create() failed");
             goto free;
         }
     }
 
     if(nr) {
-        rs_log_info("start redis thread");
-
         /* init redis thread */
         if((err = pthread_create(&(si->redis_thread), NULL, 
                         rs_start_redis_thread, (void *) si)) != 0) 
         {
-            rs_log_err(err, "pthread_create() failed");
+            rs_log_error(RS_LOG_ERR, err, "pthread_create() failed");
             goto free;
         }
     }

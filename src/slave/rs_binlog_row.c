@@ -297,8 +297,8 @@ static char *rs_binlog_parse_varchar(char *p, u_char *cm, uint32_t ml,
         pack_len = 2;
     }
 
-    rs_log_slave(0, "parse_varchar max_len : %u, pack_len : %u", max_len, 
-            pack_len);
+    rs_log_debug(RS_DEBUG_BINLOG, 0, "parse_varchar max_len : %u, "
+            "pack_len : %u", max_len, pack_len);
 
     rs_memcpy(dl, p, pack_len);
 
@@ -344,7 +344,8 @@ static char *rs_binlog_parse_varstring(char *p, u_char *cm, uint32_t ml,
     rs_memcpy(&pack_len, cm + 1, 1);
     rs_memcpy(dl, p, pack_len);
 
-    rs_log_slave(0, "pack len : %u", pack_len);
+    rs_log_debug(RS_DEBUG_BINLOG, 0, "parse varstring pack len : %u", 
+            pack_len);
 
     return p + pack_len;    
 }
@@ -373,8 +374,8 @@ static char *rs_binlog_parse_string(char *p, u_char *cm, uint32_t ml,
 
     rs_memcpy(dl, p, pack_len);
 
-    rs_log_slave(0, "parse_string max_len : %u, pack_len : %u, type : %u", 
-            max_len, pack_len, type);
+    rs_log_debug(RS_DEBUG_BINLOG, 0, "parse string max_len : %u, pack_len : %u"
+            ", type : %u", max_len, pack_len, type);
 
     return p + pack_len;
 }
@@ -476,22 +477,23 @@ int rs_dml_binlog_row(rs_slave_info_t *si, void *data, uint32_t len, char type,
 
             t = *ctp;
             if(t >= 256) {
-                rs_log_err(0, "unknow mysql binlog type %u", t); 
+                rs_log_error(RS_LOG_ERR, 0, "unknow mysql binlog type %u", t); 
                 return RS_ERR;
             }
 
             meta = (rs_binlog_column_meta_t *) &(rs_column_meta[t]);
 
             if(meta->parse_handle == NULL) {
-                rs_log_err(0, "not support mysql type parse handle, please "
-                        "contact the author"); 
+                rs_log_error(RS_LOG_ERR, 0, "not support mysql type parse "
+                        "handle, please contact the author"); 
                 return RS_ERR;
             }
 
             p = meta->parse_handle(p, cmp, meta->meta_len, 
                     meta->fixed_len, (uint32_t *) &dl);
 
-            rs_log_slave(0, "column type : %u, data len : %u", t, dl);
+            rs_log_debug(RS_DEBUG_BINLOG, 0, "column type : %u, data len : %u", 
+                    t, dl);
 
             /* used */
             if((ubp[i / 8] >> (i % 8))  & 0x01) {
@@ -507,7 +509,8 @@ int rs_dml_binlog_row(rs_slave_info_t *si, void *data, uint32_t len, char type,
 
                 j++;
             } else {
-                rs_log_slave(0, "column index : %u not used", i);
+                rs_log_debug(RS_DEBUG_BINLOG, 0, "column index : %u not used", 
+                        i);
             }
             
             /* next column type */

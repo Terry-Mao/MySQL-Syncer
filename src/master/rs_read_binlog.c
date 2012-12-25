@@ -49,11 +49,11 @@ int rs_read_binlog(rs_reqdump_data_t *rd)
         idx = rd->binlog_info.t - '\0';
 
         if(idx == 0 || idx > RS_BINLOG_EVENT_NUM) {
-            rs_log_err(0, "unknown event, %u", idx);
+            rs_log_error(RS_LOG_ERR, 0, "unknown event, %u", idx);
             goto free;
         }
 
-        rs_log_master(0, "\n========== %s ==============", 
+        rs_log_debug(RS_DEBUG_BINLOG, 0, "\n========== %s ==============", 
                 rs_binlog_event_name[idx]);
 
         /* event handler */
@@ -114,7 +114,8 @@ int rs_eof_read_binlog2(rs_reqdump_data_t *rd, void *buf, size_t size)
             if(feof(rd->binlog_fp) == 0) {
                 if((err = ferror(rd->binlog_fp)) != 0) {
                     /* file error */
-                    rs_log_err(err, "ferror(\"%s\") failed", rd->dump_file);
+                    rs_log_error(RS_LOG_ERR, err, "ferror(\"%s\") failed", 
+                            rd->dump_file);
                     goto free;
                 }
             }
@@ -195,7 +196,8 @@ int rs_eof_read_binlog2(rs_reqdump_data_t *rd, void *buf, size_t size)
 free:
 
     if(rd->notify_fd != -1) {
-        if(rs_close(rd->notify_fd) != RS_OK) {
+        if(close(rd->notify_fd) != 0) {
+            rs_log_error(RS_LOG_ERR, rs_errno, "close() failed"); 
             r = RS_ERR;
         }
 
@@ -225,7 +227,7 @@ int rs_has_next_binlog(rs_reqdump_data_t *rd)
             }
 
             if(ferror(fp) != 0) {
-                rs_log_err(rs_errno, "fgets() failed");
+                rs_log_error(RS_LOG_ERR, rs_errno, "fgets() failed");
                 return RS_ERR;
             }
         }
@@ -241,7 +243,8 @@ int rs_has_next_binlog(rs_reqdump_data_t *rd)
     rd->dump_num = n;
     rd->dump_pos = 0;
 
-    rs_log_master(0, "rs_has_next_binlog(), binlog = %s, binlog_num : %u, "
+    rs_log_debug(RS_DEBUG_BINLOG, 0, "rs_has_next_binlog(), binlog = %s, "
+            "binlog_num : %u, "
             "binlog_pos = %u",
             rd->dump_file, rd->dump_num, rd->dump_pos);
 

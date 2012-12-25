@@ -76,7 +76,7 @@ int rs_binlog_header_handler(rs_reqdump_data_t *rd)
 
     bi->dl = bi->el - RS_BINLOG_EVENT_HEADER_LEN;
 
-    rs_log_master(0, 
+    rs_log_debug(RS_DEBUG_BINLOG, 0, 
             "\n========== event header =============\n"
             "server id              : %u\n"
             "event type             : %d\n"
@@ -142,7 +142,7 @@ int rs_binlog_query_handler(rs_reqdump_data_t *rd)
     bi->sql[bi->sl] = '\0';
     bi->log_format = RS_BINLOG_FORMAT_SQL_STATEMENT;
 
-    rs_log_master(0, 
+    rs_log_debug(RS_DEBUG_BINLOG, 0, 
             "\ndatabase name          : %s\n"
             "query sql              : %s\n"
             "next position          : %u\n",
@@ -189,9 +189,9 @@ int rs_binlog_intvar_handler(rs_reqdump_data_t *rd)
     rs_memcpy(&(bi->ai), p, RS_BINLOG_INTVAR_INSERT_ID_LEN);
 
 #if x86_64
-    rs_log_master(0, "\nincrement id           : %lu", bi->ai);
+    rs_log_debug(RS_DEBUG_BINLOG, 0, "\nincrement id           : %lu", bi->ai);
 #elif x86_32
-    rs_log_master(0, "\nincrement id           : %llu", bi->ai);
+    rs_log_debug(RS_DEBUG_BINLOG, 0, "\nincrement id           : %llu",bi->ai);
 
 #endif
 
@@ -213,7 +213,7 @@ int rs_binlog_xid_handler(rs_reqdump_data_t *rd)
         return r;
     }
 
-    rs_log_master(0, 
+    rs_log_debug(RS_DEBUG_BINLOG, 0, 
             "\ntran                   : %d\n"
             "tran id                : %lu",
             bi->tran,
@@ -279,13 +279,13 @@ int rs_binlog_table_map_handler(rs_reqdump_data_t *rd)
     if(snprintf(dt, RS_DATABASE_NAME_MAX_LEN + RS_TABLE_NAME_MAX_LEN + 3,
                 ",%s.%s,", bi->db, bi->tb) < 0)
     {
-        rs_log_err(rs_errno, "snprintf() failed");
+        rs_log_error(RS_LOG_ERR, rs_errno, "snprintf() failed");
         return RS_ERR;
     }
 
     bi->filter = (rs_strstr(rd->filter_tables, dt) == NULL);
 
-    rs_log_master(0, 
+    rs_log_debug(RS_DEBUG_BINLOG, 0, 
             "\ndatabase                   : %s\n"
             "table                      : %s\n"
             "column num                 : %u\n"
@@ -405,8 +405,8 @@ int rs_binlog_finish_handler(rs_reqdump_data_t *rd)
 
     if((!bi->tran && !bi->sent && !bi->filter) || bi->flush) {
 
-        rs_log_master(0, "send dump file = %s, send dump pos = %u, tran = %d, "
-                "sent = %d, flush = %d", rd->dump_file, 
+        rs_log_debug(RS_DEBUG_BINLOG, 0, "send dump file = %s, "
+        "send dump pos = %u, tran = %d, sent = %d, flush = %d", rd->dump_file, 
                 rd->dump_pos, bi->tran, bi->sent, bi->flush);
 
         /* add to ring buffer */
@@ -425,8 +425,8 @@ int rs_binlog_finish_handler(rs_reqdump_data_t *rd)
             rd->io_buf->pos = rd->io_buf->last; 
 
             if(fseek(rd->binlog_fp, rd->dump_pos, SEEK_SET) == -1) {
-                rs_log_err(rs_errno, "fseek() failed, seek_set pos = %u", 
-                        rd->dump_pos);
+                rs_log_error(RS_LOG_ERR, rs_errno, "fseek() failed, "
+                        "seek_set pos = %u", rd->dump_pos);
                 return RS_ERR;
             }
         }
@@ -448,8 +448,8 @@ int rs_binlog_stop_handler(rs_reqdump_data_t *rd)
     int err;
 
     if(rd->server_id != rd->binlog_info.svrid) {
-        rs_log_info("server id is not match, skip rotate event or "
-                "stop event");
+        rs_log_error(RS_LOG_ERR, 0, "server id is not match, skip rotate event" 
+                "or stop event");
         rd->binlog_info.skip = 1;
         return RS_OK;
     }

@@ -210,14 +210,14 @@ int64_t rs_timestr_to_msec(char *time)
     tsec = 0;
 
     if(strptime(time, RS_TIME_CONVERT_FORMAT, &tm) == 0) {
-        rs_log_err(rs_errno, "strptime(\"%s\",&tm) failed", time);
+        rs_log_error(RS_LOG_ERR, rs_errno, "strptime() %s failed", time);
         return RS_ERR;
     }
 
     tsec = (int64_t) mktime(&tm);
 
     if(tsec == -1) {
-        rs_log_err(rs_errno, "mktime() failed");
+        rs_log_error(RS_LOG_ERR, rs_errno, "mktime() failed");
         return RS_ERR;
     }
 

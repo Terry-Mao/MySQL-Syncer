@@ -23,6 +23,7 @@ extern pid_t    rs_pid;
 
 extern char     *rs_log_path;
 extern uint32_t rs_log_level;
+extern uint32_t rs_debug_level;
 extern int      rs_log_fd;
 
 extern volatile sig_atomic_t    rs_quit;

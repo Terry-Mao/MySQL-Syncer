@@ -13,8 +13,11 @@ daemon 1
 # log path
 log /tmp/rs_slave.log
 
-# log debug level(CORE : 5 SLAVE : 4 MASTER 3 DEBUG : 2, INFO : 1, ERR : 0)
-log.level 5
+# log debug level (3 DEBUG : 2, INFO : 1, ERR : 0)
+log.level 3
+
+# debug level
+debug.level BINLOG
 
 [slave]
 # listen addr

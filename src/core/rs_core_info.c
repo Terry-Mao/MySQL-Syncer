@@ -60,7 +60,7 @@ rs_core_info_t *rs_init_core_info(rs_core_info_t *oc)
 
     /* init working directory */
     if(rs_chdir(ci->cwd) != RS_OK) {
-        rs_log_err(rs_errno, "chdir() failed");
+        rs_log_error(RS_LOG_ERR, rs_errno, "chdir() failed");
         goto free;
     }
 
@@ -85,6 +85,10 @@ rs_core_info_t *rs_init_core_info(rs_core_info_t *oc)
     if(nl) {
         if((fd = rs_log_init(ci->log_path, O_CREAT| O_RDWR| O_APPEND)) == -1) {
             rs_log_stderr(rs_errno, "open(\"%s\") failed", ci->log_path);
+            goto free;
+        }
+
+        if(rs_log_set_levels(ci->debug_level) != RS_OK) {
             goto free;
         }
 
@@ -142,6 +146,12 @@ static int rs_init_core_conf(rs_core_info_t *ci)
     }
 
     if(rs_conf_register(ci->cf, "log.level", &rs_log_level, RS_CONF_UINT32) 
+            != RS_OK) 
+    {
+        return RS_ERR;    
+    }
+
+    if(rs_conf_register(ci->cf, "debug.level", &(ci->debug_level), RS_CONF_STR) 
             != RS_OK) 
     {
         return RS_ERR;    

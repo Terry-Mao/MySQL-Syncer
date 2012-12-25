@@ -5,19 +5,27 @@
 
 static void rs_get_time(char *buf);
 
-static rs_str_t rs_log_level_list[] = {
-    rs_string(RS_LOG_LEVEL_ERR_STR),
-    rs_string(RS_LOG_LEVEL_INFO_STR),
-    rs_string(RS_LOG_LEVEL_DEBUG_STR),
-    rs_string(RS_LOG_LEVEL_MASTER_STR),
-    rs_string(RS_LOG_LEVEL_SLAVE_STR),
-    rs_string(RS_LOG_LEVEL_CORE_STR)
+static rs_str_t rs_log_levels[] = {
+    rs_string(RS_LOG_ERR_STR),
+    rs_string(RS_LOG_INFO_STR),
+    rs_string(RS_LOG_DEBUG_STR)
+};
+
+static rs_str_t rs_debug_levels[] = {
+    rs_string(RS_DEBUG_ALLOC_STR),
+    rs_string(RS_DEBUG_HASH_STR),
+    rs_string(RS_DEBUG_TMPBUF_STR),
+    rs_string(RS_DEBUG_RINGBUF_STR),
+    rs_string(RS_DEBUG_BINLOG_STR),
+    rs_null_string
 };
 
 
 char        *rs_log_path = "./rs.log";
-uint32_t    rs_log_level = RS_LOG_LEVEL_DEBUG;
 int         rs_log_fd = STDOUT_FILENO;
+
+uint32_t    rs_log_level = RS_LOG_INFO;
+uint32_t    rs_debug_level = 0;
 
 
 static void rs_log_base(rs_err_t err, int fd, uint32_t level, const char *fmt, 
@@ -32,68 +40,61 @@ int rs_log_init(char *name, int flags)
     return open(name, flags, 00644);
 }
 
-void rs_log_err(rs_err_t err, const char *fmt, ...) 
+int rs_log_set_levels(char *debug_level)
+{
+    int         i;
+    char        *p;
+    rs_str_t    t;
+
+    for(p = debug_level; p != NULL; p = rs_strchr(p, '|')) {
+
+        i = 0;
+        for(t = rs_debug_levels[i]; t.len > 0 && t.data != NULL; 
+                t = rs_debug_levels[++i])
+        {
+            if(rs_strncmp(t.data, p, t.len) == 0) {
+                rs_debug_level |= (RS_DEBUG_FIRST << i);
+                break;
+            }
+        }
+
+        if(t.len == 0 && t.data == NULL) {
+            rs_log_error(RS_LOG_ERR, 0, "invalid debug level, %s", p);
+            return RS_ERR;
+        }
+    }
+
+    return RS_OK;
+}
+
+void rs_log_error(uint32_t level, rs_err_t err, const char *fmt, ...) 
 {
     va_list args;
 
     va_start(args, fmt);
-    rs_log_base(err, rs_log_fd, RS_LOG_LEVEL_ERR, fmt, args);
+    rs_log_base(err, rs_log_fd, level, fmt, args);
     va_end(args);
 }
 
-void rs_log_debug(rs_err_t err, const char *fmt, ...) 
+void rs_log_debug(uint32_t level, rs_err_t err, const char *fmt, ...)
 {
+    if(!(rs_debug_level & level)) {
+        return;
+    }
+
     va_list args;
 
     va_start(args, fmt);
-    rs_log_base(err, rs_log_fd, RS_LOG_LEVEL_DEBUG, fmt, args);
-    va_end(args);
-
-}
-
-void rs_log_info(const char *fmt, ...) 
-{
-    va_list args;
-
-    va_start(args, fmt);
-    rs_log_base(0, rs_log_fd, RS_LOG_LEVEL_INFO, fmt, args);
+    rs_log_base(err, rs_log_fd, RS_LOG_DEBUG, fmt, args);
     va_end(args);
 }
-
-void rs_log_master(rs_err_t err, const char *fmt, ...) 
-{
-    va_list args;
-
-    va_start(args, fmt);
-    rs_log_base(err, rs_log_fd, RS_LOG_LEVEL_MASTER, fmt, args);
-    va_end(args);
-}
-
-void rs_log_slave(rs_err_t err, const char *fmt, ...) 
-{
-    va_list args;
-
-    va_start(args, fmt);
-    rs_log_base(err, rs_log_fd, RS_LOG_LEVEL_SLAVE, fmt, args);
-    va_end(args);
-}
-
-void rs_log_core(rs_err_t err, const char *fmt, ...) 
-{
-    va_list args;
-
-    va_start(args, fmt);
-    rs_log_base(err, rs_log_fd, RS_LOG_LEVEL_CORE, fmt, args);
-    va_end(args);
-}
-
 
 void rs_log_stderr(rs_err_t err, const char *fmt, ...) 
 {
     va_list args;
 
     va_start(args, fmt);
-    rs_log_base(err, STDERR_FILENO, RS_LOG_LEVEL_ERR, fmt, args);
+    rs_log_base(err, STDERR_FILENO, RS_LOG_ERR, fmt, args);
     va_end(args);
 
 }
@@ -119,7 +120,7 @@ static void rs_log_base(rs_err_t err, int fd, uint32_t level, const char *fmt,
     *p++ = ' ';
 
     /* debug level str */
-    dl_str = rs_log_level_list[rs_min(level, RS_LOG_LEVEL_MAX)];
+    dl_str = rs_log_levels[rs_min(level, RS_LOG_MAX)];
     p = rs_cpymem(p, dl_str.data, dl_str.len);
 
     n = snprintf(p, last - p, "<thread : %lu> ", pthread_self());

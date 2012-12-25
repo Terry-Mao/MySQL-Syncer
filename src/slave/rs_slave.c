@@ -41,32 +41,30 @@ void rs_free_slave(void *data)
 
     if(si->io_thread != 0 && !si->io_thread_exit) {
 
-        rs_log_info("cancel io thread");
         if((err = pthread_cancel(si->io_thread)) != 0) {
-            rs_log_err(err, "pthread_cancel() failed");
+            rs_log_error(RS_LOG_ERR, err, "pthread_cancel() failed");
         }
 
-        rs_log_info("join io thread");
         if((err = pthread_join(si->io_thread, NULL)) != 0) {
-            rs_log_err(err, "pthread_join() failed");
+            rs_log_error(RS_LOG_ERR, err, "pthread_join() failed");
         }
     }
 
     if(si->redis_thread != 0 && !si->redis_thread_exit) {
 
-        rs_log_info("cancel redis thread");
         if((err = pthread_cancel(si->redis_thread)) != 0) {
-            rs_log_err(err, "pthread_cancel() failed");
+            rs_log_error(RS_LOG_ERR, err, "pthread_cancel() failed");
         }
 
-        rs_log_info("join redis thread");
         if((err = pthread_join(si->redis_thread, NULL)) != 0) {
-            rs_log_err(err, "pthread_join() failed");
+            rs_log_error(RS_LOG_ERR, err, "pthread_join() failed");
         }
     }
 
     if(si->svr_fd != -1) {
-        rs_close(si->svr_fd);
+        if(close(si->svr_fd) != 0) {
+            rs_log_error(RS_LOG_ERR, 0, "close failed()");
+        }
     }
 
     /* free ring buffer2 */
@@ -81,7 +79,9 @@ void rs_free_slave(void *data)
 
     /* close slave info file */
     if(si->info_fd != -1) {
-        rs_close(si->info_fd);
+        if(close(si->info_fd) != 0) {
+            rs_log_error(RS_LOG_ERR, 0, "close failed()");
+        }
     }
 
     if(si->c != NULL) {

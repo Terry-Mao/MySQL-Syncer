@@ -9,7 +9,8 @@ rs_buf_t *rs_create_tmpbuf(uint32_t size)
     b = malloc(sizeof(rs_buf_t) + size);
 
     if (b== NULL) {
-        rs_log_err(rs_errno, "malloc() failed, %u", sizeof(rs_buf_t) + size);
+        rs_log_error(RS_LOG_ERR, rs_errno, "malloc() failed, %u", 
+                sizeof(rs_buf_t) + size);
         return NULL;
     }
 
@@ -32,7 +33,7 @@ int rs_send_tmpbuf(rs_buf_t *b, int fd)
         return RS_OK;
     }
 
-    rs_log_core(0, "tmpbuf send size : %u", size);
+    rs_log_debug(RS_DEBUG_TMPBUF, 0, "tmpbuf send size : %u", size);
 
     while(size > 0) {
 
@@ -58,7 +59,8 @@ int rs_recv_tmpbuf(rs_buf_t *b, int fd, void *data, uint32_t size)
     ssize_t     n;
 
     if(size > b->size) {
-        rs_log_err(0, "tmpbuf recv size %u, buf size %u", size, b->size);
+        rs_log_debug(RS_DEBUG_TMPBUF, 0, "tmpbuf recv size %u, "
+                "buf size %u overflow", size, b->size);
         return RS_ERR;
     }
 
@@ -67,7 +69,7 @@ int rs_recv_tmpbuf(rs_buf_t *b, int fd, void *data, uint32_t size)
     if((uint32_t) l >= size) {
         rs_memcpy(data, b->pos, size);
         b->pos += size;
-        rs_log_core(0, "tmpbuf recv size : %u", size);
+        rs_log_debug(RS_DEBUG_TMPBUF, 0, "tmpbuf recv size : %u", size);
         return RS_OK;
     } else {
         s = size - l;
@@ -89,7 +91,7 @@ int rs_recv_tmpbuf(rs_buf_t *b, int fd, void *data, uint32_t size)
         b->pos += s;
     }
 
-    rs_log_core(0, "tmpbuf recv size : %u", size);
+    rs_log_debug(RS_DEBUG_TMPBUF, 0, "tmpbuf recv size : %u", size);
     return RS_OK;
 }
 
@@ -114,7 +116,8 @@ rs_ringbuf_t *rs_create_ringbuf(rs_pool_t *p, uint32_t num)
     rb = rs_palloc(p, sizeof(rs_ringbuf_t) + len, id);
 
     if(rb == NULL) {
-        rs_log_err(rs_errno, "malloc(%u) failed", len + sizeof(rs_ringbuf_t));
+        rs_log_error(RS_LOG_ERR, rs_errno, "malloc(%u) failed", 
+                len + sizeof(rs_ringbuf_t));
         return NULL;
     }
 
@@ -164,9 +167,11 @@ void rs_ringbuf_get_advance(rs_ringbuf_t *rb)
     rb->rn++;
 
 #if x86_64
-    rs_log_core(0, "ringbuf write : %lu, read : %lu", rb->wn, rb->rn);
+    rs_log_debug(RS_DEBUG_RINGBUF, 0, "ringbuf write : %lu, read : %lu", 
+            rb->wn, rb->rn);
 #elif x86_32
-    rs_log_core(0, "ringbuf write : %llu, read : %llu", rb->wn, rb->rn);
+    rs_log_debug(RS_DEBUG_RINGBUF, 0, "ringbuf write : %llu, read : %llu"
+            , rb->wn, rb->rn);
 #endif
 }
 
@@ -192,9 +197,11 @@ void rs_ringbuf_set_advance(rs_ringbuf_t *rb)
     rs_mem_barrier();
     rb->wn++;
 #if x86_64
-    rs_log_core(0, "ringbuf write : %lu, read : %lu", rb->wn, rb->rn);
+    rs_log_debug(RS_DEBUG_RINGBUF, 0, "ringbuf write : %lu, read : %lu", 
+            rb->wn, rb->rn);
 #elif x86_32
-    rs_log_core(0, "ringbuf write : %llu, read : %llu", rb->wn, rb->rn);
+    rs_log_debug(RS_DEBUG_RINGBUF, 0, "ringbuf write : %llu, read : %llu"
+            , rb->wn, rb->rn);
 #endif
 }
 

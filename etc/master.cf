@@ -8,13 +8,16 @@ user terry terry
 pid /tmp/rs_master.pid
 
 # daemon
-daemon 1
+daemon 0
 
 # log path
 log /tmp/rs_master.log
 
-# log debug level(CORE : 5 SLAVE : 4 MASTER : 3 DEBUG : 2 INFO : 1 ERR : 0)
-log.level 4
+# log error level (3 DEBUG : 2 INFO : 1 ERR : 0)
+log.level 3
+
+# log debug level (CORE|ALLOC)
+debug.level BINLOG
 
 [master]
 

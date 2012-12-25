@@ -15,7 +15,7 @@ ssize_t rs_read(int fd, void *buf, size_t count)
             if(err == EINTR)
                 continue;
 
-            rs_log_err(rs_errno, "read() failed");
+            rs_log_error(RS_LOG_ERR, rs_errno, "read() failed");
         }
 
         break;
@@ -61,7 +61,7 @@ ssize_t rs_write(int fd, const void *buf, size_t count)
             if(err == EINTR)
                 continue;
 
-            rs_log_err(rs_errno, "write() failed");
+            rs_log_error(RS_LOG_ERR, rs_errno, "write() failed");
         }
 
         break;
@@ -89,7 +89,7 @@ ssize_t rs_recv(int fd, void *buf, size_t count, int flags)
                 return RS_TIMEDOUT;
             }
 
-            rs_log_err(err, "read() failed");
+            rs_log_error(RS_LOG_ERR, err, "read() failed");
         }
 
         break;
@@ -105,7 +105,7 @@ int rs_init_io_watch()
 
     fd = inotify_init();
     if(fd < 0) {
-        rs_log_err(rs_errno, "inotify_init() failed");
+        rs_log_error(RS_LOG_ERR, rs_errno, "inotify_init() failed");
         return RS_ERR;
     }
 
@@ -118,21 +118,12 @@ int rs_add_io_watch(int fd, char *path, uint32_t mask)
 
     wd = inotify_add_watch(fd, path, mask);
     if(wd < 0) {
-        rs_log_err(rs_errno, "inotify_add_watch(\"%s\") failed", path);
+        rs_log_error(RS_LOG_ERR, rs_errno, "inotify_add_watch(\"%s\") "
+                "failed", path);
         return RS_ERR;
     }
 
     return wd;
-}
-
-int rs_close(int fd) 
-{
-    if(close(fd) != 0) {
-        rs_log_err(rs_errno, "close() failed");
-        return RS_ERR;    
-    }
-
-    return RS_OK;
 }
 
 int rs_timed_select(int fd, uint32_t sec, uint32_t usec)
@@ -166,13 +157,13 @@ int rs_timed_select(int fd, uint32_t sec, uint32_t usec)
                 continue;
             }
 
-            rs_log_err(rs_errno, "select failed()");
+            rs_log_error(RS_LOG_ERR, rs_errno, "select failed()");
             return RS_ERR;
         }
 
         /* unknown fd */
         if(!FD_ISSET(fd, &tset)) {
-            rs_log_err(rs_errno, "select failed(), unknown fd");
+            rs_log_error(RS_LOG_ERR, rs_errno, "select failed()");
             return RS_ERR;
         }
 

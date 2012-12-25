@@ -46,18 +46,20 @@ void rs_free_master(void *data)
 
         if(!mi->accept_thread_exit) {
             if((err = pthread_cancel(mi->accept_thread)) != 0) {
-                rs_log_err(err, "pthread_cancel() failed");
+                rs_log_error(RS_LOG_ERR, err, "pthread_cancel() failed");
             }
         }
 
         if((err = pthread_join(mi->accept_thread, NULL)) != 0) {
-            rs_log_err(err, "pthread_join() failed");
+            rs_log_error(RS_LOG_ERR, err, "pthread_join() failed");
         }
     }
 
     /* close listen fd */
     if(mi->svr_fd != -1) {
-        rs_close(mi->svr_fd);
+        if(close(mi->svr_fd) != 0) {
+            rs_log_error(RS_LOG_ERR, rs_errno, "close() failed"); 
+        }
     }
 
     /* close all request_dump*/

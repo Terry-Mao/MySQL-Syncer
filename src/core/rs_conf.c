@@ -38,22 +38,12 @@ int rs_init_conf(rs_conf_t *conf, char *path, char *name)
     m_len = rs_strlen(name);
     p = NULL;
 
-    if(path == NULL) {
-        rs_log_err(0, "conf path is null, argument *path");
-        return RS_ERR;
-    }
-
-    if(name == NULL) {
-        rs_log_err(0, "module is null");
-        return RS_ERR;
-    }
-
-    rs_log_info("conf file = %s, module = %s", path, name);
+    rs_log_error(RS_LOG_INFO, 0, "conf file = %s, module = %s", path, name);
 
     fd = open(path, O_CREAT | O_RDONLY, 00666);
 
     if(fd == -1) {
-        rs_log_err(rs_errno, "rs_init_conf() failed, %s", path);
+        rs_log_error(RS_LOG_ERR, rs_errno, "open() failed, %s", path);
         goto free;
     }
 
@@ -109,13 +99,15 @@ int rs_init_conf(rs_conf_t *conf, char *path, char *name)
 
                 if(i > RS_CONF_MODULE_MAX_LEN) {
                     r = RS_ERR;
-                    rs_log_err(0, "conf module name is too long, "
-                            "max length = %u", RS_CONF_MODULE_MAX_LEN);
+                    rs_log_error(RS_LOG_ERR, 0, 
+                            "conf module name is too long, max length = %u", 
+                            RS_CONF_MODULE_MAX_LEN);
                     goto free;
                 }
 
                 if(c == '\n' || eof == 1) {
-                    rs_log_err(0, "unexcepted end of module, expecting \"]\"");
+                    rs_log_error(RS_LOG_ERR, 0, "unexcepted end of "
+                            "module, expecting \"]\"");
                     goto free;
                 }
 
@@ -145,13 +137,15 @@ int rs_init_conf(rs_conf_t *conf, char *path, char *name)
                 }
 
                 if(i > RS_CONF_KEY_MAX_LEN) {
-                    rs_log_err(0, "conf key too long, max length = %u", 
+                    rs_log_error(RS_LOG_ERR, 0, 
+                            "conf key too long, max length = %u", 
                             RS_CONF_KEY_MAX_LEN);
                     goto free;
                 }
 
                 if((c == '\n' || eof == 1) && p != k) {
-                    rs_log_err(0, "unexcepted end of key, expecting \" \"");
+                    rs_log_error(RS_LOG_ERR, 0, "unexcepted end of key, "
+                            "expecting \" \"");
                     goto free;
                 }
 
@@ -176,8 +170,8 @@ int rs_init_conf(rs_conf_t *conf, char *path, char *name)
                 }
 
                 if(i > RS_CONF_VALUE_MAX_LEN) {
-                    rs_log_err(0, "conf value too long, max length = %u",
-                            RS_CONF_VALUE_MAX_LEN);
+                    rs_log_error(RS_LOG_ERR, 0, "conf value too long, "
+                            "max length = %u", RS_CONF_VALUE_MAX_LEN);
                     goto free;
                 }
 
@@ -213,7 +207,9 @@ int rs_init_conf(rs_conf_t *conf, char *path, char *name)
 free :
 
     if(fd) {
-        rs_close(fd);
+        if(close(fd) != 0) {
+            rs_log_error(RS_LOG_ERR, rs_errno, "close() failed"); 
+        }
     }
 
     return r;
@@ -243,13 +239,13 @@ int rs_conf_register(rs_conf_t *c, char *key, void *data, int32_t type)
 
     if((err = rs_shash_add(c, key, d)) != RS_OK) {
         if(err == RS_EXISTS) {
-            rs_log_err(0, "add a exists conf key \"%s\"", key);
+            rs_log_error(RS_LOG_ERR, 0, "add a exists conf key \"%s\"", key);
         }
 
         return RS_ERR;
     }
     
-    rs_log_core(0, "add conf key %s, type %d", key, type);
+    rs_log_error(RS_LOG_INFO, 0, "add conf key %s, type %d", key, type);
 
     return RS_OK;
 }
@@ -261,7 +257,7 @@ static int rs_conf_apply(rs_conf_t *c, char *key, char *val)
     char            *t;
 
     if(rs_shash_get(c, key, (void *) &d) != RS_OK) {
-        rs_log_err(0, "unknown conf key \"%s\"", key);
+        rs_log_error(RS_LOG_ERR, 0, "unknown conf key \"%s\"", key);
         return RS_ERR;
     }
 

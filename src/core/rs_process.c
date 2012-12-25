@@ -15,7 +15,7 @@ int rs_init_daemon(rs_core_info_t *ci)
     switch (fork()) {
 
     case -1:
-        rs_log_err(rs_errno, "fork() failed");
+        rs_log_error(RS_LOG_ERR, rs_errno, "fork() failed");
         return RS_ERR;
 
     case 0:
@@ -25,7 +25,9 @@ int rs_init_daemon(rs_core_info_t *ci)
         rs_free_core(ci);
 
         if(rs_log_fd != STDOUT_FILENO) {
-            rs_close(rs_log_fd);
+            if(close(rs_log_fd) != 0) {
+                rs_log_error(RS_LOG_ERR, rs_errno, "close() failed"); 
+            }
         }
 
         rs_free_strerr();
@@ -33,7 +35,7 @@ int rs_init_daemon(rs_core_info_t *ci)
     }
 
     if (setsid() == -1) {
-        rs_log_err(rs_errno, "setsid() failed");
+        rs_log_error(RS_LOG_ERR, rs_errno, "setsid() failed");
         return RS_ERR;
     }
 
@@ -42,23 +44,23 @@ int rs_init_daemon(rs_core_info_t *ci)
     fd = open("/dev/null", O_RDWR);
 
     if (fd == -1) {
-        rs_log_err(rs_errno, "open(\"/dev/null\") failed");
+        rs_log_error(RS_LOG_ERR, rs_errno, "open(\"/dev/null\") failed");
         return RS_ERR;
     }
 
     if (dup2(fd, STDIN_FILENO) == -1) {
-        rs_log_err(rs_errno, "dup2(STDIN_FILENO) failed");
+        rs_log_error(RS_LOG_ERR, rs_errno, "dup2(STDIN_FILENO) failed");
         return RS_ERR;
     }
 
     if (dup2(fd, STDOUT_FILENO) == -1) {
-        rs_log_err(rs_errno, "dup2(STDOUT_FILENO) failed");
+        rs_log_error(RS_LOG_ERR, rs_errno, "dup2(STDOUT_FILENO) failed");
         return RS_ERR;
     }
 
     if (fd > STDERR_FILENO) {
         if (close(fd) == -1) {
-            rs_log_err(rs_errno, "close() failed");
+            rs_log_error(RS_LOG_ERR, rs_errno, "close() failed");
             return RS_ERR;
         }
     }
@@ -77,7 +79,7 @@ int rs_init_signals(sigset_t *waitset)
     sigaddset(waitset, SIGHUP);     /* RELOAD */
 
     if (sigprocmask(SIG_BLOCK, waitset, NULL) == -1) {
-        rs_log_err(rs_errno, "sigprocmask() failed");
+        rs_log_error(RS_LOG_ERR, rs_errno, "sigprocmask() failed");
         return RS_ERR;
     }
 
@@ -95,19 +97,19 @@ void rs_sig_handle(int signum) {
         break;
     case SIGINT:
         rs_quit = 1;
-        rs_log_info("get a SIGINT signal");
+        rs_log_error(RS_LOG_INFO, 0, "get a SIGINT signal");
         break;
     case SIGTERM:
         rs_quit = 1;
-        rs_log_info("get a SIGTERM signal");
+        rs_log_error(RS_LOG_INFO, 0, "get a SIGTERM signal");
         break;
     case SIGQUIT:
         rs_quit = 1;
-        rs_log_info("get a SIGQUIT signal");
+        rs_log_error(RS_LOG_INFO, 0, "get a SIGQUIT signal");
         break;
     case SIGHUP:
         rs_reload = 1;
-        rs_log_info("get a SIGHUP signal");
+        rs_log_error(RS_LOG_INFO, 0, "get a SIGHUP signal");
     }
 
     errno = err;
@@ -131,14 +133,14 @@ int rs_create_pidfile(char *name)
     fd = open(name, O_CREAT | O_TRUNC | O_WRONLY, 00644);
 
     if(fd == -1) {
-        rs_log_err(rs_errno, "open(\"%s\") failed", name);
+        rs_log_error(RS_LOG_ERR, rs_errno, "open(\"%s\") failed", name);
         return RS_ERR;
     }
 
     len = snprintf(pid_str, INT32_LEN + 1, "%d\n", rs_pid);
 
     if(len < 0) {
-        rs_log_err(rs_errno, "snprintf() failed");
+        rs_log_error(RS_LOG_ERR, rs_errno, "snprintf() failed");
         return RS_ERR;
     }
 
@@ -148,7 +150,9 @@ int rs_create_pidfile(char *name)
         return RS_ERR;
     }
 
-    rs_close(fd);
+    if(close(fd) != 0) {
+        rs_log_error(RS_LOG_ERR, rs_errno, "close() failed"); 
+    }
 
     return RS_OK;
 }
@@ -160,7 +164,7 @@ void rs_delete_pidfile(char *name)
     }
 
     if(unlink(name) == -1) {
-        rs_log_err(rs_errno, "unlink(\"%s\")  failed", name);
+        rs_log_error(RS_LOG_ERR, rs_errno, "unlink(\"%s\")  failed", name);
     }
 }
 
@@ -172,12 +176,12 @@ int rs_init_uid(char *user)
     u = getpwnam(user);
 
     if(u == NULL) {
-        rs_log_err(rs_errno, "getpwnam(\"%s\")  failed", user);
+        rs_log_error(RS_LOG_ERR, rs_errno, "getpwnam(\"%s\")  failed", user);
         return RS_ERR;
     }
 
     if(setuid(u->pw_uid) == -1) {
-        rs_log_err(rs_errno, "setuid() failed");
+        rs_log_error(RS_LOG_ERR, rs_errno, "setuid() failed");
         return RS_ERR;
     }
 
@@ -192,12 +196,12 @@ int rs_init_gid(char *grp)
     g = getgrnam(grp);
 
     if(g == NULL) {
-        rs_log_err(rs_errno, "getgrnam(\"%s\")  failed", grp);
+        rs_log_error(RS_LOG_ERR, rs_errno, "getgrnam(\"%s\")  failed", grp);
         return RS_ERR;
     }
 
     if(setgid(g->gr_gid) == -1) {
-        rs_log_err(rs_errno, "setgid() failed");
+        rs_log_error(RS_LOG_ERR, rs_errno, "setgid() failed");
         return RS_ERR;
     }
 

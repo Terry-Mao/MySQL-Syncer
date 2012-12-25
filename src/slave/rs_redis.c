@@ -41,8 +41,9 @@ int rs_redis_append_command(rs_slave_info_t *si, const char *fmt, ...)
             if(c->err) {
                 if(i % 60 == 0) {
                     i = 0;
-                    rs_log_err(rs_errno, "redisConnect(\"%s\", %d) failed, %s"
-                            , si->redis_addr, si->redis_port, c->errstr);
+                    rs_log_error(RS_LOG_ERR, rs_errno, "redisConnect(\"%s\", "
+                            "%d) failed, %s" , si->redis_addr, si->redis_port, 
+                            c->errstr);
                 }
 
                 redisFree(c);
@@ -65,7 +66,7 @@ int rs_redis_append_command(rs_slave_info_t *si, const char *fmt, ...)
     si->c = c;
 
     if(err != REDIS_OK) {
-        rs_log_err(rs_errno, "redisvAppendCommand() failed");
+        rs_log_error(RS_LOG_ERR, rs_errno, "redisvAppendCommand() failed");
         return RS_ERR;
     } 
 

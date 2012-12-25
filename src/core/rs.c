@@ -54,7 +54,7 @@ int main(int argc, char * const *argv)
                 continue;
             }
 
-            rs_log_err(rs_errno, "sigwaitinfo() failed");
+            rs_log_error(RS_LOG_ERR, rs_errno, "sigwaitinfo() failed");
 #if MASTER
             rs_free_master(NULL);
 #elif SLAVE
@@ -111,7 +111,9 @@ int main(int argc, char * const *argv)
     rs_free_core(ci);
 
     if(rs_log_fd != STDOUT_FILENO) {
-        rs_close(rs_log_fd);
+        if(close(rs_log_fd) != 0) {
+            rs_log_error(RS_LOG_ERR, rs_errno, "close() failed"); 
+        }
     }
 
     rs_free_strerr();

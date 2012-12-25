@@ -61,7 +61,7 @@ int rs_binlog_create_data(rs_reqdump_data_t *rd)
                     istr, bi->mev);
 
             if(len < 0) {
-                rs_log_err(rs_errno, "snprintf() failed");
+                rs_log_error(RS_LOG_ERR, rs_errno, "snprintf() failed");
                 return RS_ERR;
             }
         } else {
@@ -87,7 +87,7 @@ int rs_binlog_create_data(rs_reqdump_data_t *rd)
                         bi->tb, 0);
 
                 if(len < 0) {
-                    rs_log_err(rs_errno, "snprintf() failed");
+                    rs_log_error(RS_LOG_ERR, rs_errno, "snprintf() failed");
                     return RS_ERR;
                 }
 

@@ -85,10 +85,10 @@ rs_master_info_t *rs_init_master_info(rs_master_info_t *om)
         /* exit accpet thread */
         if(om->accept_thread != 0) {
             if((err = pthread_cancel(om->accept_thread)) != 0) {
-                rs_log_err(err, "pthread_cancel() failed");
+                rs_log_error(RS_LOG_ERR, err, "pthread_cancel() failed");
             } else {
                 if((err = pthread_join(om->accept_thread, NULL)) != 0) {
-                    rs_log_err(err, "pthread_join() failed");
+                    rs_log_error(RS_LOG_ERR, err, "pthread_join() failed");
                 }
             }
         }
@@ -97,28 +97,24 @@ rs_master_info_t *rs_init_master_info(rs_master_info_t *om)
         if((nl = ((rs_strcmp(mi->listen_addr, om->listen_addr) != 0) || 
                         (mi->listen_port != om->listen_port))))
         {
+#if 0
             rs_log_info("old addr = %s, old port = %d, new addr = %s, "
                     "old port = %d", om->listen_addr, om->listen_port, 
                     mi->listen_addr, mi->listen_port);
+#endif
         } else {
-            rs_log_info("reuse svr_fd");
-
             mi->svr_fd = om->svr_fd;
             om->svr_fd = -1; /* NOTICE : reuse fd, don't reclose svr_fd */
         }
-
 
         nd = (rs_strcmp(mi->binlog_idx_file, om->binlog_idx_file) != 0) && 
             (om->ringbuf_num != mi->ringbuf_num);
 
         if(!nd) {
             if(nl) {
-                rs_log_info("free dump threads");
                 /* free dump threads */
                 rs_freeall_reqdump_data(om->req_dump);
             }
-
-            rs_log_info("reuse dump threads");
 
             mi->req_dump = om->req_dump;
             om->req_dump = NULL; /* NOTICE: don't refree req_dump_info */
@@ -126,8 +122,8 @@ rs_master_info_t *rs_init_master_info(rs_master_info_t *om)
     } /* end om */
 
     if(nl) {
-        rs_log_info("start listening on %s:%d", mi->listen_addr, 
-                mi->listen_port);
+        rs_log_error(RS_LOG_INFO, 0, "start listening on %s:%d", 
+                mi->listen_addr, mi->listen_port);
 
         /* init dump listen */
         if(rs_dump_listen(mi) != RS_OK) {
@@ -137,7 +133,6 @@ rs_master_info_t *rs_init_master_info(rs_master_info_t *om)
 
     if(nd) {
         /* init dump threads */
-        rs_log_info("start initing dump threads");
         mi->req_dump = rs_create_reqdump(p, mi->max_dump_thread);
 
         if(mi->req_dump == NULL) {
@@ -146,11 +141,10 @@ rs_master_info_t *rs_init_master_info(rs_master_info_t *om)
     }
 
     /* start accept thread */
-    rs_log_info("start accepting client");
     if((err = pthread_create(&(mi->accept_thread), NULL, 
                     rs_start_accept_thread, mi)) != 0) 
     {
-        rs_log_err(err, "pthread_create() failed");
+        rs_log_error(RS_LOG_ERR, err, "pthread_create() failed");
         goto free;
     }
 

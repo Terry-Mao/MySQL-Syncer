@@ -6,7 +6,7 @@
 #include <rs_core.h>
 
 #define RS_CORE_MODULE_NAME     "core"
-#define RS_CORE_CONF_NUM        6 
+#define RS_CORE_CONF_NUM        7
 
 typedef struct {
     char            *user;
@@ -14,6 +14,7 @@ typedef struct {
     char            *pid_path;
     char            *log_path;
     uint32_t        daemon;
+    char            *debug_level;
 
     rs_conf_t       *cf;
     rs_pool_t       *pool;
@@ -28,7 +29,8 @@ typedef struct {
     (ci)->cwd = NULL;                                                        \
     (ci)->pid_path = NULL;                                                   \
     (ci)->log_path = NULL;                                                   \
-    (ci)->daemon = 0;
+    (ci)->debug_level = NULL;                                                \
+    (ci)->daemon = 0
 
 
 extern rs_core_info_t   *rs_core_info;

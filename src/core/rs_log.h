@@ -5,32 +5,41 @@
 #include <rs_config.h>
 #include <rs_core.h>
 
-#define RS_MAX_ERROR_STR        2048
+#define RS_MAX_ERROR_STR    2048
 
-#define RS_LOG_LEVEL_ERR        0
-#define RS_LOG_LEVEL_INFO       1    
-#define RS_LOG_LEVEL_DEBUG      2
-#define RS_LOG_LEVEL_MASTER     3
-#define RS_LOG_LEVEL_SLAVE      4
-#define RS_LOG_LEVEL_CORE       5 
+#define RS_LOG_MAX          2
 
-#define RS_LOG_LEVEL_MAX        5
+#define RS_LOG_ERR          0
+#define RS_LOG_INFO         1    
+#define RS_LOG_DEBUG        2
 
-#define RS_LOG_LEVEL_ERR_STR    "[ERROR] "
-#define RS_LOG_LEVEL_INFO_STR   "[INFO]  "
-#define RS_LOG_LEVEL_DEBUG_STR  "[DEBUG] "
-#define RS_LOG_LEVEL_MASTER_STR "[MASTER] " 
-#define RS_LOG_LEVEL_SLAVE_STR  "[SLAVE] " 
-#define RS_LOG_LEVEL_CORE_STR   "[CORE] "
+#define RS_LOG_ERR_STR      "[ERROR] "
+#define RS_LOG_INFO_STR     "[INFO]  "
+#define RS_LOG_DEBUG_STR    "[DEBUG] "
+
+#define RS_DEBUG_FIRST      0x010
+#define RS_DEBUG_ALLOC      0x010
+#define RS_DEBUG_HASH       0x020
+#define RS_DEBUG_TMPBUF     0x040
+#define RS_DEBUG_RINGBUF    0x080
+#define RS_DEBUG_BINLOG     0x100
+
+#define RS_DEBUG_ALL            0x7FFFFFF0
+
+#define RS_DEBUG_ALLOC_STR      "ALLOC"
+#define RS_DEBUG_HASH_STR       "HASH"
+#define RS_DEBUG_TMPBUF_STR     "TMPBUF"
+#define RS_DEBUG_RINGBUF_STR    "RINGBUF"
+#define RS_DEBUG_BINLOG_STR     "BINLOG"
+
 
 int rs_log_init(char *name, int flags);
+int rs_log_set_levels(char *debug_level);
 
-void rs_log_err(rs_err_t err, const char *fmt, ...);
-void rs_log_debug(rs_err_t err, const char *fmt, ...);
-void rs_log_master(rs_err_t err, const char *fmt, ...);
-void rs_log_slave(rs_err_t err, const char *fmt, ...);
-void rs_log_core(rs_err_t err, const char *fmt, ...);
+void rs_log_debug(uint32_t level, rs_err_t err, const char *fmt, ...);
+void rs_log_error(uint32_t level, rs_err_t err, const char *fmt, ...);
 void rs_log_stderr(rs_err_t err, const char *fmt, ...);
-void rs_log_info(const char *fmt, ...);
+
+
 
 #endif

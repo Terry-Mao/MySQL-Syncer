@@ -40,14 +40,14 @@ void rs_print_test_test(void *obj)
 {
     rs_mysql_test_t         *test;
     test = (rs_mysql_test_t *) obj;
-    rs_log_debug(0,
+    rs_log_error(RS_LOG_DEBUG, 0,
             "\n========== test ==========\n"
             "id  : %d\n"
             "col : %s\n"
             "\n==========================\n",
             test->id,
             test->col
-                );
+            );
 }
 
 int rs_insert_test_test(rs_slave_info_t *si, void *obj)

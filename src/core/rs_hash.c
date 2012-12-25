@@ -37,7 +37,8 @@ rs_shash_t *rs_create_shash(rs_pool_t *p, uint32_t num)
     h = NULL;
 
     if(num == 0) {
-        rs_log_err(0, "rs_shash_init() failed, num must great than zero");
+        rs_log_error(RS_LOG_ERR, 0, "rs_shash_init() failed, "
+                "num must great than zero");
         return NULL;
     }
     
@@ -71,7 +72,7 @@ int rs_shash_add(rs_shash_t *h, char *key, void *val)
     t = NULL;
 
     i = rs_bkd_hash(key) % h->num;
-    rs_log_core(0, "rs_bdk_hash(%s), index = %u", key, i);
+    rs_log_debug(RS_DEBUG_HASH, 0, "rs_bdk_hash(%s), index = %u", key, i);
     
     for(n = h->ht[i].first; n != NULL; t = n, n = n->next) {
         if(rs_strncmp(key, n->key, rs_strlen(key)) == 0) {
@@ -106,7 +107,7 @@ int rs_shash_get(rs_shash_t *h, char *key, void **val)
     rs_shash_node_t *p;    
 
     i = rs_bkd_hash(key) % h->num;
-    rs_log_core(0, "rs_bdk_hash(%s), index = %u", key, i);
+    rs_log_debug(RS_DEBUG_HASH, 0, "rs_bdk_hash(%s), index = %u", key, i);
 
     for(p = h->ht[i].first; p != NULL; p = p->next) {
         if(p->key != NULL && rs_strncmp(p->key, key, rs_strlen(key)) == 0) {

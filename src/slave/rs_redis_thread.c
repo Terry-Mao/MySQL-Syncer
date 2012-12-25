@@ -50,7 +50,7 @@ void *rs_start_redis_thread(void *data)
 
         /* get flush info */
         if((p = rs_strchr(p, '\n')) == NULL) {
-            rs_log_err(0, "rs_strchr(\"%s\", '\\n') failed", p);
+            rs_log_error(RS_LOG_ERR, 0, "rs_strchr(\"%s\", '\\n') failed", p);
             goto free;
         }
 
@@ -115,7 +115,7 @@ static int rs_redis_dml_data(rs_slave_info_t *si, char *buf, uint32_t len)
         }
 
     } else {
-        rs_log_err(0, "unkonw cmd type = %d", t);
+        rs_log_error(RS_LOG_ERR, 0, "unkonw cmd type = %d", t);
         return RS_ERR;
     }
 
@@ -137,7 +137,7 @@ static int rs_flush_slave_info(rs_slave_info_t *si)
     ssize_t         n;
 
     if(gettimeofday(&tv, NULL) != 0) {
-        rs_log_err(rs_errno, "gettimeofday() failed");
+        rs_log_error(RS_LOG_ERR, rs_errno, "gettimeofday() failed");
         return RS_ERR;
     }
 
@@ -148,14 +148,14 @@ static int rs_flush_slave_info(rs_slave_info_t *si)
     }
 
     if(lseek(si->info_fd, 0, SEEK_SET) == -1) {
-        rs_log_err(rs_errno, "lseek() failed");
+        rs_log_error(RS_LOG_ERR, rs_errno, "lseek() failed");
         return RS_ERR;
     }
 
     si->cur_binlog_save = 1;
     si->cur_binlog_savesec = tv.tv_sec;
 
-    rs_log_info("flush slave.info %s", si->dump_info);
+    rs_log_error(RS_LOG_INFO, 0, "flush slave.info %s", si->dump_info);
 
     len = rs_strlen(si->dump_info);
 
@@ -167,7 +167,7 @@ static int rs_flush_slave_info(rs_slave_info_t *si)
 
     /* truncate other remained file bytes */
     if(truncate(si->slave_info, len) != 0) {
-        rs_log_err(rs_errno, "truncate() failed");
+        rs_log_error(RS_LOG_ERR, rs_errno, "truncate() failed");
         return RS_ERR;
     }
 
@@ -181,10 +181,8 @@ static void rs_free_redis_thread(void *data)
     si = (rs_slave_info_t *) data;
 
     if(si != NULL) {
-        rs_log_info("set redis thread exit state");
         si->redis_thread_exit = 1;
         if(rs_quit == 0 && rs_reload == 0) {
-            rs_log_info("redis thread send SIGQUIT signal");
             kill(rs_pid, SIGQUIT);
         }
     }

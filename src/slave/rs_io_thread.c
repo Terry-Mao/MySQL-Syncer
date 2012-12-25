@@ -36,7 +36,8 @@ void *rs_start_io_thread(void *data)
     svr_addr.sin_port = htons(si->listen_port);
 
     if (inet_pton(AF_INET, si->listen_addr, &(svr_addr.sin_addr)) != 1) {
-        rs_log_err(rs_errno, "inet_pton(\"%s\") failed", si->listen_addr); 
+        rs_log_error(RS_LOG_ERR, rs_errno, "inet_pton(\"%s\") failed", 
+                si->listen_addr); 
         goto free;
     }
 
@@ -45,7 +46,7 @@ void *rs_start_io_thread(void *data)
         si->svr_fd = socket(AF_INET, SOCK_STREAM, 0);
 
         if(si->svr_fd == -1) {
-            rs_log_err(rs_errno, "socket() failed");
+            rs_log_error(RS_LOG_ERR, rs_errno, "socket() failed");
             goto free;
         }
 
@@ -81,8 +82,6 @@ void *rs_start_io_thread(void *data)
                 goto retry;
             }
 
-            rs_log_slave(0, "get cmd packet length = %u", pack_len);
-
             /* alloc memory */
             rbd->len = pack_len;
             rbd->id = rs_palloc_id(si->pool, pack_len);
@@ -103,7 +102,9 @@ void *rs_start_io_thread(void *data)
 
 retry:
         /* close svr_fd retry connect */
-        (void) rs_close(si->svr_fd);
+        if(close(si->svr_fd) != 0) {
+            rs_log_error(RS_LOG_ERR, 0, "close failed()");
+        }
         si->svr_fd = -1;
         sleep(RS_RETRY_CONNECT_SLEEP_SEC);
     }
@@ -126,7 +127,7 @@ static int rs_send_dumpcmd(rs_slave_info_t *si)
 
     p = rs_cpymem(buf, &l, 4);
     if(snprintf(p, l + 1, "%s,%s,", si->dump_info, si->filter_tables) < 0) {
-        rs_log_err(rs_errno, "snprintf() failed");
+        rs_log_error(RS_LOG_ERR, rs_errno, "snprintf() failed");
         return RS_ERR;
     }
 
@@ -148,7 +149,6 @@ static void rs_free_io_thread(void *data)
     if(si != NULL) {
         si->io_thread_exit = 1;
         if(rs_quit == 0 && rs_reload == 0) {
-            rs_log_info("io thread send SIGQUIT signal");
             kill(rs_pid, SIGQUIT);
         }
     }

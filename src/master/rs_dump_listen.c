@@ -28,7 +28,8 @@ int rs_dump_listen(rs_master_info_t *mi)
     svr_addr.sin_port = htons(mi->listen_port);
 
     if (inet_pton(AF_INET, mi->listen_addr, &(svr_addr.sin_addr)) != 1) {
-        rs_log_err(rs_errno, "inet_pton() failed, %s", mi->listen_addr);
+        rs_log_error(RS_LOG_ERR, rs_errno, "inet_pton() failed, %s", 
+                mi->listen_addr);
         goto free;
     }
 
@@ -37,15 +38,15 @@ int rs_dump_listen(rs_master_info_t *mi)
         mi->svr_fd = socket(AF_INET, SOCK_STREAM, 0);
 
         if(mi->svr_fd == -1) {
-            rs_log_err(rs_errno, "socket() failed");
+            rs_log_error(RS_LOG_ERR, rs_errno, "socket() failed");
             goto free;
         }
 
         if(setsockopt(mi->svr_fd, SOL_SOCKET, SO_REUSEADDR, 
                     (const void *) &reuseaddr, sizeof(int)) == -1)
         {
-            rs_log_err(rs_errno, "setsockopt(SO_REUSEADDR) failed, %s", 
-                    mi->listen_addr);
+            rs_log_error(RS_LOG_ERR, rs_errno, "setsockopt(SO_REUSEADDR) "
+                    "failed , %s", mi->listen_addr);
             goto free;
         }
 
@@ -56,11 +57,12 @@ int rs_dump_listen(rs_master_info_t *mi)
             mi->svr_fd = -1;
 
             if(err != EADDRINUSE) {
-                rs_log_err(err, "bind() failed, %s", mi->listen_addr);
+                rs_log_error(RS_LOG_ERR, err, "bind() failed, %s", 
+                        mi->listen_addr);
                 goto free;
             }
 
-            rs_log_info(0, "try again to bind() after %ums"
+            rs_log_error(RS_LOG_INFO, 0, "try again to bind() after %ums"
                     , RS_RETRY_BIND_SLEEP_MSC);
 
             usleep(RS_RETRY_BIND_SLEEP_MSC * 1000);
@@ -69,7 +71,8 @@ int rs_dump_listen(rs_master_info_t *mi)
         }
 
         if(listen(mi->svr_fd, RS_BACKLOG) == -1) {
-            rs_log_err(rs_errno, "listen() failed, %s", mi->listen_addr);
+            rs_log_error(RS_LOG_ERR, rs_errno, "listen() failed, %s", 
+                    mi->listen_addr);
             goto free;
         }
 
@@ -111,7 +114,7 @@ void *rs_start_accept_thread(void *data)
                 continue;
             }
 
-            rs_log_err(rs_errno, "accept() failed");
+            rs_log_error(RS_LOG_ERR, rs_errno, "accept() failed");
             goto free;
         }
 
@@ -157,7 +160,7 @@ void *rs_start_accept_thread(void *data)
                         &(rd->req_dump->thr_attr), 
                         rs_start_dump_thread, (void *) rd)) != 0) 
         {
-            rs_log_err(err, "pthread_create() failed");
+            rs_log_error(RS_LOG_ERR, err, "pthread_create() failed");
             goto free;
         }
     }
