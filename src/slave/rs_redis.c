@@ -23,9 +23,9 @@ int rs_redis_get_replies(rs_slave_info_t *si)
 
 int rs_redis_append_command(rs_slave_info_t *si, const char *fmt, ...) 
 {
-    va_list         args;
-    redisContext    *c;
-    int i, err;
+    va_list args;
+    MYSQL   *c;
+    int     i, err;
 
     i = 0;
     err = 0;

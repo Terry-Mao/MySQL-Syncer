@@ -63,7 +63,7 @@ void *rs_start_redis_thread(void *data)
             goto free;
         }
 
-        if(si->cmdn < RS_REDIS_CMD_COMMIT_NUM) {
+        if(si->cmdn >= RS_REDIS_CMD_COMMIT_NUM) {
             if(rs_redis_get_replies(si) != RS_OK) {
                 goto free;
             }
