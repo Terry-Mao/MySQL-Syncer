@@ -209,7 +209,7 @@ int rs_ringbuf_spin_wait(rs_ringbuf_t *rb, rs_ringbuf_data_t **d)
 {
     int err, n, i;
 
-    for (n = 1; n < RS_RING_BUFFER_SPIN; n <<= 1) {
+    for (n = 1; n < RS_RINGBUF_SPIN; n <<= 1) {
 
         for (i = 0; i < n; i++) {
             rs_cpu_pause();

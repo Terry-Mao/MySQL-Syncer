@@ -231,6 +231,18 @@ static int rs_init_slave_conf(rs_slave_info_t *si)
         return RS_ERR;
     }
 
+    if(rs_conf_register(si->cf, "svr.ringbuf.esusec", &(si->svr_rb_esusec), 
+                RS_CONF_UINT32) != RS_OK)
+    {
+        return RS_ERR;
+    }
+
+    if(rs_conf_register(si->cf, "cli.ringbuf.esusec", &(si->rb_esusec), 
+                RS_CONF_UINT32) != RS_OK)
+    {
+        return RS_ERR;
+    }
+
     /* init slave conf */
     return rs_init_conf(si->cf, rs_conf_path, RS_SLAVE_MODULE_NAME);
 }

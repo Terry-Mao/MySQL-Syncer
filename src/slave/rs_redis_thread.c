@@ -35,7 +35,7 @@ void *rs_start_redis_thread(void *data)
             err = rs_ringbuf_spin_wait(si->ringbuf, &rbd);
 
             if(err != RS_OK) {
-                usleep(RS_RING_BUFFER_EMPTY_SLEEP_USEC);
+                usleep(si->svr_rb_esusec);
 
                 if(rs_flush_slave_info(si) != RS_OK) {
                     goto free;

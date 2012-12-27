@@ -34,7 +34,6 @@ int rs_dump_listen(rs_master_info_t *mi)
     }
 
     for(tries = RS_RETRY_BIND_TIMES; tries; tries--) {
-
         mi->svr_fd = socket(AF_INET, SOCK_STREAM, 0);
 
         if(mi->svr_fd == -1) {
@@ -45,8 +44,7 @@ int rs_dump_listen(rs_master_info_t *mi)
         if(setsockopt(mi->svr_fd, SOL_SOCKET, SO_REUSEADDR, 
                     (const void *) &reuseaddr, sizeof(int)) == -1)
         {
-            rs_log_error(RS_LOG_ERR, rs_errno, "setsockopt(SO_REUSEADDR) "
-                    "failed , %s", mi->listen_addr);
+            rs_log_error(RS_LOG_ERR, rs_errno, "setsockopt(REUSEADDR) failed");
             goto free;
         }
 
@@ -57,8 +55,7 @@ int rs_dump_listen(rs_master_info_t *mi)
             mi->svr_fd = -1;
 
             if(err != EADDRINUSE) {
-                rs_log_error(RS_LOG_ERR, err, "bind() failed, %s", 
-                        mi->listen_addr);
+                rs_log_error(RS_LOG_ERR, err, "bind() failed");
                 goto free;
             }
 
@@ -66,13 +63,11 @@ int rs_dump_listen(rs_master_info_t *mi)
                     , RS_RETRY_BIND_SLEEP_MSC);
 
             usleep(RS_RETRY_BIND_SLEEP_MSC * 1000);
-
             continue;
         }
 
         if(listen(mi->svr_fd, RS_BACKLOG) == -1) {
-            rs_log_error(RS_LOG_ERR, rs_errno, "listen() failed, %s", 
-                    mi->listen_addr);
+            rs_log_error(RS_LOG_ERR, rs_errno, "listen() failed");
             goto free;
         }
 
@@ -109,7 +104,6 @@ void *rs_start_accept_thread(void *data)
         cli_fd = accept(mi->svr_fd, (struct sockaddr *) &cli_addr, &socklen);
 
         if(cli_fd == -1) {
-        
             if(rs_errno == EINTR) {
                 continue;
             }

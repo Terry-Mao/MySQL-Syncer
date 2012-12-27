@@ -8,7 +8,7 @@ user terry terry
 pid /tmp/rs_slave.pid
 
 # daemon
-daemon 1
+daemon 0
 
 # log path
 log /tmp/rs_slave.log
@@ -58,3 +58,9 @@ filter.tables test.test
 
 # recv buffer length
 recvbuf.size 10485760
+
+# server ring buffer empty sleep usec
+svr.ringbuf.esusec 10000
+
+# client ring buffer empty sleep usec
+cli.ringbuf.esusec 10000

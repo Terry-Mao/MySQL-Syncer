@@ -31,7 +31,7 @@ int rs_binlog_create_data(rs_reqdump_data_t *rd)
         r = rs_ringbuf_set(rd->ringbuf, &rbd);
 
         if(r == RS_FULL) {
-            sleep(RS_RING_BUFFER_FULL_SLEEP_SEC);
+            sleep(RS_RINGBUF_FSSEC);
             continue;
         } else if(r == RS_ERR) {
             return RS_ERR;

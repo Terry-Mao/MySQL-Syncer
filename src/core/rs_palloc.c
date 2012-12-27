@@ -113,8 +113,7 @@ int rs_palloc_id(rs_pool_t *p, uint32_t size)
     mid = 0;
 
     if(size == 0) {
-        rs_log_error(RS_LOG_ERR, 0, "rs_palloc_id() faield,"
-                " size must great than zero");
+        rs_log_error(RS_LOG_ERR, 0, "rs_palloc_id() faield, size 0");
         return RS_ERR;
     }
 
@@ -126,7 +125,6 @@ int rs_palloc_id(rs_pool_t *p, uint32_t size)
     }
 
     while(low <= high) {
-        
         mid = low + ((high - low) >> 1);
 
         if(p->slab_class[mid].size > size) {
@@ -155,7 +153,7 @@ rs_pool_t *rs_create_pool(uint32_t init_size, uint32_t mem_size,
         uint32_t chunk_size, uint32_t max_idx, double factor, int32_t flag)
 {
     int             i;
-    uint32_t        cls_size;
+    uint32_t        cls_size, alloc_size;
     rs_pool_t       *p;
     rs_pool_class_t *c;
 
@@ -167,24 +165,19 @@ rs_pool_t *rs_create_pool(uint32_t init_size, uint32_t mem_size,
 
     if(flag == RS_POOL_PREALLOC) {
         /* prealloc memory */
-        p = malloc(sizeof(rs_pool_t) + cls_size + mem_size);
-
-        if(p == NULL) {
-            rs_log_error(RS_LOG_ERR, rs_errno, "malloc(%u) failed", 
-                    sizeof(rs_pool_t) + mem_size + cls_size);
-            return NULL;
-        }
+        alloc_size = sizeof(rs_pool_t) + cls_size + mem_size;
+        p = malloc(alloc_size);
     } else if(flag == RS_POOL_PAGEALLOC) {
         /* pagealloc memory */
-        p = malloc(sizeof(rs_pool_t) + cls_size);
-
-        if(p == NULL) {
-            rs_log_error(RS_LOG_ERR, rs_errno, "malloc(%u) failed", 
-                    sizeof(rs_pool_t) + cls_size);
-            return NULL;
-        }
+        alloc_size = sizeof(rs_pool_t) + cls_size;
+        p = malloc(alloc_size);
     } else {
         rs_log_error(RS_LOG_ERR, 0, "unknown slab flag %d", flag);
+        return NULL;
+    }
+
+    if(p == NULL) {
+        rs_log_error(RS_LOG_ERR, rs_errno, "malloc(%u) failed", alloc_size);
         return NULL;
     }
 
@@ -199,8 +192,7 @@ rs_pool_t *rs_create_pool(uint32_t init_size, uint32_t mem_size,
     p->used_size = 0;
 
     for(i = 0; i < p->max_idx && init_size < p->chunk_size; i++) {
-        rs_log_debug(RS_DEBUG_ALLOC, 0, "pool align init_size %u", 
-                init_size);
+        rs_log_debug(RS_DEBUG_ALLOC, 0, "pool align init_size %u", init_size);
         c = &(p->slab_class[i]);
 
         rs_pool_class_t_init(c);
@@ -302,9 +294,7 @@ void rs_pfree(rs_pool_t *p, void *data, int id)
     }
 
     c->free_chunk[c->used_free++] = data;
-
-    rs_log_debug(RS_DEBUG_ALLOC, 0, "used free chunk num = %u", 
-            c->used_free);
+    rs_log_debug(RS_DEBUG_ALLOC, 0, "used free chunk num = %u", c->used_free);
 }
 
 void rs_destroy_pool(rs_pool_t *p)
@@ -312,9 +302,7 @@ void rs_destroy_pool(rs_pool_t *p)
     int32_t i, j;
 
     for(i = 0; i <= p->cur_idx; i++) {
-
         if(p->slab_class[i].slab != NULL) {
-
             if(p->flag == RS_POOL_PAGEALLOC) { 
                 for(j = 0; j < (int) p->slab_class[i].used_slab; j++) {
                     free(p->slab_class[i].slab[j]);

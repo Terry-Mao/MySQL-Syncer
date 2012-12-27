@@ -76,8 +76,7 @@ void *rs_start_io_thread(void *data)
             }
 
 
-            if(rs_recv_tmpbuf(si->recv_buf, si->svr_fd, &pack_len, 4) 
-                    != RS_OK) 
+            if(rs_recv_tmpbuf(si->recv_buf, si->svr_fd, &pack_len, 4) != RS_OK) 
             {
                 goto retry;
             }
@@ -116,20 +115,32 @@ free:;
      pthread_exit(NULL);
 }
 
+/*
+ * DESCRIPTION 
+ *   send slave dump cmd
+ *   format : slave.info\n,filter.tables,\0ringbuf_sleep_usec(binary)
+ *   eaxmplae : /data/mysql-bin.00001,0\n,test.test,\01000(binary)
+ *
+ *
+ */
 static int rs_send_dumpcmd(rs_slave_info_t *si)
 {
     int32_t l;
     ssize_t n;
-    l = 2 + rs_strlen(si->dump_info) + rs_strlen(si->filter_tables);
+    l = rs_strlen(si->dump_info) + 2 + rs_strlen(si->filter_tables) + 2 + 4;
     char buf[4 + l], *p;
     
     p = buf;
 
     p = rs_cpymem(buf, &l, 4);
-    if(snprintf(p, l + 1, "%s,%s,", si->dump_info, si->filter_tables) < 0) {
+    if(snprintf(p, l + 1, "%s\n,%s,%c", si->dump_info, si->filter_tables, 0) 
+            < 0) 
+    {
         rs_log_error(RS_LOG_ERR, rs_errno, "snprintf() failed");
         return RS_ERR;
     }
+
+    rs_memcpy(p + l - 4, &(si->rb_esusec), 4);
 
     n = rs_write(si->svr_fd, buf, 4 + l);
 

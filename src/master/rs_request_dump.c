@@ -4,6 +4,7 @@
 #include <rs_master.h>
 
 static void *rs_start_io_thread(void *data);
+static int rs_parse_dumpcmd(rs_reqdump_data_t *rd);
 
 /*
  * DESCRIPTION 
@@ -15,76 +16,24 @@ static void *rs_start_io_thread(void *data);
  */
 void *rs_start_dump_thread(void *data) 
 {
-    int                 err, id, len;
-    uint32_t            pack_len;
-    char                *cbuf, *p;
-    rs_reqdump_data_t   *d;
+    int                 err, len;
+    char                t;
+    rs_reqdump_data_t   *rd;
     rs_ringbuf_data_t   *rbd;
 
-    cbuf = NULL;
-    p = NULL;
-    d = (rs_reqdump_data_t *) data;
+    rd = (rs_reqdump_data_t *) data;
     rbd = NULL;
 
-    pthread_cleanup_push(rs_free_dump_thread, (void *) d);
+    pthread_cleanup_push(rs_free_dump_thread, (void *) rd);
 
-    /* get packet length (litte endian) */
-    if(rs_size_read(d->cli_fd, &pack_len, RS_SLAVE_CMD_PACK_HEADER_LEN) 
-            == RS_ERR) 
-    {
+    /* get dumpcmd info */
+    if(rs_parse_dumpcmd(rd) != RS_OK) {
         goto free;
     }
-
-    /* alloc cmd buf from mempool */
-    id = rs_palloc_id(d->pool, pack_len + 1);
-    cbuf = (char *) rs_palloc(d->pool, pack_len + 1, id);
-
-    if(cbuf == NULL) {
-        goto free;
-    }
-
-    /* while get a full packet */
-    if(rs_size_read(d->cli_fd, cbuf, pack_len) == RS_ERR) {
-        goto free;
-    }
-
-    cbuf[pack_len] = '\0';
-
-    /* parse command then open and seek file */
-    if((p = rs_strchr(cbuf, ',')) == NULL) {
-        rs_log_error(RS_LOG_ERR, 0, "slave cmd %s format error, no slave.info", 
-                cbuf);
-        goto free;
-    }
-
-    rs_memcpy(d->dump_file, cbuf, p - cbuf);
-    d->dump_num = rs_estr_to_uint32(p - 1);
-    d->dump_pos = rs_str_to_uint32(p + 1);
-
-    /* get filter tables */
-    if((p = rs_strchr(p + 1, ',')) == NULL) {
-        goto free;
-    }
-
-    d->filter_tables = p;
-
-    rs_log_error(RS_LOG_INFO, 0,
-            "\n========== SLAVE CMD ==============\n"
-            "cmd = %s\n"
-            "dump_file = %s\n"
-            "dump_num = %u\n"
-            "dump_pos = %u\n" 
-            "filter_tables = %s"
-            "\n===================================\n",
-            cbuf, 
-            d->dump_file, 
-            d->dump_num, 
-            d->dump_pos, 
-            d->filter_tables);
 
     /* start io thread, read binlog */
-    if((err = pthread_create(&(d->io_thread), &(d->req_dump->thr_attr)
-                    , rs_start_io_thread, (void *) d)) != 0) 
+    if((err = pthread_create(&(rd->io_thread), &(rd->req_dump->thr_attr)
+                    , rs_start_io_thread, (void *) rd)) != 0) 
     {
         rs_log_error(RS_LOG_ERR, err, "pthread_create() failed");
         goto free;
@@ -93,28 +42,27 @@ void *rs_start_dump_thread(void *data)
     /* loop get ringbuffer data */
     for( ;; ) {
 
-        err = rs_ringbuf_get(d->ringbuf, &rbd);
+        err = rs_ringbuf_get(rd->ringbuf, &rbd);
 
         if(err == RS_EMPTY) {
 
             /* send reserved buf, so won't hungry */
-            if(rs_send_tmpbuf(d->send_buf, d->cli_fd) != RS_OK) {
+            if(rs_send_tmpbuf(rd->send_buf, rd->cli_fd) != RS_OK) {
                 goto free;
             }
 
             /* spin wait */
-            err = rs_ringbuf_spin_wait(d->ringbuf, &rbd);
+            err = rs_ringbuf_spin_wait(rd->ringbuf, &rbd);
 
             if(err != RS_OK) {
                 /* sleep wait, release cpu */
-                err = rs_timed_select(d->cli_fd, 0, 
-                        RS_RING_BUFFER_EMPTY_SLEEP_USEC);
+                err = rs_timed_select(rd->cli_fd, 0, rd->rb_esusec);
 
                 if(err == RS_ERR) {
                     goto free;
                 } else if(err == RS_OK) {
                     /* test slave alive */
-                    if(rs_read(d->cli_fd, (void *) &pack_len, 1) <= 0) {
+                    if(rs_read(rd->cli_fd, (void *) &t, 1) <= 0) {
                         goto free;
                     }
 
@@ -127,16 +75,16 @@ void *rs_start_dump_thread(void *data)
         }
 
         len = 4 + rbd->len;
-        if((d->send_buf->end - d->send_buf->last) >= len) {
+        if((rd->send_buf->end - rd->send_buf->last) >= len) {
             // if have enough space buffer data
-            rs_memcpy(d->send_buf->last, &(rbd->len), 4);
-            rs_memcpy(d->send_buf->last + 4, rbd->data, rbd->len);
-            d->send_buf->last += len;
+            rs_memcpy(rd->send_buf->last, &(rbd->len), 4);
+            rs_memcpy(rd->send_buf->last + 4, rbd->data, rbd->len);
+            rd->send_buf->last += len;
 
-            rs_ringbuf_get_advance(d->ringbuf);
+            rs_ringbuf_get_advance(rd->ringbuf);
         } else {
             /* send buf */
-            if(rs_send_tmpbuf(d->send_buf, d->cli_fd) != RS_OK) {
+            if(rs_send_tmpbuf(rd->send_buf, rd->cli_fd) != RS_OK) {
                 goto free;
             }
         }
@@ -148,6 +96,94 @@ free:;
      pthread_exit(NULL);
 }
 
+
+static int rs_parse_dumpcmd(rs_reqdump_data_t *rd)
+{
+    int         id;
+    uint32_t    pack_len;
+    char        *p;
+
+    p = NULL;
+
+    /* get packet length (litte endian) */
+    if(rs_size_read(rd->cli_fd, &pack_len, RS_SLAVE_CMD_PACK_LEN) == RS_ERR) {
+        goto free;
+    }
+
+    /* alloc cmd buf from mempool */
+    id = rs_palloc_id(rd->pool, pack_len);
+    rd->cbuf = (char *) rs_palloc(rd->pool, pack_len, id);
+
+    if(rd->cbuf == NULL) {
+        return RS_ERR;
+    }
+
+    /* while get a full packet */
+    if(rs_size_read(rd->cli_fd, rd->cbuf, pack_len) == RS_ERR) {
+        goto free;
+    }
+
+    /* get slave.info */
+    if((p = rs_strchr(rd->cbuf, ',')) == NULL) {
+        goto free;
+    }
+
+    rs_memcpy(rd->dump_file, rd->cbuf, p - rd->cbuf);
+    rd->dump_num = rs_estr_to_uint32(p - 1);
+    rd->dump_pos = rs_str_to_uint32(p + 1);
+
+    /* get filter tables */
+    if((p = rs_strchr(p, '\n')) == NULL) {
+        goto free;
+    }
+
+    if(*(++p) != ',') {
+        goto free;
+    }
+
+    rd->filter_tables = p;
+
+    if((p = rs_strrchr(rd->filter_tables, ',')) == NULL) {
+        goto free;
+    }
+
+    if((p - rd->filter_tables) > 1) {
+        goto free;
+    }
+
+    p += 2;
+
+    /* get ringbuf sleep usec */
+    rs_memcpy(&(rd->rb_esusec), p, 4);
+
+    rs_log_error(RS_LOG_INFO, 0,
+            "\n========== SLAVE CMD ==============\n"
+            "cmd = %s\n"
+            "dump_file = %s\n"
+            "dump_num = %u\n"
+            "dump_pos = %u\n" 
+            "filter_tables = %s\n"
+            "ringbuf_susec = %u"
+            "\n===================================\n",
+            rd->cbuf, 
+            rd->dump_file, 
+            rd->dump_num, 
+            rd->dump_pos, 
+            rd->filter_tables,
+            rd->rb_esusec
+            );
+
+    /* no filter tables , all db and tables */
+    if(strncmp(",,", rd->filter_tables, 2) == 0) {
+        rd->filter_tables = NULL;
+    }
+
+    return RS_OK;
+
+free:
+    rs_log_error(RS_LOG_ERR, 0, "get dumpcmd failed");
+    return RS_ERR;
+}
 
 static void *rs_start_io_thread(void *data)
 {
@@ -349,6 +385,7 @@ void rs_free_reqdump_data(rs_reqdump_t *rd, rs_reqdump_data_t *d)
 
     sleep(10);
 
+
     /* free ring buffer */
     rs_destroy_ringbuf(d->ringbuf);
 
@@ -367,6 +404,7 @@ void rs_free_reqdump_data(rs_reqdump_t *rd, rs_reqdump_data_t *d)
         rs_log_error(RS_LOG_ERR, rs_errno, "fclose() failed");
     }
 
+    /* free cmd buf */
     /* free pool */
     rs_destroy_pool(d->pool);
 

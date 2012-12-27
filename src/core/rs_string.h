@@ -32,6 +32,7 @@ typedef struct {
 #define rs_strstr(s1, s2)  strstr((const char *) s1, (const char *) s2)
 #define rs_strlen(s)       strlen((const char *) s)
 #define rs_strchr(s1, c)   strchr((const char *) s1, (int) c)
+#define rs_strrchr(s1, c)  strrchr((const char *) s1, (int) c)
 
 #define rs_memzero(buf, n)       (void) memset(buf, 0, n)
 #define rs_memset(buf, c, n)     (void) memset(buf, c, n)

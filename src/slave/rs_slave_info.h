@@ -7,7 +7,7 @@
 #include <rs_slave.h>
 
 #define RS_SLAVE_MODULE_NAME            "slave"
-#define RS_SLAVE_CONF_NUM               13
+#define RS_SLAVE_CONF_NUM               18
 
 #define RS_SLAVE_INFO_STR_LEN           (PATH_MAX + 1 + UINT32_LEN + 1)
 
@@ -42,6 +42,8 @@ struct rs_slave_info_s {
     uint64_t            cur_binlog_savesec;
     char                *filter_tables;
     uint32_t            recvbuf_size;
+    uint32_t            svr_rb_esusec;
+    uint32_t            rb_esusec;
 
     int                 info_fd;
     int                 svr_fd;
@@ -79,6 +81,8 @@ struct rs_slave_info_s {
     (si)->filter_tables = NULL;                                              \
     (si)->ringbuf_num = 0;                                                   \
     (si)->recvbuf_size = 0;                                                  \
+    (si)->svr_rb_esusec = RS_RINGBUF_ESUSEC;                                 \
+    (si)->rb_esusec = RS_RINGBUF_ESUSEC;                                     \
     (si)->info_fd = -1;                                                      \
     (si)->svr_fd = -1;                                                       \
     (si)->c = NULL;                                                          \

@@ -7,10 +7,8 @@
 #include <rs_core.h>
 #include <rs_master.h>
 
-#define RS_SLAVE_CMD_PACK_HEADER_LEN        4
+#define RS_SLAVE_CMD_PACK_LEN               4
 #define RS_CMD_RETRY_TIMES                  600
-
-#define RS_RING_BUFFER_EMPTY_SLEEP_USEC     (1000 * 10)
 
 
 struct rs_reqdump_data_s {
@@ -22,6 +20,8 @@ struct rs_reqdump_data_s {
     uint32_t            dump_num;
     char                dump_file[PATH_MAX + 1];
     char                *binlog_idx_file;
+    char                *cbuf;
+    uint32_t            rb_esusec;
     
     char                *filter_tables;
 
@@ -60,6 +60,8 @@ struct rs_reqdump_data_s {
     (rd)->binlog_fp = NULL;                                                  \
     (rd)->binlog_idx_fp = NULL;                                              \
     (rd)->binlog_idx_file = NULL;                                            \
+    (rd)->rb_esusec = RS_RINGBUF_ESUSEC;                                     \
+    (rd)->cbuf = NULL;                                                       \
     (rd)->filter_tables = NULL;                                              \
     (rd)->server_id = 0;                                                     \
     (rd)->dump_thread = 0;                                                   \
