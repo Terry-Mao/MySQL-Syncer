@@ -147,7 +147,7 @@ static int rs_parse_dumpcmd(rs_reqdump_data_t *rd)
         goto free;
     }
 
-    if((p - rd->filter_tables) > 1) {
+    if((p - rd->filter_tables) < 2) {
         goto free;
     }
 
