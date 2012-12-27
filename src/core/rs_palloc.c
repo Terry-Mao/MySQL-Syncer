@@ -53,7 +53,6 @@ static int rs_palloc_new(rs_pool_t *p, int id)
         return RS_ERR;
     }
 
-    rs_memzero(t, len);
     c->chunk = t;
     c->free = c->num;
     c->slab[c->used_slab++] = t;
