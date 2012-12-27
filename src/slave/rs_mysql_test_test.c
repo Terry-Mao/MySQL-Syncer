@@ -8,9 +8,9 @@ typedef struct {
     char    col[10 * 3 + 1];
 } rs_mysql_test_t;
 
-int32_t rs_mysql_test_pos[] = {
-    offsetof(rs_mysql_test_t, id),
-    offsetof(rs_mysql_test_t, col)
+rs_dm_pos_alloc_t rs_mysql_test_pas[] = {
+    { offsetof(rs_mysql_test_t, id), RS_DM_DATA_STACK, RS_DM_TYPE_DEF },
+    { offsetof(rs_mysql_test_t, col), RS_DM_DATA_STACK, RS_DM_TYPE_DEF }
 };
 
 
@@ -81,16 +81,16 @@ int rs_delete_test_test(rs_slave_info_t *si, void *obj)
 }
 
 
-int rs_dml_test_test(rs_slave_info_t *si, char *r, uint32_t rl, char t) {
+int rs_dm_test_test(rs_slave_info_t *si, char *r, uint32_t rl, char t) {
     /* test.test */
     rs_mysql_test_t test;
 
-    return rs_dml_binlog_row(si, r, rl, t,
-                rs_init_test_test,
-                rs_print_test_test,
-                rs_insert_test_test, 
-                rs_before_update_test_test,
-                rs_update_test_test, 
-                rs_delete_test_test, 
-                rs_mysql_test_pos, &test);
+    return rs_dm_binlog_row(si, r, rl, t,
+            rs_init_test_test,
+            rs_print_test_test,
+            rs_insert_test_test, 
+            rs_before_update_test_test,
+            rs_update_test_test, 
+            rs_delete_test_test, 
+            rs_mysql_test_pas, &test);
 }

@@ -86,9 +86,9 @@ free:;
 
 static int rs_redis_dml_data(rs_slave_info_t *si, char *buf, uint32_t len) 
 {
-    char                *p, t;
-    uint32_t            rl, tl;
-    rs_redis_dml_func   handler;
+    char            *p, t;
+    uint32_t        rl, tl;
+    rs_reg_dm_func  handler;
 
     p = buf;
     t = 0;

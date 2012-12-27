@@ -92,6 +92,10 @@ void rs_free_slave(void *data)
         rs_destroy_shash(si->table_func);
     }
 
+    if(si->dpool != NULL) {
+        rs_destroy_pool(si->dpool);
+    }
+
     p = si->pool;
 
     /* free conf */

@@ -378,20 +378,22 @@ static char *rs_binlog_parse_string(char *p, u_char *cm, uint32_t ml,
 }
 
 
-int rs_dml_binlog_row(rs_slave_info_t *si, void *data, uint32_t len, char type, 
+int rs_dm_binlog_row(rs_slave_info_t *si, void *data, uint32_t len, char type, 
         rs_binlog_obj_func before_parse_handle,        
         rs_binlog_obj_func after_parse_handle,        
-        rs_binlog_dml_func write_handle, 
-        rs_binlog_dml_func before_update_handle,
-        rs_binlog_dml_func update_handle,
-        rs_binlog_dml_func delete_handle,
-        int32_t *offset_arr, void *obj)
+        rs_binlog_dm_func write_handle, 
+        rs_binlog_dm_func before_update_handle,
+        rs_binlog_dm_func update_handle,
+        rs_binlog_dm_func delete_handle,
+        rs_dm_pos_alloc_t *pas_arr, void *obj)
 {
-    char                        *p, *ubp;
+    char                        *p, *ubp, *dp;
     u_char                      *ctp, *cmp;
     uint32_t                    i, j, un, nn, before, ml, cn, cl, dl, t;
-    rs_binlog_dml_func          handle;
+    rs_binlog_dm_func           handle;
     rs_binlog_column_meta_t     *meta;
+    rs_dm_pos_alloc_t           pas;
+    rs_pstr_t                   *pstr;
 
     p = data;
     before = 0;
@@ -402,6 +404,7 @@ int rs_dml_binlog_row(rs_slave_info_t *si, void *data, uint32_t len, char type,
     ctp = NULL;
     cmp = NULL;
     meta = NULL;
+    pstr = NULL;
 
     /* get column number */
     rs_memcpy(&cn, p, 4);
@@ -488,22 +491,48 @@ int rs_dml_binlog_row(rs_slave_info_t *si, void *data, uint32_t len, char type,
 
             rs_log_debug(RS_DEBUG_BINLOG, 0, "col type %u, len %u", t, dl);
 
-            /* used */
-            if((ubp[i / 8] >> (i % 8))  & 0x01) {
-                /* not null */
-                if(!((null_bits[j / 8] >> (j % 8)) & 0x01)) {
-                    /* parse */
-                    if(offset_arr[i] > -1) {
-                        rs_memcpy((char *) obj + offset_arr[i], p, dl);
-                    }
-                    p += dl;
-                }
-
-                j++;
-            } else {
+            /* not used */
+            if(!((ubp[i / 8] >> (i % 8))  & 0x01)) {
                 rs_log_debug(RS_DEBUG_BINLOG, 0, "col idx %u nouse", i);
+                goto next_col;
             }
-            
+
+            /* not null */
+            if(((null_bits[j / 8] >> (j % 8)) & 0x01)) {
+                rs_log_debug(RS_DEBUG_BINLOG, 0, "col idx %u null", i);
+                j++;
+                goto next_col; 
+            }
+
+            /* parse */
+            pas = pas_arr[i];
+            if(pas.pos == -1) {
+                goto skip_col;
+            }
+
+            if(pas.alloc == RS_DM_DATA_STACK) {
+                dp = (char *) obj + pas.pos;
+                if(pas.type == RS_DM_TYPE_HEX) {
+                    dp = rs_cpymem(dp, &dl, 4);        
+                }
+                rs_memcpy(dp, p, dl);
+            } else if(pas.alloc == RS_DM_DATA_POOL) {
+                /* rs_pstr_t */
+                pstr = (rs_pstr_t *) ((char *) obj + pas.pos);
+                pstr->len = dl;
+                pstr->id = rs_palloc_id(si->dpool, dl);
+                pstr->data = rs_palloc(si->dpool, dl, pstr->id);
+                rs_memcpy(pstr->data, p, dl);
+            } else {
+                rs_log_error(RS_LOG_ERR, 0, "unknown alloc %d", pas.alloc); 
+                return RS_ERR;
+            }
+
+skip_col:
+            p += dl;
+            j++;
+
+next_col:
             /* next column type */
             ctp++;
             /* next meta info */
@@ -514,7 +543,7 @@ int rs_dml_binlog_row(rs_slave_info_t *si, void *data, uint32_t len, char type,
             after_parse_handle(obj);
         }
 
-        /* append redis cmd */
+        /* append cmd */
         if(type == RS_WRITE_ROWS_EVENT) {
             handle = write_handle;
         } else if(type == RS_UPDATE_ROWS_EVENT) {

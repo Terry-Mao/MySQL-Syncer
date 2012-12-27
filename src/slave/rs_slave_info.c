@@ -101,6 +101,14 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
         goto free;
     }
 
+    /* create dpool */
+    si->dpool = rs_create_pool(si->pool_initsize, si->pool_memsize, rs_pagesize
+            , RS_POOL_CLASS_IDX, si->pool_factor, RS_POOL_PAGEALLOC);
+
+    if(si->dpool == NULL) {
+        goto free;
+    }
+
     /* register tables */
     if(rs_register_tables(si) != RS_OK) {
         goto free;

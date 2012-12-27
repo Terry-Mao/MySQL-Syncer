@@ -57,6 +57,7 @@ struct rs_slave_info_s {
     rs_shash_t          *table_func;
 
     rs_pool_t           *pool;
+    rs_pool_t           *dpool;
     int32_t             id;
 
     pthread_t           io_thread;
@@ -95,6 +96,7 @@ struct rs_slave_info_s {
     (si)->redis_thread = 0;                                                  \
     (si)->io_thread_exit = 0;                                                \
     (si)->redis_thread_exit = 0;                                             \
+    (si)->dpool = NULL;                                                      \
     (si)->pool = NULL 
 
 

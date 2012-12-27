@@ -7,17 +7,23 @@
 #include <rs_core.h>
 
 typedef struct {
-    size_t len;
-    char *data;
+    size_t  len;
+    char    *data;
 } rs_str_t;
+
+typedef struct {
+    size_t  len;
+    char    *data;
+    int     id;
+} rs_pstr_t;
 
 
 #define RS_TIME_CONVERT_FORMAT      "%Y-%m-%d %H:%M:%S"
 
 
-#define rs_string(str)     { sizeof(str) - 1, (char *) str }
-#define rs_null_string     { 0, NULL }
-#define rs_str_set(str, text)                                               \
+#define rs_string(str)      { sizeof(str) - 1, (char *) str }
+#define rs_null_string      { 0, NULL }
+#define rs_str_set(str, text)                                                \
     (str)->len = rs_strlen(text); (str)->data = (char *) text
 
 #define rs_strncmp(s1, s2, n)  strncmp((const char *) s1, (const char *) s2, n)
