@@ -68,7 +68,9 @@ int rs_redis_append_command(rs_slave_info_t *si, const char *fmt, ...)
     if(err != REDIS_OK) {
         rs_log_error(RS_LOG_ERR, rs_errno, "redisvAppendCommand() failed");
         return RS_ERR;
-    } 
+    }
+
+    si->cmdn++;
 
     return RS_OK;
 }

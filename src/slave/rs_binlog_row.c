@@ -389,14 +389,12 @@ int rs_dml_binlog_row(rs_slave_info_t *si, void *data, uint32_t len, char type,
 {
     char                        *p, *ubp;
     u_char                      *ctp, *cmp;
-    uint32_t                    i, j, un, nn, before, ml, cn, cl, cmdn, dl, t;
-    int                         cmd;
+    uint32_t                    i, j, un, nn, before, ml, cn, cl, dl, t;
     rs_binlog_dml_func          handle;
     rs_binlog_column_meta_t     *meta;
 
     p = data;
     before = 0;
-    cmdn = 0;
     dl = 0;
     t = 0;
     ubp = NULL;
@@ -447,7 +445,6 @@ int rs_dml_binlog_row(rs_slave_info_t *si, void *data, uint32_t len, char type,
     while(p < (char *) data + len) {
 
         j = 0;    
-        cmd = 0;
         nn = (un * 8 + 7) / 8;
         char null_bits[nn];
         ctp = ct;
@@ -537,14 +534,10 @@ int rs_dml_binlog_row(rs_slave_info_t *si, void *data, uint32_t len, char type,
             continue;
         }
 
-        if((cmd = handle(si, obj)) == RS_ERR) {
+        if(handle(si, obj) == RS_ERR) {
             return RS_ERR;
         }
-
-        cmdn += (uint32_t) cmd;
     }
-
-    si->cmdn += cmdn;
 
     return RS_OK;
 }

@@ -53,20 +53,16 @@ void rs_print_test_test(void *obj)
 int rs_insert_test_test(rs_slave_info_t *si, void *obj)
 {
     rs_mysql_test_t *test;
-    uint32_t            cmdn;
 
     test = (rs_mysql_test_t *) obj;
-    cmdn = 0;
 
-    if(rs_redis_append_command(si, "SET test_%d %s", test->id, 
-                test->col) != RS_OK)
+    if(rs_redis_append_command(si, "SET test_%d %s", test->id, test->col) 
+            != RS_OK)
     {
         return RS_ERR;
     }
 
-    cmdn++;
-
-    return cmdn;
+    return RS_OK;
 }
 
 int rs_before_update_test_test(rs_slave_info_t *si, void *obj)
