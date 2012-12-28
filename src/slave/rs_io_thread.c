@@ -105,9 +105,9 @@ retry:
             rs_log_error(RS_LOG_ERR, 0, "close failed()");
         }
         si->svr_fd = -1;
+        rs_log_error(RS_LOG_ERR, 0, "retry connect to master");
         sleep(RS_RETRY_CONNECT_SLEEP_SEC);
     }
-
 
 free:;
 

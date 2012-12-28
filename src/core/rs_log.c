@@ -20,10 +20,8 @@ static rs_str_t rs_debug_levels[] = {
     rs_null_string
 };
 
-
 char        *rs_log_path = "./rs.log";
 int         rs_log_fd = STDOUT_FILENO;
-
 uint32_t    rs_log_level = RS_LOG_INFO;
 uint32_t    rs_debug_level = 0;
 
@@ -48,8 +46,11 @@ int rs_log_set_levels(char *debug_level)
 
     for(p = debug_level; p != NULL; p = rs_strchr(p, '|')) {
 
-        i = 0;
-        for(t = rs_debug_levels[i]; t.len > 0 && t.data != NULL; 
+        if(p != debug_level) {
+            p++;
+        }
+
+        for(i = 0, t = rs_debug_levels[i]; t.len > 0 && t.data != NULL; 
                 t = rs_debug_levels[++i])
         {
             if(rs_strncmp(t.data, p, t.len) == 0) {

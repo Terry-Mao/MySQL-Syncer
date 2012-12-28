@@ -385,6 +385,7 @@ int rs_dm_binlog_row(rs_slave_info_t *si, void *data, uint32_t len, char type,
         rs_binlog_dm_func before_update_handle,
         rs_binlog_dm_func update_handle,
         rs_binlog_dm_func delete_handle,
+        rs_binlog_dm_func free_handle,
         rs_dm_pos_alloc_t *pas_arr, void *obj)
 {
     char                        *p, *ubp, *dp;
@@ -463,6 +464,7 @@ int rs_dm_binlog_row(rs_slave_info_t *si, void *data, uint32_t len, char type,
             ubp = use_bits_after;
         }
 
+        /* before parse struct handle */
         if(before_parse_handle != NULL) {
             before_parse_handle(obj);
         }
@@ -546,11 +548,11 @@ next_col:
             cmp += meta->meta_len;
         }
 
+        /* after parse struct handle */
         if(after_parse_handle != NULL) {
             after_parse_handle(obj);
         }
 
-        /* append cmd */
         if(type == RS_WRITE_ROWS_EVENT) {
             handle = write_handle;
         } else if(type == RS_UPDATE_ROWS_EVENT) {
@@ -566,11 +568,13 @@ next_col:
             return RS_ERR;
         }
 
-        if(handle == NULL) {
-            continue;
+        /* dm handle */
+        if(handle != NULL && handle(si, obj) == RS_ERR) {
+            return RS_ERR;
         }
 
-        if(handle(si, obj) == RS_ERR) {
+        /* free resource handle */
+        if(free_handle != NULL && free_handle(si, obj) == RS_ERR) {
             return RS_ERR;
         }
     }

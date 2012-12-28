@@ -74,6 +74,7 @@ int rs_dm_binlog_row(rs_slave_info_t *si, void *data, uint32_t len, char type,
         rs_binlog_dm_func before_update_handle,
         rs_binlog_dm_func update_handle,
         rs_binlog_dm_func delete_handle,
+        rs_binlog_dm_func free_handle,
         rs_dm_pos_alloc_t *pas_arr, void *obj);
 
 #endif

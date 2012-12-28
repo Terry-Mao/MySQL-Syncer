@@ -17,7 +17,7 @@ log /tmp/rs_slave.log
 log.level 3
 
 # debug level
-debug.level BINLOG
+debug.level BINLOG|ALLOC
 
 [slave]
 # listen addr
