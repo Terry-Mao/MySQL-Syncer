@@ -510,18 +510,25 @@ int rs_dm_binlog_row(rs_slave_info_t *si, void *data, uint32_t len, char type,
                 goto skip_col;
             }
 
+            dp = (char *) obj + pas.pos;
+
             if(pas.alloc == RS_DM_DATA_STACK) {
-                dp = (char *) obj + pas.pos;
                 if(pas.type == RS_DM_TYPE_HEX) {
                     dp = rs_cpymem(dp, &dl, 4);        
                 }
                 rs_memcpy(dp, p, dl);
             } else if(pas.alloc == RS_DM_DATA_POOL) {
                 /* rs_pstr_t */
-                pstr = (rs_pstr_t *) ((char *) obj + pas.pos);
-                pstr->len = dl;
+                pstr = (rs_pstr_t *) dp;
+
                 pstr->id = rs_palloc_id(si->dpool, dl);
+                pstr->len = dl;
                 pstr->data = rs_palloc(si->dpool, dl, pstr->id);
+
+                if(pstr->data == NULL) {
+                    return RS_ERR;
+                }
+
                 rs_memcpy(pstr->data, p, dl);
             } else {
                 rs_log_error(RS_LOG_ERR, 0, "unknown alloc %d", pas.alloc); 

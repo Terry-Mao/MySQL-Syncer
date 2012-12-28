@@ -4,19 +4,19 @@
 #include <rs_slave.h>
 
 typedef struct {
-    int32_t id;
-    char    col[10 * 3 + 1];
+    int32_t     id;
+    rs_pstr_t   col;
 } rs_mysql_test_t;
 
 rs_dm_pos_alloc_t rs_mysql_test_pas[] = {
     { offsetof(rs_mysql_test_t, id), RS_DM_DATA_STACK, RS_DM_TYPE_DEF },
-    { offsetof(rs_mysql_test_t, col), RS_DM_DATA_STACK, RS_DM_TYPE_DEF }
+    { offsetof(rs_mysql_test_t, col), RS_DM_DATA_POOL, RS_DM_TYPE_DEF }
 };
 
 
 #define rs_mysql_test_t_init(test)                                           \
     (test)->id = 0;                                                          \
-    rs_memzero((test)->col, 10 * 3 + 1)
+    rs_pstr_t_init(&(test->col))
 
 
 void rs_init_test_test(void *obj);
@@ -39,14 +39,19 @@ void rs_init_test_test(void *obj)
 void rs_print_test_test(void *obj)
 {
     rs_mysql_test_t         *test;
+
+
     test = (rs_mysql_test_t *) obj;
+
+
     rs_log_error(RS_LOG_DEBUG, 0,
             "\n========== test ==========\n"
             "id  : %d\n"
-            "col : %s\n"
+            "col : %.*s\n"
             "\n==========================\n",
             test->id,
-            test->col
+            test->col.len,
+            test->col.data
             );
 }
 
@@ -83,14 +88,17 @@ int rs_delete_test_test(rs_slave_info_t *si, void *obj)
 
 int rs_dm_test_test(rs_slave_info_t *si, char *r, uint32_t rl, char t) {
     /* test.test */
+    int             err;
     rs_mysql_test_t test;
 
-    return rs_dm_binlog_row(si, r, rl, t,
-            rs_init_test_test,
-            rs_print_test_test,
-            rs_insert_test_test, 
-            rs_before_update_test_test,
-            rs_update_test_test, 
-            rs_delete_test_test, 
-            rs_mysql_test_pas, &test);
+    err = rs_dm_binlog_row(si, r, rl, t,
+                rs_init_test_test,
+                rs_print_test_test,
+                rs_insert_test_test, 
+                rs_before_update_test_test,
+                rs_update_test_test, 
+                rs_delete_test_test, 
+                rs_mysql_test_pas, &test);
+
+    return err;
 }

@@ -26,6 +26,10 @@ typedef struct {
 #define rs_str_set(str, text)                                                \
     (str)->len = rs_strlen(text); (str)->data = (char *) text
 
+#define rs_pstr_t_init(pstr)                                                 \
+    (pstr)->len = 0;                                                         \
+    (pstr)->data = NULL
+
 #define rs_strncmp(s1, s2, n)  strncmp((const char *) s1, (const char *) s2, n)
 #define rs_strncasecmp(s1, s2, n)  strncmp((const char *) s1, (const char *) \
         s2, n)
