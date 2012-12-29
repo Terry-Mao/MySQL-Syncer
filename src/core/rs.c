@@ -41,9 +41,13 @@ int main(int argc, char * const *argv)
     rs_core_info = ci;
 
 #if MASTER
-        rs_init_master();
+        if(rs_init_master() != RS_OK) {
+            goto free;
+        }
 #elif SLAVE
-        rs_init_slave();
+        if(rs_init_slave() != RS_OK) {
+            goto free;
+        }
 #endif
 
     /* wait signal */
@@ -103,6 +107,8 @@ int main(int argc, char * const *argv)
             continue;
         }
     }
+
+free:
 
     if(ci->pid_path != NULL) {
         rs_delete_pidfile(ci->pid_path);

@@ -279,6 +279,9 @@ static char *rs_binlog_parse_def(char *p, u_char *cm, uint32_t ml,
         uint32_t fl, uint32_t *dl) 
 {
     *dl = fl;
+
+    rs_log_debug(RS_DEBUG_BINLOG, 0, "def fixed_len %u", *dl);
+
     return p;    
 }
 
@@ -296,7 +299,8 @@ static char *rs_binlog_parse_varchar(char *p, u_char *cm, uint32_t ml,
        len = 1; 
     }
 
-    rs_log_debug(RS_DEBUG_BINLOG, 0, "varchar max %u, len %u", max, len);
+    rs_log_debug(RS_DEBUG_BINLOG, 0, "varchar pack %u max %u, len %u", 
+            len, max, *dl);
 
     rs_memcpy(dl, p, len);
 
@@ -311,8 +315,9 @@ static char *rs_binlog_parse_bit(char *p, u_char *cm, uint32_t ml,
     len = 0;
 
     rs_memcpy(&len, cm, 1);
-
     *dl = len / 8;
+
+    rs_log_debug(RS_DEBUG_BINLOG, 0, "bit pack %u len %u", len, *dl);
 
     return p;    
 }
@@ -328,6 +333,8 @@ static char *rs_binlog_parse_blob(char *p, u_char *cm, uint32_t ml,
     rs_memcpy(&pack_len, cm, ml);
     rs_memcpy(dl, p, pack_len);
 
+    rs_log_debug(RS_DEBUG_BINLOG, 0, "blob pack %u len %u", pack_len, *dl);
+
     return p + pack_len;    
 }
 
@@ -335,16 +342,17 @@ static char *rs_binlog_parse_blob(char *p, u_char *cm, uint32_t ml,
 static char *rs_binlog_parse_varstring(char *p, u_char *cm, uint32_t ml, 
         uint32_t fl, uint32_t *dl) 
 {
-    uint32_t len;
+    uint32_t pack_len;
 
-    len = 0;
+    pack_len = 0;
 
-    rs_memcpy(&len, cm + 1, 1);
-    rs_memcpy(dl, p, len);
+    rs_memcpy(&pack_len, cm + 1, 1);
+    rs_memcpy(dl, p, pack_len);
 
-    rs_log_debug(RS_DEBUG_BINLOG, 0, "varstring len %u", len);
+    rs_log_debug(RS_DEBUG_BINLOG, 0, "varstring pack %u len %u", 
+            pack_len, *dl);
 
-    return p + len;    
+    return p + pack_len;    
 }
 
 static char *rs_binlog_parse_string(char *p, u_char *cm, uint32_t ml, 
@@ -371,8 +379,8 @@ static char *rs_binlog_parse_string(char *p, u_char *cm, uint32_t ml,
 
     rs_memcpy(dl, p, pack_len);
 
-    rs_log_debug(RS_DEBUG_BINLOG, 0, "string max %u, len %u, type %u", 
-            max_len, pack_len, type);
+    rs_log_debug(RS_DEBUG_BINLOG, 0, "string pack %u max %u len %u type %u", 
+            pack_len, max_len, *dl, type);
 
     return p + pack_len;
 }
@@ -482,6 +490,8 @@ int rs_dm_binlog_row(rs_slave_info_t *si, void *data, uint32_t len, char type,
 
             meta = (rs_binlog_column_meta_t *) &(rs_column_meta[t]);
 
+            rs_log_debug(RS_DEBUG_BINLOG, 0, "col idx %u type %u", i, t);
+
             if(meta->parse_handle == NULL) {
                 rs_log_error(RS_LOG_ERR, 0, "not support mysql type parse "
                         "handle, please contact the lazy author!"); 
@@ -490,8 +500,6 @@ int rs_dm_binlog_row(rs_slave_info_t *si, void *data, uint32_t len, char type,
 
             p = meta->parse_handle(p, cmp, meta->meta_len, 
                     meta->fixed_len, (uint32_t *) &dl);
-
-            rs_log_debug(RS_DEBUG_BINLOG, 0, "col type %u, len %u", t, dl);
 
             /* not used */
             if(!((ubp[i / 8] >> (i % 8))  & 0x01)) {

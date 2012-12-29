@@ -126,6 +126,8 @@ rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os)
     n = rs_read(si->info_fd, si->dump_info, RS_SLAVE_INFO_STR_LEN);
 
     if(n <= 0) {
+        rs_log_error(RS_LOG_ERR, 0, "rs_read() %s failed, error or empty", 
+                si->dump_info);
         goto free;
     } else if (n > 0) { 
         si->dump_info[n] = '\0';
