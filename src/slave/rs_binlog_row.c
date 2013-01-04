@@ -15,7 +15,11 @@ static char *rs_binlog_parse_bit(char *p, u_char *cm, uint32_t ml,
         uint32_t fl, uint32_t *dl);
 static char *rs_binlog_parse_string(char *p, u_char *cm, uint32_t ml, 
         uint32_t fl, uint32_t *dl);
+static char *rs_binlog_parse_decimal(char *p, u_char *cm, uint32_t ml,
+    uint32_t fl, uint32_t *dl);
+static uint32_t rs_binlog_decimal_binsize(uint32_t precision, uint32_t scale);
 
+/* meta_len, fixed_len, handler */
 static rs_binlog_column_meta_t rs_column_meta[] = {
     { 0, 0, NULL },                             /* 0 : DECIMAL */
     { 0, 1, rs_binlog_parse_def },              /* 1 : TINYINT */
@@ -263,7 +267,7 @@ static rs_binlog_column_meta_t rs_column_meta[] = {
     { 0, 0, NULL },
     { 0, 0, NULL },
     { 0, 0, NULL },
-    { 0, 0, NULL },
+    { 2, 0, rs_binlog_parse_decimal }, /* 246 : NEWDEICMAL */
     { 0, 0, NULL },
     { 0, 0, NULL },
     { 0, 0, NULL },
@@ -274,6 +278,8 @@ static rs_binlog_column_meta_t rs_column_meta[] = {
     { 2, 0, rs_binlog_parse_string },
     { 1, 0, rs_binlog_parse_blob }
 };
+
+static const uint32_t dig2bytes[10] = { 0, 1, 1, 2, 2, 3, 3, 4, 4, 4 };
 
 static char *rs_binlog_parse_def(char *p, u_char *cm, uint32_t ml, 
         uint32_t fl, uint32_t *dl) 
@@ -288,23 +294,23 @@ static char *rs_binlog_parse_def(char *p, u_char *cm, uint32_t ml,
 static char *rs_binlog_parse_varchar(char *p, u_char *cm, uint32_t ml, 
         uint32_t fl, uint32_t *dl) 
 {
-    uint32_t len, max;
+    uint32_t pack_len, max;
 
     max = 0;
-    len = 2;
+    pack_len = 2;
 
     rs_memcpy(&max, cm, ml);
 
     if(max < 256) {
-       len = 1; 
+       pack_len = 1; 
     }
 
+    rs_memcpy(dl, p, pack_len);
+
     rs_log_debug(RS_DEBUG_BINLOG, 0, "varchar pack %u max %u, len %u", 
-            len, max, *dl);
+            pack_len, max, *dl);
 
-    rs_memcpy(dl, p, len);
-
-    return p + len;    
+    return p + pack_len;    
 }
 
 /* not test */
@@ -383,6 +389,41 @@ static char *rs_binlog_parse_string(char *p, u_char *cm, uint32_t ml,
             pack_len, max_len, *dl, type);
 
     return p + pack_len;
+}
+
+static char *rs_binlog_parse_decimal(char *p, u_char *cm, uint32_t ml,
+    uint32_t fl, uint32_t *dl)
+{
+    uint32_t    pack_len, precision, decimal;
+
+    pack_len = 0;
+    decimal = *cm++;
+    precision = *cm;
+
+    rs_log_debug(RS_DEBUG_BINLOG, 0, "decimal decimal %u precision %u", 
+            decimal, precision);
+
+    pack_len = rs_binlog_decimal_binsize(decimal, precision);
+
+    rs_log_debug(RS_DEBUG_BINLOG, 0, "decimal pack_len %u", pack_len);
+
+    *dl = pack_len;
+
+    return p;
+}
+
+static uint32_t rs_binlog_decimal_binsize(uint32_t decimal, uint32_t precision)
+{
+    uint32_t intg, intg0, frac0, intg0x, frac0x;
+
+        intg = decimal - precision;
+        intg0 = intg / 9;
+        frac0 = precision / 9;
+        intg0x = intg - intg0 * 9;
+        frac0x = precision - frac0 * 9;
+
+        return intg0 * sizeof(int32_t) + dig2bytes[intg0x] + 
+            frac0 * sizeof(int32_t) + dig2bytes[frac0x];
 }
 
 
@@ -488,18 +529,7 @@ int rs_dm_binlog_row(rs_slave_info_t *si, void *data, uint32_t len, char type,
                 return RS_ERR;
             }
 
-            meta = (rs_binlog_column_meta_t *) &(rs_column_meta[t]);
-
             rs_log_debug(RS_DEBUG_BINLOG, 0, "col idx %u type %u", i, t);
-
-            if(meta->parse_handle == NULL) {
-                rs_log_error(RS_LOG_ERR, 0, "not support mysql type parse "
-                        "handle, please contact the lazy author!"); 
-                return RS_ERR;
-            }
-
-            p = meta->parse_handle(p, cmp, meta->meta_len, 
-                    meta->fixed_len, (uint32_t *) &dl);
 
             /* not used */
             if(!((ubp[i / 8] >> (i % 8))  & 0x01)) {
@@ -510,9 +540,19 @@ int rs_dm_binlog_row(rs_slave_info_t *si, void *data, uint32_t len, char type,
             /* not null */
             if(((null_bits[j / 8] >> (j % 8)) & 0x01)) {
                 rs_log_debug(RS_DEBUG_BINLOG, 0, "col idx %u null", i);
-                j++;
                 goto next_col; 
             }
+
+            meta = (rs_binlog_column_meta_t *) &(rs_column_meta[t]);
+
+            if(meta->parse_handle == NULL) {
+                rs_log_error(RS_LOG_ERR, 0, "not support mysql type parse "
+                        "handle, please contact the lazy author!"); 
+                return RS_ERR;
+            }
+
+            p = meta->parse_handle(p, cmp, meta->meta_len, 
+                    meta->fixed_len, (uint32_t *) &dl);
 
             /* parse */
             pas = pas_arr[i];
@@ -547,9 +587,9 @@ int rs_dm_binlog_row(rs_slave_info_t *si, void *data, uint32_t len, char type,
 
 skip_col:
             p += dl;
-            j++;
-
 next_col:
+            /* not null */
+            j++;
             /* next column type */
             ctp++;
             /* next meta info */
