@@ -62,7 +62,7 @@ static int rs_insert_test_test(rs_slave_info_t *si, void *obj)
 
     test = (rs_mysql_test_t *) obj;
 
-    if(rs_redis_append_command(si, "SET test_%d %s", test->id, test->col) 
+    if(rs_redis_append_command(si, "SET test_%d %s", test->id, test->col.data) 
             != RS_OK)
     {
         return RS_ERR;
