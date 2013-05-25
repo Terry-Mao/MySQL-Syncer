@@ -1,35 +1,29 @@
 
 #include <rs_config.h>
 #include <rs_core.h>
-#include <rs_master.h>
-
 
 int rs_def_filter_data_handle(rs_reqdump_data_t *rd)
 {
     return RS_OK;
 }
 
-int rs_binlog_create_data(rs_reqdump_data_t *rd) 
+int rs_binlog_create_data(rs_binlog_info_t *bi) 
 {
     int                     r, len;
-    char                    istr[UINT32_LEN + 1], *p;
-    rs_binlog_info_t        *bi;
+    char                    *p;
     rs_ringbuf_data_t       *rbd;
 
-    bi = &(rd->binlog_info);
     p = NULL;
 
-    if(bi->mev == 0) {
-        if(bi->skip_n++ % RS_SKIP_DATA_FLUSH_NUM != 0) {
-            bi->skip_n = 1;
+    if(bi->task_type == 0) {
+        if(bi->skip_num++ % RS_SKIP_DATA_FLUSH_NUM != 0) {
+            bi->skip_num = 1;
             return RS_OK;
         }
     }
 
     for( ;; ) {
-
         r = rs_ringbuf_set(rd->ringbuf, &rbd);
-
         if(r == RS_FULL) {
             sleep(RS_RINGBUF_FSSEC);
             continue;
@@ -47,7 +41,7 @@ int rs_binlog_create_data(rs_reqdump_data_t *rd)
         len = snprintf(istr, UINT32_LEN + 1, "%u", rd->dump_pos);
         len += rs_strlen(rd->dump_file) + 1 + 1 + 1; 
 
-        if(bi->mev == 0) {
+        if(bi->task_type == 0) {
 
             rbd->len = len;
             rbd->id = rs_palloc_id(rd->pool, len);
@@ -65,7 +59,6 @@ int rs_binlog_create_data(rs_reqdump_data_t *rd)
                 return RS_ERR;
             }
         } else {
-
             if(bi->log_format == RS_BINLOG_FORMAT_ROW_BASED) {
 
                 /* RBR */

@@ -161,6 +161,48 @@ free:
     return NULL;
 }
 
+/*
+ *  rs_flush_slave_info
+ *  @s:rs_slave_info_s struct
+ *
+ *  Flush slave into to disk, format like rsylog_path,rsylog_pos
+ *
+ *  On success, RS_OK is returned. On error, RS_ERR is returned
+ */
+int rs_flush_slave_info(rs_slave_info_t *si) 
+{
+    int32_t         len;
+    struct timeval  tv;
+    ssize_t         n;
+
+    if(gettimeofday(&tv, NULL) != 0) {
+        rs_log_error(RS_LOG_ERR, rs_errno, "gettimeofday() failed");
+        return RS_ERR;
+    }
+
+    if(si->cur_binlog_save < si->binlog_save && 
+            (tv.tv_sec - si->cur_binlog_savesec) < si->binlog_savesec) 
+    {
+        return RS_OK;
+    }
+
+    if(lseek(si->info_fd, 0, SEEK_SET) == -1) {
+        rs_log_error(RS_LOG_ERR, rs_errno, "lseek() failed");
+        return RS_ERR;
+    }
+
+    si->cur_binlog_save = 1;
+    si->cur_binlog_savesec = tv.tv_sec;
+    rs_log_error(RS_LOG_INFO, 0, "flush slave.info %s", si->dump_info);
+    len = rs_strlen(si->dump_info);
+    n = rs_write(si->info_fd, si->dump_info, len);
+    if(n != len) {
+        return RS_ERR;
+    } 
+
+    return RS_OK; 
+}
+
 static int rs_init_slave_conf(rs_slave_info_t *si)
 {
     if(rs_conf_register(si->cf, "listen.addr", &(si->listen_addr), 

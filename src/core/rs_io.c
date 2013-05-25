@@ -173,3 +173,45 @@ int rs_timed_select(int fd, uint32_t sec, uint32_t usec)
 
     return RS_OK;
 }
+
+int rs_select(int fd)
+{
+    int                     ready, mfd;
+    fd_set                  rset, tset;
+
+    mfd = 0;
+    ready = 0;
+    FD_ZERO(&rset);
+    FD_ZERO(&tset);
+    mfd = rs_max(fd, mfd);
+
+    FD_SET(fd, &rset);
+    tset = rset;
+    ready = select(mfd + 1, &tset, NULL, NULL, NULL);
+
+    for(;;) {
+        /* select timedout */
+        if(ready == 0) {
+            // won't happan
+            continue;
+        } else if(ready == -1) {
+            if(rs_errno == EINTR) {
+                continue;
+            }
+
+            rs_log_error(RS_LOG_ERR, rs_errno, "select failed()");
+            return RS_ERR;
+        }
+
+        /* unknown fd */
+        if(!FD_ISSET(fd, &tset)) {
+            rs_log_error(RS_LOG_ERR, rs_errno, "select failed()");
+            return RS_ERR;
+        }
+
+        FD_CLR(fd, &rset);
+        break;
+    }
+
+    return RS_OK;
+}

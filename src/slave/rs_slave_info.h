@@ -102,7 +102,8 @@ struct rs_slave_info_s {
 
 rs_slave_info_t *rs_init_slave_info(rs_slave_info_t *os); 
 
-extern rs_slave_info_t                  *rs_slave_info; 
+extern rs_slave_info_t *rs_slave_info; 
+extern int rs_flush_slave_info(rs_slave_info_t *si);
 
 #endif
 

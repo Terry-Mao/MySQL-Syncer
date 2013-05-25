@@ -7,7 +7,6 @@ rs_buf_t *rs_create_tmpbuf(uint32_t size)
     rs_buf_t    *b;
     
     b = malloc(sizeof(rs_buf_t) + size);
-
     if (b== NULL) {
         rs_log_error(RS_LOG_ERR, rs_errno, "malloc() failed, %u", 
                 sizeof(rs_buf_t) + size);
@@ -15,12 +14,11 @@ rs_buf_t *rs_create_tmpbuf(uint32_t size)
     }
 
     b->start = (char *) b + sizeof(rs_buf_t);
-
     b->size = size;
     b->pos = b->start;
     b->last = b->start;
     b->end = b->start + size;
-    
+
     return b;
 }
 
@@ -34,11 +32,8 @@ int rs_send_tmpbuf(rs_buf_t *b, int fd)
     }
 
     rs_log_debug(RS_DEBUG_TMPBUF, 0, "tmpbuf send size : %u", size);
-
     while(size > 0) {
-
         n = rs_write(fd, b->pos, size);
-
         if(n <= 0) {
             return RS_ERR;
         }
@@ -55,7 +50,7 @@ int rs_send_tmpbuf(rs_buf_t *b, int fd)
 
 int rs_recv_tmpbuf(rs_buf_t *b, int fd, void *data, uint32_t size)
 {
-    int32_t     l, s;
+    uint32_t    l, c;
     ssize_t     n;
 
     if(size > b->size) {
@@ -65,34 +60,63 @@ int rs_recv_tmpbuf(rs_buf_t *b, int fd, void *data, uint32_t size)
     }
 
     l = b->last - b->pos;
-
-    if((uint32_t) l >= size) {
+    if(l >= size) {
         rs_memcpy(data, b->pos, size);
         b->pos += size;
         rs_log_debug(RS_DEBUG_TMPBUF, 0, "tmpbuf recv size : %u", size);
         return RS_OK;
     } else {
-        s = size - l;
         rs_memcpy(data, b->pos, l);
         b->pos = b->start;
         b->last = b->start;
+        c = size - l;
 
         do {
             n = rs_read(fd, b->last, b->size);
-
             if(n <= 0) {
                 return RS_ERR;
             }
 
             b->last += n;
-        } while((b->last - b->pos) < s);
+        } while((b->last - b->pos) < c);
 
-        rs_memcpy((char *) data + l, b->pos, s);
-        b->pos += s;
+        rs_memcpy((char *) data + l, b->pos, c);
+        b->pos += c;
     }
 
     rs_log_debug(RS_DEBUG_TMPBUF, 0, "tmpbuf recv size : %u", size);
     return RS_OK;
+}
+
+uint32_t rs_get_tmpbuf(rs_buf_t *b, void *buf, uint32_t size)
+{
+    uint32_t ms;
+
+    ms = rs_min((uint32_t) (bi->io_buf->last - bi->io_buf->pos), size);
+    if(ms > 0) {
+        f = rs_cpymem(buf, b->pos, ms);
+        io_buf->pos += ms;
+    }
+
+    return ms;
+}
+
+ssize_t rs_read_tmpbuf(rs_buf_t *b, int fd) 
+{
+    ssize_t n;
+
+    n = rs_read(fd, b->start, b->size);
+    if(n > 0) {
+        b->last = b->start + n;
+    }
+
+    return n;
+}
+
+void rs_clear_tmpbuf(rs_buf_t *b) 
+{
+    b->pos = b->start;
+    b->last = b->start;
 }
 
 void rs_destroy_tmpbuf(rs_buf_t *b)

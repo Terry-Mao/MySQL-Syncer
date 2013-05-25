@@ -564,7 +564,7 @@ int rs_dm_binlog_row(rs_slave_info_t *si, void *data, uint32_t len, char type,
 
             if(pas.alloc == RS_DM_DATA_STACK) {
                 if(pas.type == RS_DM_TYPE_HEX) {
-                    dp = rs_cpymem(dp, &dl, 4);        
+                    dp = rs_cpymem(dp, &dl, 4);
                 }
                 rs_memcpy(dp, p, dl);
             } else if(pas.alloc == RS_DM_DATA_POOL) {

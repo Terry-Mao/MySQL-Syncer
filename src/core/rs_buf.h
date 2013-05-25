@@ -28,6 +28,9 @@ struct rs_buf_s {
 rs_buf_t *rs_create_tmpbuf(uint32_t size);
 int rs_send_tmpbuf(rs_buf_t *b, int fd);
 int rs_recv_tmpbuf(rs_buf_t *b, int fd, void *data, uint32_t size);
+uint32_t rs_get_tmpbuf(rs_buf_t *b, void *buf, uint32_t size);
+ssize_t rs_read_tmpbuf(rs_buf_t *b, int fd);
+void rs_clear_tmpbuf(rs_buf_t *b);
 void rs_destroy_tmpbuf(rs_buf_t *b);
 
 
