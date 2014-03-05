@@ -1,4 +1,3 @@
-
 #include <rs_config.h>
 #include <rs_core.h>
 #include <rs_master.h>
@@ -31,7 +30,30 @@ rs_binlog_func rs_binlog_funcs[] = {
     rs_binlog_update_rows_handler,
     rs_binlog_delete_rows_handler,
     rs_binlog_skip_handler,
-    rs_binlog_skip_handler     
+    rs_binlog_skip_handler,
+    rs_binlog_skip_handler,
+    rs_binlog_skip_handler,
+    rs_binlog_skip_handler,
+    rs_binlog_skip_handler,
+    rs_binlog_skip_handler,
+    rs_binlog_skip_handler,
+    rs_binlog_skip_handler,
+    rs_binlog_skip_handler,
+    rs_binlog_skip_handler,
+    rs_binlog_skip_handler,
+    rs_binlog_skip_handler,
+    rs_binlog_skip_handler,
+    rs_binlog_skip_handler,
+    rs_binlog_skip_handler,
+    rs_binlog_skip_handler,
+    rs_binlog_skip_handler,
+    rs_binlog_skip_handler,
+    rs_binlog_skip_handler,
+    rs_binlog_skip_handler,
+    rs_binlog_skip_handler,
+    rs_binlog_skip_handler,
+    rs_binlog_skip_handler,
+    rs_binlog_skip_handler,
 };
 
 int rs_binlog_header_handler(rs_reqdump_data_t *rd) 
