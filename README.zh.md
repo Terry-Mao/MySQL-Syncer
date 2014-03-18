@@ -34,8 +34,9 @@ MySQL Syncer Linux操作系统下是一套异构数据源复制的框架，基�
 1.  执行安装脚本
 
 		[root@TEST ~]# cd MySQL-Syncer-master
-		64位系统执行:[root@TEST ~]# make master_64
-		32位系统执行:[root@TEST ~]# make master_32
+		64位系统执行:[root@TEST ~]# make master_64 && make slave_64
+		32位系统执行:[root@TEST ~]# make master_32 && make slave_32
+
 
 1. 配置master.cf,slave.cf,slave.info信息  
  
@@ -189,8 +190,8 @@ MySQL Syncer Linux操作系统下是一套异构数据源复制的框架，基�
 
 1.  检查获取服务是否启动是否正常，并查看主从日志
 
-	    tail -f /var/log/rs/rs_slave.log
-		tail -f /var/log/rs/rs_master.log
+	        tail -f /tmp/rs_slave.log
+		tail -f /tmp/rs_master.log
 
 		查看服务进程运行日志,如果出现相关error信息,请检查master.cf,slave.cf，slave.info的配置信息
 
@@ -203,7 +204,7 @@ MySQL Syncer Linux操作系统下是一套异构数据源复制的框架，基�
 		log_bin    | off
 		如果状态为off,需要到mysql my.cnf配置文件里面去开启
 		[mysqld]
-		# bin log file path
+		# bin log file path  
 		log-bin          = /var/lib/mysql/mysql-bin
 		
 		# bin log index filei
@@ -244,13 +245,13 @@ MySQL Syncer Linux操作系统下是一套异构数据源复制的框架，基�
 		filter.tables test.test 
 		添加新表
 		# filter tables
-		filter.tables test.test test.user
+		filter.tables test.test,test.user
 
 1.  关闭slave服务，重新编译slave服务,启动slave服务
 
 		[root@TEST ~]# cd $prefix 
 		[root@TEST ~]# rs.sh slave  stop    
-		[root@TEST ~]# make master_32 or make master_64
+		[root@TEST ~]# make slave_32 or make slave_64
 		[root@TEST ~]# rs.sh slave  start     
 
 ##反馈信息
